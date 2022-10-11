@@ -7,7 +7,7 @@ use crate::constants::{
     CATALOG_BTN_MSG, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT, SPACE_COLUMNS, SPACE_ROWS,
     TO_BUY_BTN_MSG, WINDOW_TITTLE,
 };
-use crate::data::catalog::CatalogRepo;
+use crate::data::catalog::ProductRepo;
 use crate::db::Db;
 use crate::kinds::{AppEvents, Views};
 use crate::schemas::catalog::ProductsToBy;
@@ -62,7 +62,7 @@ impl Application for App {
 
         match message {
             AppEvents::ShowToBuy => Command::perform(
-                CatalogRepo::get_products_to_buy(db_connection),
+                ProductRepo::get_products_to_buy(db_connection),
                 AppEvents::ToBuyData,
             ),
             AppEvents::ToBuyData(result) => {

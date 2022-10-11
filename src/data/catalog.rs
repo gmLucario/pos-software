@@ -3,9 +3,9 @@ use crate::schemas::catalog::ProductsToBy;
 
 use sqlx::{pool::Pool, postgres::Postgres};
 
-pub struct CatalogRepo {}
+pub struct ProductRepo {}
 
-impl CatalogRepo {
+impl ProductRepo {
     /// Return products have less than the minimum required
     pub async fn get_products_to_buy(
         connection: &Pool<Postgres>,
