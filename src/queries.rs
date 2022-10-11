@@ -1,4 +1,4 @@
-pub const GET_PRODUCTS_TO_BY: &str = r#"
+pub const GET_PRODUCTS_TO_BUY: &str = r#"
 select
     product.full_name as product_name,
     product.min_amount - COUNT(1) as amount_to_buy

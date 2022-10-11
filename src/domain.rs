@@ -10,7 +10,7 @@ use crate::constants::{
 use crate::data::catalog::ProductRepo;
 use crate::db::Db;
 use crate::kinds::{AppEvents, Views};
-use crate::schemas::catalog::ProductsToBy;
+use crate::schemas::catalog::ProductsToBuy;
 use crate::views::{catalog, sale, sales_info, to_buy};
 
 pub struct App {
@@ -25,7 +25,7 @@ pub struct App {
     pub sales_info_view: sales_info::SalesInfo,
     pub to_buy_view: to_buy::ToBuy,
 
-    pub products_to_buy: Vec<ProductsToBy>,
+    pub products_to_buy: Vec<ProductsToBuy>,
 }
 
 impl Application for App {

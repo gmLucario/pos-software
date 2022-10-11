@@ -6,11 +6,11 @@ use iced::{
 
 use crate::constants::SIZE_TEXT;
 use crate::kinds::AppEvents;
-use crate::schemas::catalog::ProductsToBy;
+use crate::schemas::catalog::ProductsToBuy;
 
 #[derive(Default)]
 pub struct ToBuy {
-    pub products: Vec<ProductsToBy>,
+    pub products: Vec<ProductsToBuy>,
     pub scroll_list_state: scrollable::State,
 }
 
@@ -22,7 +22,7 @@ impl ToBuy {
         }
     }
 
-    pub fn view(&mut self, products: &Vec<ProductsToBy>) -> Element<AppEvents> {
+    pub fn view(&mut self, products: &Vec<ProductsToBuy>) -> Element<AppEvents> {
         let mut col = Column::new()
             .align_items(Alignment::Start)
             .padding(20)

@@ -1,4 +1,4 @@
-use crate::schemas::catalog::ProductsToBy;
+use crate::schemas::catalog::ProductsToBuy;
 
 #[derive(Debug, Clone)]
 pub enum Views {
@@ -10,7 +10,7 @@ pub enum Views {
 
 #[derive(Debug, Clone)]
 pub enum AppEvents {
-    ToBuyData(Result<Vec<ProductsToBy>, String>),
+    ToBuyData(Result<Vec<ProductsToBuy>, String>),
     ShowSale,
     ShowSalesInfo,
     ShowToBuy,
