@@ -19,6 +19,20 @@ Help to manage a small store like:
 
 # For devs
 
+## Run locally the app
+
+1. start docker compose
+
+```bash
+$ docker compose up -d 
+```
+
+2. Run app
+
+```
+$ cargo run
+```
+
 ## Migrations
 
 Install [sqlx-cli](https://crates.io/crates/sqlx-cli) to run the migrations:
