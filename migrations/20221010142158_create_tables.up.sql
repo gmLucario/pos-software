@@ -55,7 +55,6 @@ CREATE TABLE IF NOT EXISTS catalog (
     cost MONEY,
     condition_id SMALLINT,
 
-  UNIQUE (product_id, priced_at),
   CONSTRAINT fk_catalog_product_id
     FOREIGN KEY(product_id)
         REFERENCES product(id),
