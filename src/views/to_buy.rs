@@ -22,13 +22,13 @@ impl ToBuy {
         }
     }
 
-    pub fn view(&mut self, products: &Vec<ProductsToBuy>) -> Element<AppEvents> {
+    pub fn view(&mut self) -> Element<AppEvents> {
         let mut col = Column::new()
             .align_items(Alignment::Start)
             .padding(20)
             .spacing(20);
 
-        for product in products {
+        for product in self.products.iter() {
             col = col.push(
                 Text::new(format!(
                     "{product_name}: {amount_to_buy}",
