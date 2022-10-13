@@ -1,9 +1,11 @@
 pub mod config;
 pub mod constants;
+pub mod controllers;
 pub mod data;
 pub mod db;
 pub mod domain;
 pub mod kinds;
+pub mod models;
 pub mod queries;
 pub mod schemas;
 pub mod views;

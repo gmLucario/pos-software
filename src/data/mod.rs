@@ -1,1 +1,1 @@
-pub mod catalog;
+pub mod product_repo;

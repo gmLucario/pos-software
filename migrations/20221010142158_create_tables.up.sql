@@ -24,6 +24,17 @@ CREATE TABLE IF NOT EXISTS status_loan (
 
 CREATE INDEX status_loan_description_idx ON status_loan (description);
 
+-- ///////
+-- Unit
+-- ///////
+
+CREATE TABLE IF NOT EXISTS unit_measurement (
+    id SMALLINT PRIMARY KEY,
+    description VARCHAR(100)
+);
+
+CREATE INDEX unit_measurement_description_idx ON unit_measurement (description);
+
 -- Models
 
 -- ///////
@@ -35,8 +46,13 @@ CREATE TABLE IF NOT EXISTS product (
     barcode VARCHAR(100),
     full_name VARCHAR(100),
     user_price MONEY,
-    min_amount SMALLINT,
-    created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City')
+    min_amount NUMERIC(5,3) ,
+    unit_measurement_id SMALLINT,
+    created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
+
+    CONSTRAINT fk_product_unit_measurement_id
+        FOREIGN KEY(unit_measurement_id)
+            REFERENCES unit_measurement(id)
 );
 
 CREATE INDEX product_full_name_idx ON product (full_name);
@@ -51,22 +67,39 @@ CREATE INDEX product_barcode_idx ON product (barcode);
 CREATE TABLE IF NOT EXISTS catalog (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID,
-    priced_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
     cost MONEY,
-    condition_id SMALLINT,
+    amount_product NUMERIC(5, 3) ,
+    current_amount NUMERIC(5, 3) ,
+    priced_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
 
-  UNIQUE (product_id, priced_at),
   CONSTRAINT fk_catalog_product_id
     FOREIGN KEY(product_id)
-        REFERENCES product(id),
-  CONSTRAINT fk_catalog_condition_id
-    FOREIGN KEY(condition_id)
-        REFERENCES item_condition(id)
+        REFERENCES product(id)
 );
 
 CREATE INDEX catalog_priced_at_idx ON catalog (priced_at);
-CREATE INDEX catalog_condition_idx ON catalog (condition_id);
 
+-- ///////
+-- Operation
+-- ///////
+CREATE TABLE IF NOT EXISTS operation (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID,
+    amount_product NUMERIC(5,3) ,
+    earning MONEY,
+    condition_id SMALLINT,
+    recorded_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
+
+  CONSTRAINT fk_operation_product_id
+    FOREIGN KEY(product_id)
+        REFERENCES product(id),
+  CONSTRAINT fk_operation_condition_id
+    FOREIGN KEY(condition_id)
+        REFERENCES item_condition(id)        
+);
+
+CREATE INDEX operation_recorded_at_idx ON operation (recorded_at);
+CREATE INDEX operation_condition_idx ON operation (condition_id);
 
 -- ///////
 -- Sale
