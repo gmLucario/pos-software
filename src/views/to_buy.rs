@@ -1,27 +1,14 @@
 use iced::{
-    scrollable,
     widget::{Container, Text},
     Alignment, Column, Element, Length, Scrollable,
 };
 
 use crate::constants::SIZE_TEXT;
 use crate::kinds::AppEvents;
-use crate::schemas::catalog::ProductsToBuy;
 
-#[derive(Default)]
-pub struct ToBuy {
-    pub products: Vec<ProductsToBuy>,
-    pub scroll_list_state: scrollable::State,
-}
+use crate::controllers::to_buy::ToBuy;
 
 impl ToBuy {
-    pub fn new() -> Self {
-        Self {
-            products: vec![],
-            scroll_list_state: scrollable::State::new(),
-        }
-    }
-
     pub fn view(&mut self) -> Element<AppEvents> {
         let mut col = Column::new()
             .align_items(Alignment::Start)
@@ -29,14 +16,7 @@ impl ToBuy {
             .spacing(20);
 
         for product in self.products.iter() {
-            col = col.push(
-                Text::new(format!(
-                    "{product_name}: {amount_to_buy}",
-                    product_name = product.product_name,
-                    amount_to_buy = product.amount_to_buy
-                ))
-                .size(SIZE_TEXT),
-            );
+            col = col.push(Text::new(product.get_formatted_item()).size(SIZE_TEXT));
         }
 
         let scroll_row = Scrollable::new(&mut self.scroll_list_state)
