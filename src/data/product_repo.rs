@@ -1,5 +1,5 @@
-use crate::queries::GET_PRODUCTS_TO_BUY;
-use crate::schemas::catalog::ProductsToBuy;
+use crate::models::catalog::{LoadProduct, ProductsToBuy};
+use crate::queries::{GET_PRODUCTS_TO_BUY, GET_PRODUCT_CATALOG_INFO};
 
 use sqlx::{pool::Pool, postgres::Postgres};
 
@@ -16,5 +16,19 @@ impl ProductRepo {
             .map_err(|_| String::new())?;
 
         Ok(products)
+    }
+
+    /// Return product info by barcode
+    pub async fn get_product_info_catalog(
+        connection: &Pool<Postgres>,
+        barcode: String,
+    ) -> Result<Option<LoadProduct>, String> {
+        let result = sqlx::query_as::<_, LoadProduct>(GET_PRODUCT_CATALOG_INFO)
+            .bind(barcode)
+            .fetch_optional(connection)
+            .await
+            .map_err(|_| String::new())?;
+
+        Ok(result)
     }
 }
