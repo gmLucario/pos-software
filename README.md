@@ -14,8 +14,12 @@ Help to manage a small store like:
 - [x] select dependency make interaction db
 - [x] define basic models
 - [x] data - sales_info view linked
-- [ ] read input external device
-- [ ] catalog flow - models
+- [x] read input external device
+- [ ] catalog flow
+    - [x] schemas
+    - [ ] save new products list to save
+    - [ ] delete product record before save them 
+    - [ ] save list products
 
 # For devs
 
