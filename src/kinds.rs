@@ -11,7 +11,7 @@ pub enum Views {
     CatalogAddRecord,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnitsMeasurement {
     Kilograms, // 1
     Liters,    // 2
@@ -49,6 +49,7 @@ pub enum CatalogInputs {
     AmountProduct,
     MinAmountProduct,
     ClientPrice,
+    CostProduct,
 }
 
 #[derive(Debug, Clone)]

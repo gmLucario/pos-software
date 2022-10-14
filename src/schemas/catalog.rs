@@ -1,6 +1,6 @@
 use crate::{kinds::UnitsMeasurement, models};
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Hash)]
 pub struct LoadProduct {
     pub barcode: String,
     pub product_name: String,

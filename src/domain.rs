@@ -152,16 +152,16 @@ impl Application for App {
                             _ => (),
                         }
                     }
-                    CatalogInputs::ClientPrice => {
-                        if input_value.parse::<f64>().is_ok() {
-                            self.catalog_view.load_product.user_price = input_value
-                        }
+                    CatalogInputs::ClientPrice if input_value.parse::<f64>().is_ok() => {
+                        self.catalog_view.load_product.user_price = input_value
                     }
-                    CatalogInputs::MinAmountProduct => {
-                        if input_value.parse::<f64>().is_ok() {
-                            self.catalog_view.load_product.min_amount = input_value
-                        }
+                    CatalogInputs::MinAmountProduct if input_value.parse::<f64>().is_ok() => {
+                        self.catalog_view.load_product.min_amount = input_value
                     }
+                    CatalogInputs::CostProduct if input_value.parse::<f64>().is_ok() => {
+                        self.catalog_view.load_product.cost = input_value
+                    }
+                    _ => (),
                 }
                 Command::none()
             }
