@@ -1,7 +1,7 @@
 use iced::keyboard::KeyCode;
 use iced::{
-    button, executor, widget::Container, Alignment, Application, Button, Column, Command, Element,
-    Row, Subscription, Text,
+    button, executor, Alignment, Application, Button, Column, Command, Container, Element, Row,
+    Subscription, Text,
 };
 
 use crate::constants::{
@@ -170,9 +170,23 @@ impl Application for App {
                 self.catalog_view.reset_values();
                 Command::none()
             }
+            AppEvents::CatalogNewRecordOk => {
+                self.current_view = Views::Catalog;
+                self.catalog_view.products_to_add.insert(
+                    self.catalog_view.load_product.get_id(),
+                    self.catalog_view.load_product.clone(),
+                );
+                self.catalog_view.reset_values();
+                Command::none()
+            }
             AppEvents::CatalogPickListSelected(unit) => {
                 self.catalog_view.load_product.unit_measurement = unit;
                 self.catalog_view.load_product.amount.clear();
+                Command::none()
+            }
+            AppEvents::RemoveRecordList(id) => {
+                self.catalog_view.products_to_add.remove(&id);
+                self.catalog_view.reset_values();
                 Command::none()
             }
             _ => Command::none(),

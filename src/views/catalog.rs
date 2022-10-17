@@ -1,8 +1,8 @@
 use iced::{
-    widget::pick_list, Alignment, Button, Column, Element, Length, Row, Scrollable, Text, TextInput,
+    pick_list, Alignment, Button, Column, Element, Length, Row, Scrollable, Text, TextInput,
 };
 
-use crate::constants::SPACE_COLUMNS;
+use crate::constants::{SIZE_BTNS_TEXT, SPACE_COLUMNS};
 use crate::constants::{SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL};
 use crate::kinds::{AppEvents, CatalogInputs, UnitsMeasurement};
 
@@ -62,7 +62,7 @@ impl Catalog {
                     "",
                     &self.load_product.min_amount,
                     |input_value| {
-                        AppEvents::InputChangedCatalog(input_value, CatalogInputs::AmountProduct)
+                        AppEvents::InputChangedCatalog(input_value, CatalogInputs::MinAmountProduct)
                     },
                 )
                 .size(SIZE_TEXT_INPUT),
@@ -79,6 +79,18 @@ impl Catalog {
                 )
                 .size(SIZE_TEXT_INPUT),
             )
+            .push(Text::new("Costo:").size(SIZE_TEXT_LABEL))
+            .push(
+                TextInput::new(
+                    &mut self.cost_input_state,
+                    "",
+                    &self.load_product.cost,
+                    |input_value| {
+                        AppEvents::InputChangedCatalog(input_value, CatalogInputs::CostProduct)
+                    },
+                )
+                .size(SIZE_TEXT_INPUT),
+            )
             .push(
                 Row::new()
                     .push(
@@ -89,22 +101,20 @@ impl Catalog {
                         Button::new(&mut self.save_record_state, Text::new("Ok"))
                             .on_press(AppEvents::CatalogNewRecordOk),
                     )
-                    .align_items(Alignment::End)
                     .spacing(20),
             )
             .into()
     }
 
     pub fn catalog_list_view(&mut self) -> Element<AppEvents> {
-        let container_products = Column::with_children(
-            self.products_to_add
-                .iter()
-                .map(Text::new)
-                .map(Element::from)
-                .collect(),
-        )
-        .spacing(SPACE_COLUMNS)
-        .align_items(Alignment::Start);
+        let mut container_products = Column::new()
+            .spacing(SPACE_COLUMNS)
+            .align_items(Alignment::Start);
+
+        for (id, product) in self.products_to_add.iter_mut() {
+            container_products = container_products
+                .push::<Element<AppEvents>>(product.get_formatted_row(id.to_string()))
+        }
 
         let container_products = Scrollable::new(&mut self.scroll_list_state)
             .push(container_products)
@@ -114,8 +124,34 @@ impl Catalog {
         Column::new()
             .padding(20)
             .spacing(SPACE_COLUMNS)
-            .align_items(Alignment::Start)
+            .align_items(Alignment::Center)
+            .push(
+                Row::new()
+                    .push(
+                        Text::new("Producto:")
+                            .width(Length::FillPortion(5))
+                            .size(SIZE_TEXT),
+                    )
+                    .push(
+                        Text::new("Cantidad:")
+                            .width(Length::FillPortion(2))
+                            .size(SIZE_TEXT),
+                    )
+                    .push(
+                        Text::new("Costo:")
+                            .width(Length::FillPortion(2))
+                            .size(SIZE_TEXT),
+                    )
+                    .push(Text::new("").size(SIZE_TEXT)),
+            )
             .push(container_products)
+            .push(
+                Button::new(
+                    &mut self.save_list_records_state,
+                    Text::new("Guardar").size(SIZE_BTNS_TEXT),
+                )
+                .on_press(AppEvents::SaveAllRecords),
+            )
             .into()
     }
 }

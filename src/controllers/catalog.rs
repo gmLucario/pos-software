@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use iced::{button, pick_list, scrollable, text_input};
 
 use crate::{kinds::UnitsMeasurement, schemas::catalog::LoadProduct};
@@ -20,10 +22,11 @@ pub struct Catalog {
     // Btns states
     pub save_record_state: button::State,
     pub cancel_record_state: button::State,
+    pub save_list_records_state: button::State,
 
     // Data
     pub listen_barcode_device: bool,
-    pub products_to_add: Vec<String>,
+    pub products_to_add: HashMap<String, LoadProduct>,
     pub load_product: LoadProduct,
 }
 
@@ -43,9 +46,10 @@ impl Catalog {
 
             save_record_state: button::State::new(),
             cancel_record_state: button::State::new(),
+            save_list_records_state: button::State::new(),
 
             listen_barcode_device: false,
-            products_to_add: vec![],
+            products_to_add: HashMap::new(),
             load_product: LoadProduct::default(),
         }
     }
@@ -53,15 +57,5 @@ impl Catalog {
     pub fn reset_values(&mut self) {
         self.listen_barcode_device = true;
         self.load_product = LoadProduct::default();
-    }
-
-    pub fn append_new_record(&mut self) {
-        if !self.load_product.barcode.is_empty() {
-            self.products_to_add
-                .push(self.load_product.barcode.to_string());
-        }
-
-        // self.listen_barcode_device = false;
-        self.load_product.barcode.clear();
     }
 }

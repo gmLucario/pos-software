@@ -11,7 +11,7 @@ pub enum Views {
     CatalogAddRecord,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnitsMeasurement {
     Kilograms, // 1
     Liters,    // 2
@@ -64,6 +64,8 @@ pub enum AppEvents {
     CatalogNewRecordCancel,
     CatalogNewRecordOk,
     CatalogPickListSelected(UnitsMeasurement),
+    RemoveRecordList(String),
+    SaveAllRecords,
 
     // ToBuy view
     ToBuyData(Result<Vec<ProductsToBuy>, String>),
