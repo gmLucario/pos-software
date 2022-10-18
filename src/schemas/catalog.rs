@@ -18,19 +18,6 @@ impl LoadProduct {
     pub fn get_id(&self) -> String {
         format!("{}@{}@{}", self.barcode, self.amount, self.cost)
     }
-
-    pub fn format_to_user(&self) -> String {
-        format!(
-            "{barcode}:{product}  |   {amount}[{units}]   |   ${cost}{emoji_cost}   |   ${user_price}",
-            barcode = self.barcode,
-            product = self.product_name,
-            amount = self.amount,
-            units = self.unit_measurement,
-            cost = self.cost,
-            emoji_cost = '\u{1F4B5}',
-            user_price = self.user_price,
-        )
-    }
 }
 
 impl From<models::catalog::LoadProduct> for LoadProduct {
@@ -44,7 +31,7 @@ impl From<models::catalog::LoadProduct> for LoadProduct {
         };
 
         LoadProduct {
-            amount: String::new(),
+            amount: "1".to_string(),
             unit_measurement,
             barcode: model.barcode,
             product_name: model.product_name,
