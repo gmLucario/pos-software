@@ -1,4 +1,4 @@
-use iced::{Button, Element, Row, Text, Length};
+use iced::{Button, Element, Length, Row, Text};
 
 use crate::constants::SIZE_TEXT;
 use crate::kinds::AppEvents;

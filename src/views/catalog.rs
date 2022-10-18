@@ -111,6 +111,8 @@ impl Catalog {
             .spacing(SPACE_COLUMNS)
             .align_items(Alignment::Start);
 
+        let is_products_empty: bool = self.products_to_add.is_empty();
+
         for (id, product) in self.products_to_add.iter_mut() {
             container_products = container_products
                 .push::<Element<AppEvents>>(product.get_formatted_row(id.to_string()))
@@ -121,7 +123,7 @@ impl Catalog {
             .width(Length::Fill)
             .height(Length::Fill);
 
-        Column::new()
+        let mut general_container = Column::new()
             .padding(20)
             .spacing(SPACE_COLUMNS)
             .align_items(Alignment::Center)
@@ -144,14 +146,18 @@ impl Catalog {
                     )
                     .push(Text::new("").size(SIZE_TEXT)),
             )
-            .push(container_products)
-            .push(
-                Button::new(
-                    &mut self.save_list_records_state,
-                    Text::new("Guardar").size(SIZE_BTNS_TEXT),
-                )
-                .on_press(AppEvents::SaveAllRecords),
-            )
-            .into()
+            .push(container_products);
+
+        let mut btn_save = Button::new(
+            &mut self.save_list_records_state,
+            Text::new("Guardar").size(SIZE_BTNS_TEXT),
+        );
+
+        if !is_products_empty {
+            btn_save = btn_save.on_press(AppEvents::CatalogSaveAllRecords)
+        }
+
+        general_container = general_container.push(btn_save);
+        general_container.into()
     }
 }
