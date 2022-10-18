@@ -1,3 +1,5 @@
+use iced::button;
+
 use crate::{kinds::UnitsMeasurement, models};
 
 #[derive(Default, Debug, Clone)]
@@ -9,6 +11,13 @@ pub struct LoadProduct {
     pub unit_measurement: UnitsMeasurement,
     pub min_amount: String,
     pub cost: String,
+
+    pub edit_button_state: button::State,
+}
+impl LoadProduct {
+    pub fn get_id(&self) -> String {
+        format!("{}@{}@{}", self.barcode, self.amount, self.cost)
+    }
 }
 
 impl From<models::catalog::LoadProduct> for LoadProduct {
@@ -22,13 +31,15 @@ impl From<models::catalog::LoadProduct> for LoadProduct {
         };
 
         LoadProduct {
-            amount: String::new(),
+            amount: "1".to_string(),
             unit_measurement,
             barcode: model.barcode,
             product_name: model.product_name,
             user_price: model.user_price.to_bigdecimal(2).to_string(),
             min_amount: model.min_amount.to_string(),
             cost: model.cost.to_bigdecimal(2).to_string(),
+
+            edit_button_state: button::State::new(),
         }
     }
 }

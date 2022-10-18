@@ -1,4 +1,8 @@
+use std::str::FromStr;
+
 use sqlx::types::BigDecimal;
+
+use crate::schemas;
 
 #[derive(sqlx::FromRow, Debug, Clone)]
 pub struct ProductsToBuy {
@@ -32,4 +36,37 @@ pub struct LoadProduct {
     pub min_amount: BigDecimal,
     pub cost: sqlx::postgres::types::PgMoney,
     pub unit_measurement_id: i16,
+    pub current_amount: BigDecimal,
+}
+
+impl From<&schemas::catalog::LoadProduct> for LoadProduct {
+    fn from(schema: &schemas::catalog::LoadProduct) -> Self {
+        let unit_measurement_id: i16 = match schema.unit_measurement {
+            crate::kinds::UnitsMeasurement::Kilograms => 1,
+            crate::kinds::UnitsMeasurement::Liters => 2,
+            crate::kinds::UnitsMeasurement::Pieces => 3,
+        };
+        let user_price = sqlx::postgres::types::PgMoney::from_bigdecimal(
+            BigDecimal::from_str(&schema.user_price).unwrap(),
+            2,
+        )
+        .unwrap();
+        let cost = sqlx::postgres::types::PgMoney::from_bigdecimal(
+            BigDecimal::from_str(&schema.cost).unwrap(),
+            2,
+        )
+        .unwrap();
+        let min_amount = BigDecimal::from_str(&schema.min_amount).unwrap();
+        let current_amount = BigDecimal::from_str(&schema.amount).unwrap();
+
+        Self {
+            barcode: schema.barcode.to_string(),
+            product_name: schema.product_name.to_string(),
+            user_price,
+            min_amount,
+            cost,
+            unit_measurement_id,
+            current_amount,
+        }
+    }
 }

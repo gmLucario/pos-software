@@ -43,7 +43,7 @@ CREATE INDEX unit_measurement_description_idx ON unit_measurement (description);
 
 CREATE TABLE IF NOT EXISTS product (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    barcode VARCHAR(100),
+    barcode VARCHAR(100) UNIQUE,
     full_name VARCHAR(100),
     user_price MONEY,
     min_amount NUMERIC(5,3) ,

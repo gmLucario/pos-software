@@ -27,7 +27,8 @@ select
     product.user_price,
     product.min_amount,
     "catalog"."cost",
-    unit_measurement_id
+    unit_measurement_id,
+    "catalog".current_amount
 from product
 left join "catalog" on (
     product.id = "catalog".product_id
@@ -37,4 +38,8 @@ where
     and "catalog".priced_at <= now()
 order by "catalog"."cost" desc
 limit 1;
+"#;
+
+pub const INSERT_PRODUCT_CATALOG: &str = r#"
+call sp_save_product_catalog($1, $2, $3, $4, $5, $6, $7);
 "#;

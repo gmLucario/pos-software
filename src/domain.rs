@@ -1,19 +1,23 @@
-use iced::keyboard::KeyCode;
+use std::collections::HashMap;
+
 use iced::{
-    button, executor, widget::Container, Alignment, Application, Button, Column, Command, Element,
-    Row, Subscription, Text,
+    button, executor, keyboard::KeyCode, Alignment, Application, Button, Column, Command,
+    Container, Element, Row, Subscription, Text,
 };
 
-use crate::constants::{
-    CATALOG_BTN_MSG, CHARS_SAVED_AS_BARCODE, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT,
-    SPACE_COLUMNS, SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
+use crate::{
+    constants::{
+        CATALOG_BTN_MSG, CHARS_SAVED_AS_BARCODE, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT,
+        SPACE_COLUMNS, SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
+    },
+    controllers,
+    data::product_repo::ProductRepo,
+    db::Db,
+    kinds::{AppEvents, CatalogInputs, UnitsMeasurement, Views},
+    models,
+    schemas::catalog::LoadProduct,
+    views::{sale, sales_info},
 };
-use crate::controllers;
-use crate::data::product_repo::ProductRepo;
-use crate::db::Db;
-use crate::kinds::{AppEvents, CatalogInputs, UnitsMeasurement, Views};
-use crate::schemas::catalog::LoadProduct;
-use crate::views::{sale, sales_info};
 
 pub struct App {
     pub catalog_btn: button::State,
@@ -66,7 +70,7 @@ impl Application for App {
             AppEvents::ToBuyData(result) => {
                 self.current_view = Views::ToBuy;
                 match result {
-                    Err(_) => (),
+                    Err(err) => eprintln!("{:#?}", err),
                     Ok(to_buy) => self.to_buy_view.products = to_buy,
                 }
                 Command::none()
@@ -121,7 +125,7 @@ impl Application for App {
             AppEvents::CatalogAddRecordData(result) => {
                 self.current_view = Views::CatalogAddRecord;
                 match result {
-                    Err(_) => (),
+                    Err(err) => eprintln!("{:#?}", err),
                     Ok(record) => match record {
                         Some(data) => self.catalog_view.load_product = LoadProduct::from(data),
                         None => {
@@ -152,16 +156,16 @@ impl Application for App {
                             _ => (),
                         }
                     }
-                    CatalogInputs::ClientPrice => {
-                        if input_value.parse::<f64>().is_ok() {
-                            self.catalog_view.load_product.user_price = input_value
-                        }
+                    CatalogInputs::ClientPrice if input_value.parse::<f64>().is_ok() => {
+                        self.catalog_view.load_product.user_price = input_value
                     }
-                    CatalogInputs::MinAmountProduct => {
-                        if input_value.parse::<f64>().is_ok() {
-                            self.catalog_view.load_product.min_amount = input_value
-                        }
+                    CatalogInputs::MinAmountProduct if input_value.parse::<f64>().is_ok() => {
+                        self.catalog_view.load_product.min_amount = input_value
                     }
+                    CatalogInputs::CostProduct if input_value.parse::<f64>().is_ok() => {
+                        self.catalog_view.load_product.cost = input_value
+                    }
+                    _ => (),
                 }
                 Command::none()
             }
@@ -170,9 +174,43 @@ impl Application for App {
                 self.catalog_view.reset_values();
                 Command::none()
             }
+            AppEvents::CatalogNewRecordOk => {
+                self.current_view = Views::Catalog;
+                self.catalog_view.products_to_add.insert(
+                    self.catalog_view.load_product.get_id(),
+                    self.catalog_view.load_product.clone(),
+                );
+                self.catalog_view.reset_values();
+                Command::none()
+            }
+            AppEvents::CatalogSaveAllRecords => Command::perform(
+                ProductRepo::save_products_catalog(
+                    db_connection,
+                    self.catalog_view
+                        .products_to_add
+                        .values()
+                        .map(models::catalog::LoadProduct::from)
+                        .collect::<Vec<models::catalog::LoadProduct>>(),
+                ),
+                AppEvents::CatalogNewRecordPerformed,
+            ),
+            AppEvents::CatalogNewRecordPerformed(result) => {
+                match result {
+                    Ok(_) => (),
+                    Err(err) => eprintln!("{:#?}", err),
+                };
+                self.catalog_view.products_to_add = HashMap::new();
+                self.current_view = Views::Catalog;
+                Command::none()
+            }
             AppEvents::CatalogPickListSelected(unit) => {
                 self.catalog_view.load_product.unit_measurement = unit;
-                self.catalog_view.load_product.amount.clear();
+                self.catalog_view.load_product.amount = "1".to_string();
+                Command::none()
+            }
+            AppEvents::RemoveRecordList(id) => {
+                self.catalog_view.products_to_add.remove(&id);
+                self.catalog_view.reset_values();
                 Command::none()
             }
             _ => Command::none(),

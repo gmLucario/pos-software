@@ -49,6 +49,7 @@ pub enum CatalogInputs {
     AmountProduct,
     MinAmountProduct,
     ClientPrice,
+    CostProduct,
 }
 
 #[derive(Debug, Clone)]
@@ -62,7 +63,10 @@ pub enum AppEvents {
     CatalogAddRecordData(Result<Option<LoadProduct>, String>),
     CatalogNewRecordCancel,
     CatalogNewRecordOk,
+    CatalogSaveAllRecords,
+    CatalogNewRecordPerformed(Result<(), String>),
     CatalogPickListSelected(UnitsMeasurement),
+    RemoveRecordList(String),
 
     // ToBuy view
     ToBuyData(Result<Vec<ProductsToBuy>, String>),

@@ -1,7 +1,4 @@
-use iced::{
-    widget::{Container, Text},
-    Element, Length,
-};
+use iced::{Container, Element, Length, Text};
 
 use crate::constants::{SALE_BTN_MSG, SIZE_TEXT};
 use crate::kinds::AppEvents;

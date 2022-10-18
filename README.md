@@ -17,9 +17,11 @@ Help to manage a small store like:
 - [x] read input external device
 - [ ] catalog flow
     - [x] schemas
-    - [ ] save new products list to save
-    - [ ] delete product record before save them 
-    - [ ] save list products
+    - [x] save new products list to save
+    - [x] delete product record before save them 
+    - [x] save list products
+    - [ ] show message products saved/not saved
+- [ ] sale flow
 
 # For devs
 

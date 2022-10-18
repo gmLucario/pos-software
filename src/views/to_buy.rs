@@ -1,7 +1,4 @@
-use iced::{
-    widget::{Container, Text},
-    Alignment, Column, Element, Length, Scrollable,
-};
+use iced::{Alignment, Column, Container, Element, Length, Scrollable, Text};
 
 use crate::constants::SIZE_TEXT;
 use crate::kinds::AppEvents;
