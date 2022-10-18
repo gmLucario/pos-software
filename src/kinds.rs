@@ -63,9 +63,10 @@ pub enum AppEvents {
     CatalogAddRecordData(Result<Option<LoadProduct>, String>),
     CatalogNewRecordCancel,
     CatalogNewRecordOk,
+    CatalogSaveAllRecords,
+    CatalogNewRecordPerformed(Result<(), String>),
     CatalogPickListSelected(UnitsMeasurement),
     RemoveRecordList(String),
-    SaveAllRecords,
 
     // ToBuy view
     ToBuyData(Result<Vec<ProductsToBuy>, String>),
