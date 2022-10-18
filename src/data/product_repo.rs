@@ -1,5 +1,5 @@
 use crate::models::catalog::{LoadProduct, ProductsToBuy};
-use crate::queries::{GET_PRODUCTS_TO_BUY, GET_PRODUCT_CATALOG_INFO};
+use crate::queries::{GET_PRODUCTS_TO_BUY, GET_PRODUCT_CATALOG_INFO, INSERT_PRODUCT_CATALOG};
 
 use sqlx::{pool::Pool, postgres::Postgres};
 
@@ -27,8 +27,28 @@ impl ProductRepo {
             .bind(barcode)
             .fetch_optional(connection)
             .await
-            .map_err(|_| String::new())?;
+            .map_err(|err| format!("{:#?}", err))?;
 
         Ok(result)
+    }
+
+    pub async fn save_products_catalog(
+        connection: &Pool<Postgres>,
+        products: Vec<LoadProduct>,
+    ) -> Result<(), String> {
+        for product in products {
+            sqlx::query(INSERT_PRODUCT_CATALOG)
+                .bind(product.barcode)
+                .bind(product.product_name)
+                .bind(product.user_price)
+                .bind(product.min_amount)
+                .bind(product.unit_measurement_id)
+                .bind(product.cost)
+                .bind(product.current_amount)
+                .execute(connection)
+                .await
+                .map_err(|err| format!("{:#?}", err))?;
+        }
+        Ok(())
     }
 }
