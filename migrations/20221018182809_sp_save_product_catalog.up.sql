@@ -30,10 +30,9 @@ DECLARE
 	    (
 	        product_id,
 	        "cost",
-	        amount_product,
 	        current_amount
 	    )
-	 VALUES (id_product, input_cost, input_amount_product, input_amount_product);
+	 VALUES (id_product, input_cost, input_amount_product);
     END;
 
     COMMIT;
