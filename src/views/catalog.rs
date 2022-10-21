@@ -2,9 +2,11 @@ use iced::{
     pick_list, Alignment, Button, Column, Element, Length, Row, Scrollable, Text, TextInput,
 };
 
-use crate::constants::{SIZE_BTNS_TEXT, SPACE_COLUMNS};
-use crate::constants::{SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL};
-use crate::kinds::{AppEvents, CatalogInputs, UnitsMeasurement};
+use crate::{
+    constants::{SIZE_BTNS_TEXT, SPACE_COLUMNS},
+    constants::{SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL},
+    kinds::{AppEvents, CatalogInputs, UnitsMeasurement},
+};
 
 use crate::controllers::catalog::Catalog;
 
@@ -26,7 +28,7 @@ impl Catalog {
                     "",
                     &self.load_product.product_name,
                     |input_value| {
-                        AppEvents::InputChangedCatalog(input_value, CatalogInputs::ProductName)
+                        AppEvents::CatalogInputChanged(input_value, CatalogInputs::ProductName)
                     },
                 )
                 .size(SIZE_TEXT_INPUT),
@@ -40,7 +42,7 @@ impl Catalog {
                             "",
                             &self.load_product.amount,
                             |input_value| {
-                                AppEvents::InputChangedCatalog(
+                                AppEvents::CatalogInputChanged(
                                     input_value,
                                     CatalogInputs::AmountProduct,
                                 )
@@ -62,7 +64,7 @@ impl Catalog {
                     "",
                     &self.load_product.min_amount,
                     |input_value| {
-                        AppEvents::InputChangedCatalog(input_value, CatalogInputs::MinAmountProduct)
+                        AppEvents::CatalogInputChanged(input_value, CatalogInputs::MinAmountProduct)
                     },
                 )
                 .size(SIZE_TEXT_INPUT),
@@ -74,7 +76,7 @@ impl Catalog {
                     "",
                     &self.load_product.user_price,
                     |input_value| {
-                        AppEvents::InputChangedCatalog(input_value, CatalogInputs::ClientPrice)
+                        AppEvents::CatalogInputChanged(input_value, CatalogInputs::ClientPrice)
                     },
                 )
                 .size(SIZE_TEXT_INPUT),
@@ -86,7 +88,7 @@ impl Catalog {
                     "",
                     &self.load_product.cost,
                     |input_value| {
-                        AppEvents::InputChangedCatalog(input_value, CatalogInputs::CostProduct)
+                        AppEvents::CatalogInputChanged(input_value, CatalogInputs::CostProduct)
                     },
                 )
                 .size(SIZE_TEXT_INPUT),

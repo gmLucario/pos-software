@@ -1,9 +1,6 @@
 use iced::{Button, Element, Length, Row, Text};
 
-use crate::constants::SIZE_TEXT;
-use crate::kinds::AppEvents;
-use crate::schemas::catalog::LoadProduct;
-use crate::views::fonts;
+use crate::{constants::SIZE_TEXT, kinds::AppEvents, schemas::catalog::LoadProduct, views::fonts};
 
 impl LoadProduct {
     pub fn get_formatted_row(&mut self, id: String) -> Element<AppEvents> {
@@ -28,7 +25,7 @@ impl LoadProduct {
                     &mut self.edit_button_state,
                     Text::new('\u{F1F8}'.to_string()).font(fonts::ICONS),
                 )
-                .on_press(AppEvents::RemoveRecordList(id)),
+                .on_press(AppEvents::CatalogRemoveRecordList(id)),
             )
             .spacing(10)
             .width(iced::Length::Fill)
