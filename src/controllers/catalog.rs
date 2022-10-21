@@ -1,8 +1,19 @@
 use std::collections::HashMap;
 
-use iced::{button, pick_list, scrollable, text_input};
+use iced::{
+    button,
+    keyboard::{Event, KeyCode},
+    pick_list, scrollable, text_input, Command,
+};
+use iced_native::Event::Keyboard;
+use sqlx::{pool::Pool, postgres::Postgres};
 
-use crate::{kinds::UnitsMeasurement, schemas::catalog::LoadProduct};
+use crate::{
+    constants::CHARS_SAVED_AS_BARCODE,
+    data::product_repo::ProductRepo,
+    kinds::{AppEvents, UnitsMeasurement},
+    schemas::catalog::LoadProduct,
+};
 
 #[derive(Default)]
 pub struct Catalog {
@@ -25,7 +36,6 @@ pub struct Catalog {
     pub save_list_records_state: button::State,
 
     // Data
-    pub listen_barcode_device: bool,
     pub products_to_add: HashMap<String, LoadProduct>,
     pub load_product: LoadProduct,
 }
@@ -48,14 +58,48 @@ impl Catalog {
             cancel_record_state: button::State::new(),
             save_list_records_state: button::State::new(),
 
-            listen_barcode_device: false,
             products_to_add: HashMap::new(),
             load_product: LoadProduct::default(),
         }
     }
 
+    fn process_char_event(&mut self, c: &char) {
+        if c.is_alphanumeric() {
+            self.load_product.barcode.push(*c);
+        }
+
+        if self.load_product.barcode.len() > CHARS_SAVED_AS_BARCODE {
+            self.load_product.barcode.clear();
+        }
+    }
+
+    pub fn process_barcode_input(
+        &mut self,
+        event: iced_native::Event,
+        db_connection: &'static Pool<Postgres>,
+    ) -> Command<AppEvents> {
+        match event {
+            Keyboard(Event::CharacterReceived(c)) => self.process_char_event(&c),
+            Keyboard(Event::KeyPressed {
+                key_code: KeyCode::Enter,
+                ..
+            }) => {
+                if !self.load_product.barcode.is_empty() {
+                    return Command::perform(
+                        ProductRepo::get_product_info_catalog(
+                            db_connection,
+                            self.load_product.barcode.to_string(),
+                        ),
+                        AppEvents::CatalogProductInfoRequested,
+                    );
+                }
+            }
+            _ => (),
+        }
+        Command::none()
+    }
+
     pub fn reset_values(&mut self) {
-        self.listen_barcode_device = true;
         self.load_product = LoadProduct::default();
     }
 }
