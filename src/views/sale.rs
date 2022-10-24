@@ -141,10 +141,10 @@ impl controllers::sale::Sale {
             general_container = general_container.push(
                 Row::new()
                     .spacing(10)
-                    .push(Button::new(
-                        &mut self.cancel_list_to_pay_state,
-                        Text::new("Cancelar"),
-                    ))
+                    .push(
+                        Button::new(&mut self.cancel_list_to_pay_state, Text::new("Cancelar"))
+                            .on_press(AppEvents::SaleProductsToBuyCancel),
+                    )
                     .push(Button::new(&mut self.ok_list_to_pay_state, Text::new("Ok"))),
             );
         }

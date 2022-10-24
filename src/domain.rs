@@ -142,6 +142,10 @@ impl Application for App {
 
                 Command::none()
             }
+            AppEvents::SaleProductsToBuyCancel => {
+                self.sale_controller.products.clear();
+                Command::none()
+            }
             AppEvents::ShowCatalog => {
                 self.listen_barcode_device = true;
                 self.catalog_controller.reset_values();
