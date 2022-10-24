@@ -68,8 +68,7 @@ CREATE TABLE IF NOT EXISTS catalog (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID,
     cost MONEY,
-    amount_product NUMERIC(5, 3) ,
-    current_amount NUMERIC(5, 3) ,
+    current_amount NUMERIC(5, 3),
     priced_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
 
   CONSTRAINT fk_catalog_product_id

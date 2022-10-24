@@ -1,9 +1,6 @@
 use iced::{Alignment, Column, Container, Element, Length, Scrollable, Text};
 
-use crate::constants::SIZE_TEXT;
-use crate::kinds::AppEvents;
-
-use crate::controllers::to_buy::ToBuy;
+use crate::{constants::SIZE_TEXT, controllers::to_buy::ToBuy, kinds::AppEvents};
 
 impl ToBuy {
     pub fn view(&mut self) -> Element<AppEvents> {

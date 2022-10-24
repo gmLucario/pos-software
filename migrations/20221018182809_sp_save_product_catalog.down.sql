@@ -1,11 +1,11 @@
 -- Add down migration script here
 DROP PROCEDURE IF EXISTS sp_save_product_catalog
 (
-   barcode VARCHAR(100),
-   full_name VARCHAR(100),
-   user_price MONEY,
-   min_amount NUMERIC(5,3),
-   unit_measurement_id SMALLINT,
-   cost MONEY,
-   amount_product NUMERIC(5, 3)
+   input_barcode VARCHAR(100),
+   input_full_name VARCHAR(100),
+   input_user_price MONEY,
+   input_min_amount NUMERIC(5,3),
+   input_unit_measurement_id SMALLINT,
+   input_cost MONEY,
+   input_amount_product NUMERIC(5, 3)
 ); 

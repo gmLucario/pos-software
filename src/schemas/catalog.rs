@@ -1,6 +1,6 @@
 use iced::button;
 
-use crate::{kinds::UnitsMeasurement, models};
+use crate::{constants::TO_DECIMAL_DIGITS, kinds::UnitsMeasurement, models};
 
 #[derive(Default, Debug, Clone)]
 pub struct LoadProduct {
@@ -22,22 +22,19 @@ impl LoadProduct {
 
 impl From<models::catalog::LoadProduct> for LoadProduct {
     fn from(model: models::catalog::LoadProduct) -> Self {
-        let unit_measurement = if model.unit_measurement_id.eq(&1) {
-            UnitsMeasurement::Kilograms
-        } else if model.unit_measurement_id.eq(&2) {
-            UnitsMeasurement::Liters
-        } else {
-            UnitsMeasurement::Pieces
-        };
+        let unit_measurement = UnitsMeasurement::from(model.unit_measurement_id);
 
-        LoadProduct {
+        Self {
             amount: "1".to_string(),
             unit_measurement,
             barcode: model.barcode,
             product_name: model.product_name,
-            user_price: model.user_price.to_bigdecimal(2).to_string(),
+            user_price: model
+                .user_price
+                .to_bigdecimal(TO_DECIMAL_DIGITS)
+                .to_string(),
             min_amount: model.min_amount.to_string(),
-            cost: model.cost.to_bigdecimal(2).to_string(),
+            cost: model.cost.to_bigdecimal(TO_DECIMAL_DIGITS).to_string(),
 
             edit_button_state: button::State::new(),
         }

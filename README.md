@@ -22,6 +22,13 @@ Help to manage a small store like:
     - [x] save list products
     - [ ] show message products saved/not saved
 - [ ] sale flow
+    - [ ] validate amount product input
+    - [ ] btns `ok` and `cancel` form product
+    - [ ] list products view
+    - [ ] logic remove product list
+    - [ ] total to pay sale view
+- [ ] logger handler
+    - [ ] save logs file
 
 # For devs
 

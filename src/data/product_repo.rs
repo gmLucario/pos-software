@@ -1,5 +1,13 @@
-use crate::models::catalog::{LoadProduct, ProductsToBuy};
-use crate::queries::{GET_PRODUCTS_TO_BUY, GET_PRODUCT_CATALOG_INFO, INSERT_PRODUCT_CATALOG};
+use crate::{
+    models::{
+        catalog::{LoadProduct, ProductsToBuy},
+        sale::SaleProductInfo,
+    },
+    queries::{
+        GET_PRODUCTS_TO_BUY, GET_PRODUCT_CATALOG_INFO, GET_SALE_PRODUCT_INFO,
+        INSERT_PRODUCT_CATALOG,
+    },
+};
 
 use sqlx::{pool::Pool, postgres::Postgres};
 
@@ -13,12 +21,12 @@ impl ProductRepo {
         let products = sqlx::query_as::<_, ProductsToBuy>(GET_PRODUCTS_TO_BUY)
             .fetch_all(connection)
             .await
-            .map_err(|_| String::new())?;
+            .map_err(|err| err.to_string())?;
 
         Ok(products)
     }
 
-    /// Return product info by barcode
+    /// Return product info by barcode used in catalog form view
     pub async fn get_product_info_catalog(
         connection: &Pool<Postgres>,
         barcode: String,
@@ -27,11 +35,12 @@ impl ProductRepo {
             .bind(barcode)
             .fetch_optional(connection)
             .await
-            .map_err(|err| format!("{:#?}", err))?;
+            .map_err(|err| err.to_string())?;
 
         Ok(result)
     }
 
+    /// Save new records to "catalog"
     pub async fn save_products_catalog(
         connection: &Pool<Postgres>,
         products: Vec<LoadProduct>,
@@ -47,8 +56,22 @@ impl ProductRepo {
                 .bind(product.current_amount)
                 .execute(connection)
                 .await
-                .map_err(|err| format!("{:#?}", err))?;
+                .map_err(|err| err.to_string())?;
         }
         Ok(())
+    }
+
+    /// Get product info by barcode used in sale form view
+    pub async fn get_product_info_sale(
+        connection: &Pool<Postgres>,
+        barcode: String,
+    ) -> Result<Option<SaleProductInfo>, String> {
+        let result = sqlx::query_as::<_, SaleProductInfo>(GET_SALE_PRODUCT_INFO)
+            .bind(barcode)
+            .fetch_optional(connection)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Ok(result)
     }
 }

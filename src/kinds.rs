@@ -1,10 +1,14 @@
 use std::fmt::Display;
 
-use crate::models::catalog::{LoadProduct, ProductsToBuy};
+use crate::models::{
+    catalog::{LoadProduct, ProductsToBuy},
+    sale::SaleProductInfo,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Views {
     Sale,
+    SaleAddProductForm,
     SalesInfo,
     ToBuy,
     Catalog,
@@ -16,6 +20,26 @@ pub enum UnitsMeasurement {
     Kilograms, // 1
     Liters,    // 2
     Pieces,    // 3
+}
+
+impl From<i16> for UnitsMeasurement {
+    fn from(value: i16) -> Self {
+        match value {
+            1 => UnitsMeasurement::Kilograms,
+            2 => UnitsMeasurement::Liters,
+            3 | _ => UnitsMeasurement::Pieces,
+        }
+    }
+}
+
+impl From<UnitsMeasurement> for i16 {
+    fn from(unit: UnitsMeasurement) -> Self {
+        match unit {
+            UnitsMeasurement::Kilograms => 1,
+            UnitsMeasurement::Liters => 2,
+            UnitsMeasurement::Pieces => 3,
+        }
+    }
 }
 
 impl Display for UnitsMeasurement {
@@ -52,21 +76,35 @@ pub enum CatalogInputs {
     CostProduct,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SaleInputs {
+    AmountProduct,
+}
+
 #[derive(Debug, Clone)]
 pub enum AppEvents {
     //App general
     InputChangedIgnore(String),
+    EventOccurred(iced_native::Event),
 
     //Catalog view
-    EventOccurred(iced_native::Event),
-    InputChangedCatalog(String, CatalogInputs),
-    CatalogAddRecordData(Result<Option<LoadProduct>, String>),
+    CatalogInputChanged(String, CatalogInputs),
+    CatalogProductInfoRequested(Result<Option<LoadProduct>, String>),
     CatalogNewRecordCancel,
     CatalogNewRecordOk,
     CatalogSaveAllRecords,
     CatalogNewRecordPerformed(Result<(), String>),
     CatalogPickListSelected(UnitsMeasurement),
-    RemoveRecordList(String),
+    CatalogRemoveRecordList(String),
+
+    //Sale view
+    SaleProductInfoRequested(Result<Option<SaleProductInfo>, String>),
+    SaleInputChanged(String, SaleInputs),
+    SaleNewProductCancel,
+    SaleNewProductOk,
+    SaleProductsToBuyCancel,
+    SaleProductsToBuyOk,
+    SaleRemoveProductToBuyList(String),
 
     // ToBuy view
     ToBuyData(Result<Vec<ProductsToBuy>, String>),
@@ -74,4 +112,5 @@ pub enum AppEvents {
     ShowSalesInfo,
     ShowToBuy,
     ShowCatalog,
+    ShowCatalogClosures(Result<(), String>),
 }

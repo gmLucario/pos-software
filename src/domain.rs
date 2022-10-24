@@ -1,22 +1,22 @@
 use std::collections::HashMap;
 
 use iced::{
-    button, executor, keyboard::KeyCode, Alignment, Application, Button, Column, Command,
-    Container, Element, Row, Subscription, Text,
+    button, executor, Alignment, Application, Button, Column, Command, Element, Row, Subscription,
+    Text,
 };
 
 use crate::{
     constants::{
-        CATALOG_BTN_MSG, CHARS_SAVED_AS_BARCODE, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT,
-        SPACE_COLUMNS, SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
+        CATALOG_BTN_MSG, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT, SPACE_COLUMNS,
+        SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
     },
     controllers,
     data::product_repo::ProductRepo,
     db::Db,
     kinds::{AppEvents, CatalogInputs, UnitsMeasurement, Views},
     models,
-    schemas::catalog::LoadProduct,
-    views::{sale, sales_info},
+    schemas::{catalog::LoadProduct, sale::ProductToAdd},
+    views::sales_info,
 };
 
 pub struct App {
@@ -26,10 +26,12 @@ pub struct App {
     pub to_buy_btn: button::State,
 
     pub current_view: Views,
-    pub catalog_view: controllers::catalog::Catalog,
-    pub sale_view: sale::Sale,
+    pub catalog_controller: controllers::catalog::Catalog,
+    pub sale_controller: controllers::sale::Sale,
     pub sales_info_view: sales_info::SalesInfo,
-    pub to_buy_view: controllers::to_buy::ToBuy,
+    pub to_buy_controller: controllers::to_buy::ToBuy,
+
+    pub listen_barcode_device: bool,
 }
 
 impl Application for App {
@@ -46,10 +48,12 @@ impl Application for App {
                 to_buy_btn: button::State::new(),
 
                 current_view: Views::Sale,
-                catalog_view: controllers::catalog::Catalog::new(),
-                sale_view: sale::Sale::new(),
+                catalog_controller: controllers::catalog::Catalog::new(),
+                sale_controller: controllers::sale::Sale::default(),
                 sales_info_view: sales_info::SalesInfo::new(),
-                to_buy_view: controllers::to_buy::ToBuy::new(),
+                to_buy_controller: controllers::to_buy::ToBuy::new(),
+
+                listen_barcode_device: false,
             },
             Command::none(),
         )
@@ -70,67 +74,111 @@ impl Application for App {
             AppEvents::ToBuyData(result) => {
                 self.current_view = Views::ToBuy;
                 match result {
-                    Err(err) => eprintln!("{:#?}", err),
-                    Ok(to_buy) => self.to_buy_view.products = to_buy,
+                    Err(err) => eprintln!("{err}"),
+                    Ok(to_buy) => self.to_buy_controller.products = to_buy,
                 }
-                Command::none()
-            }
-            AppEvents::ShowSale => {
-                self.current_view = Views::Sale;
                 Command::none()
             }
             AppEvents::ShowSalesInfo => {
                 self.current_view = Views::SalesInfo;
                 Command::none()
             }
-            AppEvents::ShowCatalog => {
-                self.catalog_view.reset_values();
-                self.current_view = Views::Catalog;
+            AppEvents::ShowSale => {
+                self.listen_barcode_device = true;
+                self.current_view = Views::Sale;
                 Command::none()
             }
-            AppEvents::EventOccurred(event)
-                if self.current_view == Views::Catalog
-                    && self.catalog_view.listen_barcode_device =>
-            {
-                match event {
-                    iced_native::Event::Keyboard(iced::keyboard::Event::CharacterReceived(c)) => {
-                        if c.is_alphanumeric() {
-                            self.catalog_view.load_product.barcode.push(c);
-                        }
+            AppEvents::SaleProductInfoRequested(result) => {
+                match result {
+                    Err(err) => eprintln!("{err}"),
+                    Ok(record) => match record {
+                        Some(data) => {
+                            let unit = UnitsMeasurement::from(data.unit_measurement_id);
+                            self.sale_controller.product_to_add = ProductToAdd::from(data);
 
-                        if self.catalog_view.load_product.barcode.len() > CHARS_SAVED_AS_BARCODE {
-                            self.catalog_view.load_product.barcode.clear();
+                            match unit {
+                                UnitsMeasurement::Pieces => {
+                                    self.sale_controller.add_new_product_to_sale();
+
+                                    self.current_view = Views::Sale;
+                                    self.listen_barcode_device = true;
+                                    self.sale_controller.product_to_add.reset_values();
+                                }
+                                _ => {
+                                    self.listen_barcode_device = false;
+                                    self.current_view = Views::SaleAddProductForm;
+                                }
+                            }
                         }
-                    }
-                    iced_native::Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                        key_code: KeyCode::Enter,
-                        ..
-                    }) => {
-                        if !self.catalog_view.load_product.barcode.is_empty() {
-                            self.catalog_view.listen_barcode_device = false;
-                            return Command::perform(
-                                ProductRepo::get_product_info_catalog(
-                                    db_connection,
-                                    self.catalog_view.load_product.barcode.to_string(),
-                                ),
-                                AppEvents::CatalogAddRecordData,
-                            );
-                        }
-                        self.catalog_view.load_product.barcode.clear();
-                    }
-                    _ => (),
+                        None => self.sale_controller.product_to_add.barcode.clear(),
+                    },
                 }
                 Command::none()
             }
-            AppEvents::CatalogAddRecordData(result) => {
+            AppEvents::SaleInputChanged(input_value, input_type) => {
+                match input_type {
+                    crate::kinds::SaleInputs::AmountProduct
+                        if input_value.parse::<f64>().is_ok() =>
+                    {
+                        self.sale_controller.product_to_add.amount = input_value;
+                    }
+                    _ => (),
+                }
+
+                Command::none()
+            }
+            AppEvents::SaleNewProductCancel => {
+                self.current_view = Views::Sale;
+                self.listen_barcode_device = true;
+                self.sale_controller.product_to_add.reset_values();
+                Command::none()
+            }
+            AppEvents::SaleNewProductOk => {
+                self.sale_controller.add_new_product_to_sale();
+
+                self.current_view = Views::Sale;
+                self.listen_barcode_device = true;
+                self.sale_controller.product_to_add.reset_values();
+
+                Command::none()
+            }
+            AppEvents::SaleProductsToBuyCancel => {
+                self.sale_controller.products.clear();
+                Command::none()
+            }
+            AppEvents::SaleRemoveProductToBuyList(id) => {
+                self.sale_controller.products.remove(&id);
+                Command::none()
+            }
+            AppEvents::ShowCatalog => {
+                self.listen_barcode_device = true;
+                self.catalog_controller.reset_values();
+                self.current_view = Views::Catalog;
+                Command::none()
+            }
+            AppEvents::EventOccurred(event) if self.listen_barcode_device => {
+                match self.current_view {
+                    Views::Sale => self
+                        .sale_controller
+                        .process_barcode_input(event, db_connection),
+                    Views::Catalog => self
+                        .catalog_controller
+                        .process_barcode_input(event, db_connection),
+                    _ => Command::none(),
+                }
+            }
+            AppEvents::CatalogProductInfoRequested(result) => {
                 self.current_view = Views::CatalogAddRecord;
+                self.listen_barcode_device = false;
                 match result {
-                    Err(err) => eprintln!("{:#?}", err),
+                    Err(err) => eprintln!("{err}"),
                     Ok(record) => match record {
-                        Some(data) => self.catalog_view.load_product = LoadProduct::from(data),
+                        Some(data) => {
+                            self.catalog_controller.load_product = LoadProduct::from(data)
+                        }
                         None => {
-                            self.catalog_view.load_product = LoadProduct {
-                                barcode: self.catalog_view.load_product.barcode.to_string(),
+                            self.catalog_controller.load_product = LoadProduct {
+                                barcode: self.catalog_controller.load_product.barcode.to_string(),
                                 ..LoadProduct::default()
                             };
                         }
@@ -138,32 +186,32 @@ impl Application for App {
                 }
                 Command::none()
             }
-            AppEvents::InputChangedCatalog(input_value, input_type) => {
+            AppEvents::CatalogInputChanged(input_value, input_type) => {
                 match input_type {
                     CatalogInputs::ProductName => {
-                        self.catalog_view.load_product.product_name = input_value;
+                        self.catalog_controller.load_product.product_name = input_value;
                     }
                     CatalogInputs::AmountProduct => {
-                        match self.catalog_view.load_product.unit_measurement {
+                        match self.catalog_controller.load_product.unit_measurement {
                             UnitsMeasurement::Kilograms | UnitsMeasurement::Liters
                                 if input_value.parse::<f64>().is_ok() =>
                             {
-                                self.catalog_view.load_product.amount = input_value;
+                                self.catalog_controller.load_product.amount = input_value;
                             }
                             UnitsMeasurement::Pieces if input_value.parse::<u64>().is_ok() => {
-                                self.catalog_view.load_product.amount = input_value;
+                                self.catalog_controller.load_product.amount = input_value;
                             }
                             _ => (),
                         }
                     }
                     CatalogInputs::ClientPrice if input_value.parse::<f64>().is_ok() => {
-                        self.catalog_view.load_product.user_price = input_value
+                        self.catalog_controller.load_product.user_price = input_value
                     }
                     CatalogInputs::MinAmountProduct if input_value.parse::<f64>().is_ok() => {
-                        self.catalog_view.load_product.min_amount = input_value
+                        self.catalog_controller.load_product.min_amount = input_value
                     }
                     CatalogInputs::CostProduct if input_value.parse::<f64>().is_ok() => {
-                        self.catalog_view.load_product.cost = input_value
+                        self.catalog_controller.load_product.cost = input_value
                     }
                     _ => (),
                 }
@@ -171,22 +219,24 @@ impl Application for App {
             }
             AppEvents::CatalogNewRecordCancel => {
                 self.current_view = Views::Catalog;
-                self.catalog_view.reset_values();
+                self.listen_barcode_device = true;
+                self.catalog_controller.reset_values();
                 Command::none()
             }
             AppEvents::CatalogNewRecordOk => {
                 self.current_view = Views::Catalog;
-                self.catalog_view.products_to_add.insert(
-                    self.catalog_view.load_product.get_id(),
-                    self.catalog_view.load_product.clone(),
+                self.catalog_controller.products_to_add.insert(
+                    self.catalog_controller.load_product.get_id(),
+                    self.catalog_controller.load_product.clone(),
                 );
-                self.catalog_view.reset_values();
+                self.listen_barcode_device = true;
+                self.catalog_controller.reset_values();
                 Command::none()
             }
             AppEvents::CatalogSaveAllRecords => Command::perform(
                 ProductRepo::save_products_catalog(
                     db_connection,
-                    self.catalog_view
+                    self.catalog_controller
                         .products_to_add
                         .values()
                         .map(models::catalog::LoadProduct::from)
@@ -199,18 +249,17 @@ impl Application for App {
                     Ok(_) => (),
                     Err(err) => eprintln!("{:#?}", err),
                 };
-                self.catalog_view.products_to_add = HashMap::new();
+                self.catalog_controller.products_to_add = HashMap::new();
                 self.current_view = Views::Catalog;
                 Command::none()
             }
             AppEvents::CatalogPickListSelected(unit) => {
-                self.catalog_view.load_product.unit_measurement = unit;
-                self.catalog_view.load_product.amount = "1".to_string();
+                self.catalog_controller.load_product.unit_measurement = unit;
+                self.catalog_controller.load_product.amount = "1".to_string();
                 Command::none()
             }
-            AppEvents::RemoveRecordList(id) => {
-                self.catalog_view.products_to_add.remove(&id);
-                self.catalog_view.reset_values();
+            AppEvents::CatalogRemoveRecordList(id) => {
+                self.catalog_controller.products_to_add.remove(&id);
                 Command::none()
             }
             _ => Command::none(),
@@ -251,24 +300,26 @@ impl Application for App {
 
         let col = Column::new()
             .spacing(SPACE_COLUMNS)
+            .padding(10)
             .align_items(Alignment::Center)
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
             .push(box_buttons_next_views);
 
         let content = match self.current_view {
-            Views::Sale => self.sale_view.view(),
+            Views::Sale => {
+                self.listen_barcode_device = true;
+                self.sale_controller.scan_barcodes_view()
+            }
+            Views::SaleAddProductForm => self.sale_controller.product_to_add_view(),
             Views::SalesInfo => self.sales_info_view.view(),
-            Views::ToBuy => self.to_buy_view.view(),
-            Views::Catalog => self.catalog_view.catalog_list_view(),
-            Views::CatalogAddRecord => self.catalog_view.populate_record_view(),
+            Views::ToBuy => self.to_buy_controller.view(),
+            Views::Catalog => self.catalog_controller.catalog_list_view(),
+            Views::CatalogAddRecord => self.catalog_controller.populate_record_view(),
         };
 
         let col = col.push(content);
 
-        Container::new(col)
-            .center_x()
-            .center_y()
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .into()
+        col.into()
     }
 }

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use sqlx::types::BigDecimal;
 
-use crate::schemas;
+use crate::{constants::PGMONEY_DECIMALS, schemas};
 
 #[derive(sqlx::FromRow, Debug, Clone)]
 pub struct ProductsToBuy {
@@ -41,19 +41,15 @@ pub struct LoadProduct {
 
 impl From<&schemas::catalog::LoadProduct> for LoadProduct {
     fn from(schema: &schemas::catalog::LoadProduct) -> Self {
-        let unit_measurement_id: i16 = match schema.unit_measurement {
-            crate::kinds::UnitsMeasurement::Kilograms => 1,
-            crate::kinds::UnitsMeasurement::Liters => 2,
-            crate::kinds::UnitsMeasurement::Pieces => 3,
-        };
+        let unit_measurement_id: i16 = i16::from(schema.unit_measurement);
         let user_price = sqlx::postgres::types::PgMoney::from_bigdecimal(
             BigDecimal::from_str(&schema.user_price).unwrap(),
-            2,
+            PGMONEY_DECIMALS,
         )
         .unwrap();
         let cost = sqlx::postgres::types::PgMoney::from_bigdecimal(
             BigDecimal::from_str(&schema.cost).unwrap(),
-            2,
+            PGMONEY_DECIMALS,
         )
         .unwrap();
         let min_amount = BigDecimal::from_str(&schema.min_amount).unwrap();

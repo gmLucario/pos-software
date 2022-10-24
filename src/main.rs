@@ -13,14 +13,17 @@ pub mod views;
 use iced::{Application, Settings};
 use sqlx::postgres::PgPoolOptions;
 
-use crate::config::APP_CONFIG;
-use crate::db::{Db, INSTANCE_DB};
-use crate::domain::App;
+use crate::{
+    config::APP_CONFIG,
+    constants::MAX_CONNECTIONS_POOL,
+    db::{Db, INSTANCE_DB},
+    domain::App,
+};
 
 #[async_std::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgPoolOptions::new()
-        .max_connections(2)
+        .max_connections(MAX_CONNECTIONS_POOL)
         .connect(&APP_CONFIG.lock().await.get_db_url())
         .await?;
     let pool_db = Db::with_pool_connection(pool);
