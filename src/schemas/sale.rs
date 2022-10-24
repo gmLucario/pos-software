@@ -1,6 +1,13 @@
-use sqlx::types::BigDecimal;
+use std::str::FromStr;
 
-use crate::{constants::TO_DECIMAL_DIGITS, kinds::UnitsMeasurement, models};
+use iced::button;
+use sqlx::{postgres::types::PgMoney, types::BigDecimal};
+
+use crate::{
+    constants::{PGMONEY_DECIMALS, TO_DECIMAL_DIGITS},
+    kinds::UnitsMeasurement,
+    models,
+};
 
 #[derive(Default, Debug, Clone)]
 pub struct ProductToAdd {
@@ -29,6 +36,29 @@ impl From<models::sale::SaleProductInfo> for ProductToAdd {
             unit_measurement,
             amount: model.amount.to_string(),
             total_amount: model.total_amount,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ProductList {
+    pub product_name: String,
+    pub amount: BigDecimal,
+    pub price: PgMoney,
+    pub delete_btn_state: button::State,
+}
+
+impl From<&ProductToAdd> for ProductList {
+    fn from(schema: &ProductToAdd) -> Self {
+        let amount = BigDecimal::from_str(&schema.amount).unwrap();
+        let price = BigDecimal::from_str(&schema.price).unwrap();
+        let price = PgMoney::from_bigdecimal(price * &amount, PGMONEY_DECIMALS).unwrap();
+
+        Self {
+            product_name: schema.product_name.to_string(),
+            delete_btn_state: button::State::new(),
+            amount,
+            price,
         }
     }
 }
