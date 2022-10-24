@@ -19,4 +19,5 @@ pub const SPACE_COLUMNS: u16 = 10;
 
 // Data
 pub const TO_DECIMAL_DIGITS: i64 = 2;
+pub const PGMONEY_DECIMALS: u32 = 2;
 pub const MAX_CONNECTIONS_POOL: u32 = 2;
