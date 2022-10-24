@@ -104,6 +104,7 @@ pub enum AppEvents {
     SaleNewProductOk,
     SaleProductsToBuyCancel,
     SaleProductsToBuyOk,
+    SaleRemoveProductToBuyList(String),
 
     // ToBuy view
     ToBuyData(Result<Vec<ProductsToBuy>, String>),

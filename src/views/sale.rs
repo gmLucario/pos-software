@@ -99,7 +99,6 @@ impl controllers::sale::Sale {
                     .width(Length::FillPortion(2))
                     .size(SIZE_TEXT),
             )
-            .push(Text::new("").size(SIZE_TEXT))
     }
 
     pub fn scan_barcodes_view(&mut self) -> Element<AppEvents> {
@@ -115,13 +114,17 @@ impl controllers::sale::Sale {
         let are_products: bool = !self.products.is_empty();
 
         let mut total_pay = PgMoney(0);
-        for (_, product) in self.products.iter_mut() {
+        for (key, product) in self.products.iter_mut() {
             total_pay += product.price;
-            products_container =
-                products_container.push(Self::format_product_row(product).push(Button::new(
-                    &mut product.delete_btn_state,
-                    Text::new('\u{F1F8}'.to_string()).font(fonts::ICONS),
-                )));
+            products_container = products_container.push(
+                Self::format_product_row(product).push(
+                    Button::new(
+                        &mut product.delete_btn_state,
+                        Text::new('\u{F1F8}'.to_string()).font(fonts::ICONS),
+                    )
+                    .on_press(AppEvents::SaleRemoveProductToBuyList(key.to_string())),
+                ),
+            );
         }
 
         let products_container = Scrollable::new(&mut self.scroll_list_state)
