@@ -1,10 +1,9 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use iced::{
     button, executor, Alignment, Application, Button, Column, Command, Element, Row, Subscription,
     Text,
 };
-use sqlx::{postgres::types::PgMoney, types::BigDecimal};
 
 use crate::{
     constants::{
@@ -15,7 +14,7 @@ use crate::{
     data::product_repo::ProductRepo,
     db::Db,
     kinds::{AppEvents, CatalogInputs, UnitsMeasurement, Views},
-    models::{self, sale::SaleProductInfo},
+    models,
     schemas::{catalog::LoadProduct, sale::ProductToAdd},
     views::sales_info,
 };
@@ -75,9 +74,13 @@ impl Application for App {
             AppEvents::ToBuyData(result) => {
                 self.current_view = Views::ToBuy;
                 match result {
-                    Err(err) => eprintln!("{:#?}", err),
+                    Err(err) => eprintln!("{err}"),
                     Ok(to_buy) => self.to_buy_controller.products = to_buy,
                 }
+                Command::none()
+            }
+            AppEvents::ShowSalesInfo => {
+                self.current_view = Views::SalesInfo;
                 Command::none()
             }
             AppEvents::ShowSale => {
@@ -90,18 +93,26 @@ impl Application for App {
                     Err(err) => eprintln!("{err}"),
                     Ok(record) => match record {
                         Some(data) => {
-                            self.listen_barcode_device = false;
-                            self.current_view = Views::SaleAddProductForm;
-
+                            let unit = UnitsMeasurement::from(data.unit_measurement_id);
                             self.sale_controller.product_to_add = ProductToAdd::from(data);
+
+                            match unit {
+                                UnitsMeasurement::Pieces => {
+                                    self.sale_controller.add_new_product_to_sale();
+
+                                    self.current_view = Views::Sale;
+                                    self.listen_barcode_device = true;
+                                    self.sale_controller.product_to_add.reset_values();
+                                }
+                                _ => {
+                                    self.listen_barcode_device = false;
+                                    self.current_view = Views::SaleAddProductForm;
+                                }
+                            }
                         }
                         None => self.sale_controller.product_to_add.barcode.clear(),
                     },
                 }
-                Command::none()
-            }
-            AppEvents::ShowSalesInfo => {
-                self.current_view = Views::SalesInfo;
                 Command::none()
             }
             AppEvents::SaleInputChanged(input_value, input_type) => {
@@ -123,28 +134,7 @@ impl Application for App {
                 Command::none()
             }
             AppEvents::SaleNewProductOk => {
-                let barcode: String = format!("{}", self.sale_controller.product_to_add.barcode);
-
-                let price =
-                    BigDecimal::from_str(&self.sale_controller.product_to_add.price).unwrap();
-                let mut amount =
-                    BigDecimal::from_str(&self.sale_controller.product_to_add.amount).unwrap();
-                amount = match self.sale_controller.products.get(&barcode) {
-                    Some(product) => amount + &product.amount,
-                    None => amount,
-                };
-
-                if amount < self.sale_controller.product_to_add.total_amount {
-                    self.sale_controller
-                        .products
-                        .entry(barcode)
-                        .and_modify(|element| {
-                            element.price = PgMoney::from_bigdecimal(price * &amount, 2).unwrap();
-
-                            element.amount = amount;
-                        })
-                        .or_insert(SaleProductInfo::from(&self.sale_controller.product_to_add));
-                };
+                self.sale_controller.add_new_product_to_sale();
 
                 self.current_view = Views::Sale;
                 self.listen_barcode_device = true;

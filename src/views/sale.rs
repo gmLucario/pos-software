@@ -5,8 +5,10 @@ use crate::{
     constants::{SIZE_TEXT, SPACE_COLUMNS, TO_DECIMAL_DIGITS},
     controllers,
     kinds::{AppEvents, SaleInputs},
-    models::sale::SaleProductInfo,
+    schemas::sale::ProductList,
 };
+
+use super::fonts;
 
 impl controllers::sale::Sale {
     pub fn product_to_add_view(&mut self) -> Element<AppEvents> {
@@ -48,7 +50,7 @@ impl controllers::sale::Sale {
             .push(
                 Row::new()
                     .push(
-                        Button::new(&mut self.cancel_new_record_btn_state, Text::new("Cancel"))
+                        Button::new(&mut self.cancel_new_record_btn_state, Text::new("Cancelar"))
                             .on_press(AppEvents::SaleNewProductCancel),
                     )
                     .push(
@@ -80,7 +82,7 @@ impl controllers::sale::Sale {
             .push(Text::new("").size(SIZE_TEXT))
     }
 
-    fn format_product_row<'a>(product: &SaleProductInfo) -> Row<'a, AppEvents> {
+    fn format_product_row<'a>(product: &ProductList) -> Row<'a, AppEvents> {
         Row::new()
             .push(
                 Text::new(product.product_name.to_string())
@@ -110,21 +112,42 @@ impl controllers::sale::Sale {
             .spacing(SPACE_COLUMNS)
             .push(Self::get_list_products_header());
 
+        let are_products: bool = !self.products.is_empty();
+
         let mut total_pay = PgMoney(0);
-        for (_, product) in self.products.iter() {
+        for (_, product) in self.products.iter_mut() {
             total_pay += product.price;
-            products_container = products_container.push(Self::format_product_row(product));
+            products_container =
+                products_container.push(Self::format_product_row(product).push(Button::new(
+                    &mut product.delete_btn_state,
+                    Text::new('\u{F1F8}'.to_string()).font(fonts::ICONS),
+                )));
         }
-        let total_pay = total_pay.to_bigdecimal(TO_DECIMAL_DIGITS);
 
         let products_container = Scrollable::new(&mut self.scroll_list_state)
             .push(products_container)
             .width(Length::Fill)
             .height(Length::Fill);
 
-        general_container = general_container
-            .push(products_container)
-            .push(Text::new(format!("Total: {}", total_pay)).size(SIZE_TEXT));
+        general_container = general_container.push(products_container).push(
+            Text::new(format!(
+                "Total: {}",
+                total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
+            ))
+            .size(SIZE_TEXT),
+        );
+
+        if are_products {
+            general_container = general_container.push(
+                Row::new()
+                    .spacing(10)
+                    .push(Button::new(
+                        &mut self.cancel_list_to_pay_state,
+                        Text::new("Cancelar"),
+                    ))
+                    .push(Button::new(&mut self.ok_list_to_pay_state, Text::new("Ok"))),
+            );
+        }
 
         general_container.into()
     }
