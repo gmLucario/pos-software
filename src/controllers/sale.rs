@@ -83,7 +83,7 @@ impl Sale {
     }
 
     pub fn add_new_product_to_sale(&mut self) {
-        let barcode: String = format!("{}", self.product_to_add.barcode);
+        let barcode: String = self.product_to_add.barcode.to_string();
 
         let price = BigDecimal::from_str(&self.product_to_add.price).unwrap();
         let mut amount = BigDecimal::from_str(&self.product_to_add.amount).unwrap();
@@ -101,7 +101,7 @@ impl Sale {
                     element.price = price;
                     element.amount = amount;
                 })
-                .or_insert(ProductList::from(&self.product_to_add));
+                .or_insert_with(|| ProductList::from(&self.product_to_add));
         };
     }
 

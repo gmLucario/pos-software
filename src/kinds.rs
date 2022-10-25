@@ -28,7 +28,8 @@ impl From<i16> for UnitsMeasurement {
         match value {
             1 => UnitsMeasurement::Kilograms,
             2 => UnitsMeasurement::Liters,
-            3 | _ => UnitsMeasurement::Pieces,
+            3 => UnitsMeasurement::Pieces,
+            _ => UnitsMeasurement::Pieces,
         }
     }
 }
