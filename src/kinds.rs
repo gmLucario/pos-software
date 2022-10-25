@@ -9,6 +9,7 @@ use crate::models::{
 pub enum Views {
     Sale,
     SaleAddProductForm,
+    SaleChargeForm,
     SalesInfo,
     ToBuy,
     Catalog,
@@ -79,6 +80,8 @@ pub enum CatalogInputs {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SaleInputs {
     AmountProduct,
+    UserPay,
+    ClientName,
 }
 
 #[derive(Debug, Clone)]
@@ -105,6 +108,7 @@ pub enum AppEvents {
     SaleProductsToBuyCancel,
     SaleProductsToBuyOk,
     SaleRemoveProductToBuyList(String),
+    SaleCreateNewSale,
 
     // ToBuy view
     ToBuyData(Result<Vec<ProductsToBuy>, String>),
