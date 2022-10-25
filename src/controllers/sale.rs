@@ -9,16 +9,17 @@ use sqlx::{
 };
 
 use crate::{
-    constants::{CHARS_SAVED_AS_BARCODE, PGMONEY_DECIMALS},
+    constants::{CHARS_SAVED_AS_BARCODE, PGMONEY_DECIMALS, TO_DECIMAL_DIGITS},
     data::product_repo::ProductRepo,
     kinds::AppEvents,
     schemas::sale::{ProductList, ProductToAdd},
 };
 
-#[derive(Default)]
 pub struct Sale {
     // States
     pub amount_input_state: text_input::State,
+    pub client_pay_input_state: text_input::State,
+    pub client_name_input_state: text_input::State,
     pub cancel_new_record_btn_state: button::State,
     pub ok_new_record_btn_state: button::State,
     pub scroll_list_state: scrollable::State,
@@ -28,11 +29,61 @@ pub struct Sale {
     // Data
     pub product_to_add: ProductToAdd,
     pub products: HashMap<String, ProductList>,
+    pub total_pay: PgMoney,
+    pub client_pay: String,
+    pub client_name: String,
+    pub payback_money: PgMoney,
+}
+
+impl Default for Sale {
+    fn default() -> Self {
+        Self {
+            amount_input_state: text_input::State::focused(),
+            client_pay_input_state: text_input::State::focused(),
+            client_name_input_state: text_input::State::new(),
+            cancel_new_record_btn_state: Default::default(),
+            ok_new_record_btn_state: Default::default(),
+            scroll_list_state: Default::default(),
+            ok_list_to_pay_state: Default::default(),
+            cancel_list_to_pay_state: Default::default(),
+            product_to_add: Default::default(),
+            products: Default::default(),
+            total_pay: PgMoney(0),
+            payback_money: PgMoney(0),
+            client_pay: Default::default(),
+            client_name: Default::default(),
+        }
+    }
 }
 
 impl Sale {
+    pub fn reset_sale_form_values(&mut self) {
+        self.product_to_add.reset_values();
+        self.client_pay.clear();
+        self.client_name.clear();
+    }
+
+    pub fn is_ok_charge(&self) -> bool {
+        !self.client_pay.is_empty() && !self.is_pay_later()
+            || (!self.client_pay.is_empty() && self.is_pay_later() && !self.client_name.is_empty())
+    }
+
+    pub fn is_pay_later(&self) -> bool {
+        self.payback_money.to_bigdecimal(TO_DECIMAL_DIGITS) < BigDecimal::default()
+    }
+
+    pub fn calculate_payback_money(&mut self) {
+        let user_pay = PgMoney::from_bigdecimal(
+            BigDecimal::from_str(&self.client_pay).unwrap(),
+            PGMONEY_DECIMALS,
+        )
+        .unwrap();
+
+        self.payback_money = user_pay - self.total_pay;
+    }
+
     pub fn add_new_product_to_sale(&mut self) {
-        let barcode: String = format!("{}", self.product_to_add.barcode);
+        let barcode: String = self.product_to_add.barcode.to_string();
 
         let price = BigDecimal::from_str(&self.product_to_add.price).unwrap();
         let mut amount = BigDecimal::from_str(&self.product_to_add.amount).unwrap();
@@ -50,7 +101,7 @@ impl Sale {
                     element.price = price;
                     element.amount = amount;
                 })
-                .or_insert(ProductList::from(&self.product_to_add));
+                .or_insert_with(|| ProductList::from(&self.product_to_add));
         };
     }
 

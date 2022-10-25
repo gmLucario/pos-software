@@ -27,7 +27,7 @@ Help to manage a small store like:
     - [x] list products view
     - [x] logic remove product list
     - [x] total to pay sale view
-    - [ ] payback money logic
+    - [x] payback money logic
     - [ ] store transactions
     - [ ] update tables based on transactions
 - [ ] sale info statics
