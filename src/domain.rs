@@ -13,7 +13,7 @@ use crate::{
     controllers,
     data::product_repo::ProductRepo,
     db::Db,
-    kinds::{AppEvents, CatalogInputs, UnitsMeasurement, Views},
+    kinds::{AppEvents, CatalogInputs, SaleInputs, UnitsMeasurement, Views},
     models,
     schemas::{catalog::LoadProduct, sale::ProductToAdd},
     views::sales_info,
@@ -117,10 +117,15 @@ impl Application for App {
             }
             AppEvents::SaleInputChanged(input_value, input_type) => {
                 match input_type {
-                    crate::kinds::SaleInputs::AmountProduct
-                        if input_value.parse::<f64>().is_ok() =>
-                    {
+                    SaleInputs::AmountProduct if input_value.parse::<f64>().is_ok() => {
                         self.sale_controller.product_to_add.amount = input_value;
+                    }
+                    SaleInputs::UserPay if input_value.parse::<f64>().is_ok() => {
+                        self.sale_controller.client_pay = input_value;
+                        self.sale_controller.calculate_payback_money();
+                    }
+                    SaleInputs::ClientName => {
+                        self.sale_controller.client_name = input_value;
                     }
                     _ => (),
                 }
@@ -129,8 +134,9 @@ impl Application for App {
             }
             AppEvents::SaleNewProductCancel => {
                 self.current_view = Views::Sale;
+
                 self.listen_barcode_device = true;
-                self.sale_controller.product_to_add.reset_values();
+                self.sale_controller.reset_sale_form_values();
                 Command::none()
             }
             AppEvents::SaleNewProductOk => {
@@ -144,6 +150,10 @@ impl Application for App {
             }
             AppEvents::SaleProductsToBuyCancel => {
                 self.sale_controller.products.clear();
+                Command::none()
+            }
+            AppEvents::SaleProductsToBuyOk => {
+                self.current_view = Views::SaleChargeForm;
                 Command::none()
             }
             AppEvents::SaleRemoveProductToBuyList(id) => {
@@ -312,6 +322,7 @@ impl Application for App {
                 self.sale_controller.scan_barcodes_view()
             }
             Views::SaleAddProductForm => self.sale_controller.product_to_add_view(),
+            Views::SaleChargeForm => self.sale_controller.charge_sale_view(),
             Views::SalesInfo => self.sales_info_view.view(),
             Views::ToBuy => self.to_buy_controller.view(),
             Views::Catalog => self.catalog_controller.catalog_list_view(),
