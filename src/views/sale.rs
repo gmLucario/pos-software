@@ -1,4 +1,4 @@
-use iced::{Button, Column, Element, Length, Row, Scrollable, Text, TextInput};
+use iced::{Alignment, Button, Column, Element, Length, Row, Scrollable, Text, TextInput};
 use sqlx::postgres::types::PgMoney;
 
 use crate::{
@@ -11,6 +11,77 @@ use crate::{
 use super::fonts;
 
 impl controllers::sale::Sale {
+    pub fn charge_sale_view(&mut self) -> Element<AppEvents> {
+        let is_pay_later = self.is_pay_later();
+        let is_ok_to_charge = self.is_ok_charge();
+
+        let mut ok_btn = Button::new(&mut self.ok_new_record_btn_state, Text::new("Ok"));
+        if is_ok_to_charge {
+            ok_btn = ok_btn.on_press(AppEvents::SaleCreateNewSale);
+        }
+
+        let pay_back_money = if is_pay_later {
+            PgMoney(0)
+        } else {
+            self.payback_money
+        };
+
+        let mut container = Column::new()
+            .padding(60)
+            .spacing(10)
+            .align_items(Alignment::Center)
+            .push(
+                Text::new(format!(
+                    "Total: {}",
+                    self.total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
+                ))
+                .size(SIZE_TEXT),
+            )
+            .push(
+                TextInput::new(
+                    &mut self.client_pay_input_state,
+                    "Pago:",
+                    &self.client_pay,
+                    |input_value| AppEvents::SaleInputChanged(input_value, SaleInputs::UserPay),
+                )
+                .on_submit(AppEvents::SaleCreateNewSale)
+                .size(SIZE_TEXT)
+                .width(Length::Units(100)),
+            )
+            .push(
+                Text::new(format!(
+                    "Cambio: {}",
+                    pay_back_money.to_bigdecimal(TO_DECIMAL_DIGITS)
+                ))
+                .size(SIZE_TEXT),
+            );
+
+        if is_pay_later {
+            container = container.push(
+                TextInput::new(
+                    &mut self.client_name_input_state,
+                    "Cliente:",
+                    &self.client_name,
+                    |input_value| AppEvents::SaleInputChanged(input_value, SaleInputs::ClientName),
+                )
+                .on_submit(AppEvents::SaleCreateNewSale)
+                .size(SIZE_TEXT)
+                .width(Length::Units(500)),
+            )
+        }
+        container = container.push(
+            Row::new()
+                .push(
+                    Button::new(&mut self.cancel_new_record_btn_state, Text::new("Cancelar"))
+                        .on_press(AppEvents::SaleNewProductCancel),
+                )
+                .push(ok_btn)
+                .spacing(20),
+        );
+
+        container.into()
+    }
+
     pub fn product_to_add_view(&mut self) -> Element<AppEvents> {
         Column::new()
             .padding(60)
@@ -113,9 +184,9 @@ impl controllers::sale::Sale {
 
         let are_products: bool = !self.products.is_empty();
 
-        let mut total_pay = PgMoney(0);
+        self.total_pay = PgMoney(0);
         for (key, product) in self.products.iter_mut() {
-            total_pay += product.price;
+            self.total_pay += product.price;
             products_container = products_container.push(
                 Self::format_product_row(product).push(
                     Button::new(
@@ -135,7 +206,7 @@ impl controllers::sale::Sale {
         general_container = general_container.push(products_container).push(
             Text::new(format!(
                 "Total: {}",
-                total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
+                self.total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
             ))
             .size(SIZE_TEXT),
         );
@@ -148,7 +219,10 @@ impl controllers::sale::Sale {
                         Button::new(&mut self.cancel_list_to_pay_state, Text::new("Cancelar"))
                             .on_press(AppEvents::SaleProductsToBuyCancel),
                     )
-                    .push(Button::new(&mut self.ok_list_to_pay_state, Text::new("Ok"))),
+                    .push(
+                        Button::new(&mut self.ok_list_to_pay_state, Text::new("Ok"))
+                            .on_press(AppEvents::SaleProductsToBuyOk),
+                    ),
             );
         }
 
