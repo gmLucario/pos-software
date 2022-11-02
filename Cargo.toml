@@ -8,8 +8,8 @@ authors = ["Gerardo Lucario <gmlukario@gmail.com>"]
 [dependencies]
 iced = {version = "0.4.2", features = ["tokio"] }
 sqlx = {version = "0.6.2", features = [ "runtime-async-std-native-tls", "postgres", "uuid", "bigdecimal"] }
-serde = { version = "1.0.145", features = ["derive"] }
+serde = { version = "1.0.147", features = ["derive"] }
 envy = "0.4.2"
-once_cell = "1.15.0"
+once_cell = "1.16.0"
 async-std = { version = "1.12.0", features = ["attributes"]}
 iced_native = "0.5.1"
