@@ -23,7 +23,7 @@ impl controllers::sale::Sale {
         let pay_back_money = if is_pay_later {
             PgMoney(0)
         } else {
-            self.payback_money
+            self.sale_info.payback_money
         };
 
         let mut container = Column::new()
@@ -33,7 +33,7 @@ impl controllers::sale::Sale {
             .push(
                 Text::new(format!(
                     "Total: {}",
-                    self.total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
+                    self.sale_info.total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
                 ))
                 .size(SIZE_TEXT),
             )
@@ -41,7 +41,7 @@ impl controllers::sale::Sale {
                 TextInput::new(
                     &mut self.client_pay_input_state,
                     "Pago:",
-                    &self.client_pay,
+                    &self.sale_info.client_pay,
                     |input_value| AppEvents::SaleInputChanged(input_value, SaleInputs::UserPay),
                 )
                 .on_submit(AppEvents::SaleCreateNewSale)
@@ -61,7 +61,7 @@ impl controllers::sale::Sale {
                 TextInput::new(
                     &mut self.client_name_input_state,
                     "Cliente:",
-                    &self.client_name,
+                    &self.sale_info.client_name,
                     |input_value| AppEvents::SaleInputChanged(input_value, SaleInputs::ClientName),
                 )
                 .on_submit(AppEvents::SaleCreateNewSale)
@@ -182,11 +182,11 @@ impl controllers::sale::Sale {
             .spacing(SPACE_COLUMNS)
             .push(Self::get_list_products_header());
 
-        let are_products: bool = !self.products.is_empty();
+        let are_products: bool = !self.sale_info.products.is_empty();
 
-        self.total_pay = PgMoney(0);
-        for (key, product) in self.products.iter_mut() {
-            self.total_pay += product.price;
+        self.sale_info.total_pay = PgMoney(0);
+        for (key, product) in self.sale_info.products.iter_mut() {
+            self.sale_info.total_pay += product.price;
             products_container = products_container.push(
                 Self::format_product_row(product).push(
                     Button::new(
@@ -206,7 +206,7 @@ impl controllers::sale::Sale {
         general_container = general_container.push(products_container).push(
             Text::new(format!(
                 "Total: {}",
-                self.total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
+                self.sale_info.total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
             ))
             .size(SIZE_TEXT),
         );
