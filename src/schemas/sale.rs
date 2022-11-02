@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use iced::button;
 use sqlx::{postgres::types::PgMoney, types::BigDecimal};
@@ -59,6 +59,27 @@ impl From<&ProductToAdd> for ProductList {
             delete_btn_state: button::State::new(),
             amount,
             price,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SaleInfo {
+    pub products: HashMap<String, ProductList>,
+    pub total_pay: PgMoney,
+    pub client_pay: String,
+    pub client_name: String,
+    pub payback_money: PgMoney,
+}
+
+impl Default for SaleInfo {
+    fn default() -> Self {
+        Self {
+            products: Default::default(),
+            total_pay: PgMoney(0),
+            client_pay: Default::default(),
+            client_name: Default::default(),
+            payback_money: PgMoney(0),
         }
     }
 }
