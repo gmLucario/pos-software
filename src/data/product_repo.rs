@@ -4,12 +4,12 @@ use crate::{
         sale::SaleProductInfo,
     },
     queries::{
-        GET_PRODUCTS_TO_BUY, GET_PRODUCT_CATALOG_INFO, GET_SALE_PRODUCT_INFO,
-        INSERT_PRODUCT_CATALOG,
+        GET_PRODUCTS_TO_BUY, GET_PRODUCT_CATALOG_INFO, GET_PRODUCT_ID_BY_BARCODE,
+        GET_SALE_PRODUCT_INFO, INSERT_PRODUCT_CATALOG,
     },
 };
 
-use sqlx::{pool::Pool, postgres::Postgres};
+use sqlx::{pool::Pool, postgres::Postgres, types::Uuid};
 
 pub struct ProductRepo {}
 
@@ -73,5 +73,18 @@ impl ProductRepo {
             .map_err(|err| err.to_string())?;
 
         Ok(result)
+    }
+
+    pub async fn get_product_id(
+        connection: &Pool<Postgres>,
+        barcode: &str,
+    ) -> Result<Uuid, String> {
+        let (product_id,): (Uuid,) = sqlx::query_as(GET_PRODUCT_ID_BY_BARCODE)
+            .bind(barcode)
+            .fetch_one(connection)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Ok(product_id)
     }
 }

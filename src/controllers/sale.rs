@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
 use iced::{button, keyboard::Event, keyboard::KeyCode, scrollable, text_input, Command};
 use iced_native::Event::Keyboard;
@@ -12,7 +12,7 @@ use crate::{
     constants::{CHARS_SAVED_AS_BARCODE, PGMONEY_DECIMALS, TO_DECIMAL_DIGITS},
     data::product_repo::ProductRepo,
     kinds::AppEvents,
-    schemas::sale::{ProductList, ProductToAdd},
+    schemas::sale::{ProductList, ProductToAdd, SaleInfo},
 };
 
 pub struct Sale {
@@ -28,11 +28,7 @@ pub struct Sale {
 
     // Data
     pub product_to_add: ProductToAdd,
-    pub products: HashMap<String, ProductList>,
-    pub total_pay: PgMoney,
-    pub client_pay: String,
-    pub client_name: String,
-    pub payback_money: PgMoney,
+    pub sale_info: SaleInfo,
 }
 
 impl Default for Sale {
@@ -46,12 +42,8 @@ impl Default for Sale {
             scroll_list_state: Default::default(),
             ok_list_to_pay_state: Default::default(),
             cancel_list_to_pay_state: Default::default(),
-            product_to_add: Default::default(),
-            products: Default::default(),
-            total_pay: PgMoney(0),
-            payback_money: PgMoney(0),
-            client_pay: Default::default(),
-            client_name: Default::default(),
+            product_to_add: ProductToAdd::default(),
+            sale_info: SaleInfo::default(),
         }
     }
 }
@@ -59,27 +51,32 @@ impl Default for Sale {
 impl Sale {
     pub fn reset_sale_form_values(&mut self) {
         self.product_to_add.reset_values();
-        self.client_pay.clear();
-        self.client_name.clear();
+        self.sale_info.client_pay.clear();
+        self.sale_info.client_name.clear();
     }
 
     pub fn is_ok_charge(&self) -> bool {
-        !self.client_pay.is_empty() && !self.is_pay_later()
-            || (!self.client_pay.is_empty() && self.is_pay_later() && !self.client_name.is_empty())
+        !self.sale_info.client_pay.is_empty() && !self.is_pay_later()
+            || (!self.sale_info.client_pay.is_empty()
+                && self.is_pay_later()
+                && !self.sale_info.client_name.is_empty())
     }
 
     pub fn is_pay_later(&self) -> bool {
-        self.payback_money.to_bigdecimal(TO_DECIMAL_DIGITS) < BigDecimal::default()
+        self.sale_info
+            .payback_money
+            .to_bigdecimal(TO_DECIMAL_DIGITS)
+            < BigDecimal::default()
     }
 
     pub fn calculate_payback_money(&mut self) {
         let user_pay = PgMoney::from_bigdecimal(
-            BigDecimal::from_str(&self.client_pay).unwrap(),
+            BigDecimal::from_str(&self.sale_info.client_pay).unwrap(),
             PGMONEY_DECIMALS,
         )
         .unwrap();
 
-        self.payback_money = user_pay - self.total_pay;
+        self.sale_info.payback_money = user_pay - self.sale_info.total_pay;
     }
 
     pub fn add_new_product_to_sale(&mut self) {
@@ -87,7 +84,7 @@ impl Sale {
 
         let price = BigDecimal::from_str(&self.product_to_add.price).unwrap();
         let mut amount = BigDecimal::from_str(&self.product_to_add.amount).unwrap();
-        amount = match self.products.get(&barcode) {
+        amount = match self.sale_info.products.get(&barcode) {
             Some(product) => amount + &product.amount,
             None => amount,
         };
@@ -95,7 +92,8 @@ impl Sale {
         let price = PgMoney::from_bigdecimal(price * &amount, PGMONEY_DECIMALS).unwrap();
 
         if amount <= self.product_to_add.total_amount {
-            self.products
+            self.sale_info
+                .products
                 .entry(barcode)
                 .and_modify(|element| {
                     element.price = price;

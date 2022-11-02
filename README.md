@@ -28,11 +28,15 @@ Help to manage a small store like:
     - [x] logic remove product list
     - [x] total to pay sale view
     - [x] payback money logic
-    - [ ] store transactions
-    - [ ] update tables based on transactions
+    - [x] store operations
+    - [x] update tables based on operations
+    - [ ] save info if sale is a loan
 - [ ] sale info statics
+    - [ ] sale earnings and total list
 - [ ] logger handler
     - [ ] save logs file
+- [ ] rollback when db errors    
+
 
 # For devs
 

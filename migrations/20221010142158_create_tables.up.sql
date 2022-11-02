@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS product (
     barcode VARCHAR(100) UNIQUE,
     full_name VARCHAR(100),
     user_price MONEY,
-    min_amount NUMERIC(5,3) ,
+    min_amount NUMERIC(5,3),
     unit_measurement_id SMALLINT,
     created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
 
@@ -84,7 +84,8 @@ CREATE INDEX catalog_priced_at_idx ON catalog (priced_at);
 CREATE TABLE IF NOT EXISTS operation (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID,
-    amount_product NUMERIC(5,3) ,
+    amount_product NUMERIC(5,3),
+    cost MONEY,
     earning MONEY,
     condition_id SMALLINT,
     recorded_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
@@ -94,7 +95,7 @@ CREATE TABLE IF NOT EXISTS operation (
         REFERENCES product(id),
   CONSTRAINT fk_operation_condition_id
     FOREIGN KEY(condition_id)
-        REFERENCES item_condition(id)        
+        REFERENCES item_condition(id)
 );
 
 CREATE INDEX operation_recorded_at_idx ON operation (recorded_at);
@@ -106,7 +107,7 @@ CREATE INDEX operation_condition_idx ON operation (condition_id);
 
 CREATE TABLE IF NOT EXISTS sale (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    total_price MONEY,
+    client_payment MONEY,
     saled_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City')
 );
 
@@ -117,19 +118,17 @@ CREATE INDEX sale_saled_at_idx ON sale (saled_at);
 -- SaleProduct
 -- ///////
 
-CREATE TABLE IF NOT EXISTS sale_product (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS sale_operation (
     sale_id UUID,
-    product_id UUID,
-    amount SMALLINT,
-    earning MONEY,
+    operation_id UUID,
 
     CONSTRAINT fk_sale_id
         FOREIGN KEY(sale_id)
             REFERENCES sale(id),
-    CONSTRAINT fk_sale_product_id
-        FOREIGN KEY(product_id)
-            REFERENCES product(id)            
+    CONSTRAINT fk_sale_operation_id
+        FOREIGN KEY(operation_id)
+            REFERENCES operation(id),
+    PRIMARY KEY (sale_id, operation_id)
 );
 
 -- ///////
@@ -162,5 +161,5 @@ CREATE TABLE IF NOT EXISTS loan_payment (
 
     CONSTRAINT fk_loan_id
         FOREIGN KEY(loan_id)
-            REFERENCES loan(id)    
+            REFERENCES loan(id)
 );
