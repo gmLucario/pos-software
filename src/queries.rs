@@ -64,3 +64,84 @@ group by
 	product.user_price,
 	product.unit_measurement_id;
 "#;
+
+pub const INSERT_NEW_SALE: &str = r#"
+insert into sale (client_payment) values ($1) returning id;
+"#;
+
+pub const GET_PRODUCT_ID_BY_BARCODE: &str = r#"
+select product.id from product where barcode = $1;
+"#;
+
+pub const GET_PRODUCTS_CATALOG_UPDATE_SALE: &str = r#"
+with CatalogSum as (
+	select
+		"catalog".id as catalog_id,
+		"catalog".priced_at,
+		sum(current_amount) over (partition by product_id order by "catalog".priced_at asc) as product_amount
+	from "catalog"
+	where
+		"catalog".product_id  = $1
+)
+select 
+	"catalog".id as catalog_id,
+	"catalog".current_amount as amount,
+	"catalog"."cost" as "cost"
+from "catalog"
+where
+	"catalog".priced_at <= (
+		select 
+			CatalogSum.priced_at
+		from CatalogSum
+		where CatalogSum.product_amount >= $2
+		order by 
+			CatalogSum.product_amount asc
+		limit 1
+	)
+	and "catalog".product_id  = $1;
+"#;
+
+pub const UPDATE_CATALOG_AMOUNT: &str = r#"
+update "catalog"
+set
+	current_amount = $2
+where id = $1;
+"#;
+
+pub const DELETE_CATALOG_RECORD: &str = r#"
+delete from "catalog"
+where id = $1;
+"#;
+
+pub const CREATE_OPERATION_FROM_CATALOG: &str = r#"
+insert into operation (
+	product_id,
+	amount_product,
+	"cost",
+	earning,
+	condition_id
+)
+	select
+		p.id as product_id,
+		(c.current_amount - $2) as amount_product,
+		p.user_price as "cost",
+		(c.current_amount - $2) * (p.user_price - c."cost") as earning,
+		1 as condition_id
+	from product p
+	left join "catalog" c on (
+		c.product_id = p.id
+	)
+	where c.id = $1
+returning id;
+"#;
+
+pub const INSERT_NEW_SALE_OPERATION: &str = r#"
+insert into sale_operation (
+	sale_id,
+	operation_id
+)
+values (
+	$1,
+	$2
+);
+"#;
