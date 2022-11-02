@@ -28,11 +28,6 @@ pub struct Sale {
 
     // Data
     pub product_to_add: ProductToAdd,
-    // pub products: HashMap<String, ProductList>,
-    // pub total_pay: PgMoney,
-    // pub client_pay: String,
-    // pub client_name: String,
-    // pub payback_money: PgMoney,
     pub sale_info: SaleInfo,
 }
 
