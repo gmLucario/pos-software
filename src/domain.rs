@@ -11,10 +11,10 @@ use crate::{
         SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
     },
     controllers,
-    data::product_repo::ProductRepo,
+    data::{product_repo::ProductRepo, sale_repo::SaleRepo},
     db::Db,
     kinds::{AppEvents, CatalogInputs, SaleInputs, UnitsMeasurement, Views},
-    models,
+    models::{self, sale::Sale},
     schemas::{catalog::LoadProduct, sale::ProductToAdd},
     views::sales_info,
 };
@@ -121,11 +121,11 @@ impl Application for App {
                         self.sale_controller.product_to_add.amount = input_value;
                     }
                     SaleInputs::UserPay if input_value.parse::<f64>().is_ok() => {
-                        self.sale_controller.client_pay = input_value;
+                        self.sale_controller.sale_info.client_pay = input_value;
                         self.sale_controller.calculate_payback_money();
                     }
                     SaleInputs::ClientName => {
-                        self.sale_controller.client_name = input_value;
+                        self.sale_controller.sale_info.client_name = input_value;
                     }
                     _ => (),
                 }
@@ -149,7 +149,8 @@ impl Application for App {
                 Command::none()
             }
             AppEvents::SaleProductsToBuyCancel => {
-                self.sale_controller.products.clear();
+                self.current_view = Views::Sale;
+                self.sale_controller.sale_info.products.clear();
                 Command::none()
             }
             AppEvents::SaleProductsToBuyOk => {
@@ -157,7 +158,24 @@ impl Application for App {
                 Command::none()
             }
             AppEvents::SaleRemoveProductToBuyList(id) => {
-                self.sale_controller.products.remove(&id);
+                self.sale_controller.sale_info.products.remove(&id);
+                Command::none()
+            }
+            AppEvents::SaleCreateNewSale => Command::perform(
+                SaleRepo::process_new_sale_flow(
+                    db_connection,
+                    Sale::from(&self.sale_controller.sale_info),
+                ),
+                AppEvents::SaleCreateNewSaleRequested,
+            ),
+            AppEvents::SaleCreateNewSaleRequested(result) => {
+                self.current_view = Views::Sale;
+                self.sale_controller.sale_info.products.clear();
+
+                if let Err(err) = result {
+                    eprintln!("{err}");
+                }
+
                 Command::none()
             }
             AppEvents::ShowCatalog => {
