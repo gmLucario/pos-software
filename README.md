@@ -21,6 +21,7 @@ Help to manage a small store like:
     - [x] delete product record before save them 
     - [x] save list products
     - [ ] show message products saved/not saved
+- [ ] view edit catalog
 - [ ] sale flow
     - [x] validate amount product input
     - [x] btns `ok` and `cancel` form product
@@ -32,6 +33,9 @@ Help to manage a small store like:
     - [x] update tables based on operations
     - [x] save info if sale is a loan
     - [ ] show message products can't be added to sale list
+- [ ] sale loan info
+    - [ ] query get paginated loans by `name_debtor` and `range_dates`
+    - [ ] view search loans
 - [ ] sale info statics
     - [ ] sale earnings and total list
 - [ ] logger handler
