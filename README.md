@@ -30,7 +30,8 @@ Help to manage a small store like:
     - [x] payback money logic
     - [x] store operations
     - [x] update tables based on operations
-    - [ ] save info if sale is a loan
+    - [x] save info if sale is a loan
+    - [ ] show message products can't be added to sale list
 - [ ] sale info statics
     - [ ] sale earnings and total list
 - [ ] logger handler
