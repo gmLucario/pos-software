@@ -11,7 +11,7 @@ use crate::{
         SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
     },
     controllers,
-    data::{product_repo::ProductRepo, sale_repo::SaleRepo},
+    data::{loan_repo::LoanRepo, product_repo::ProductRepo, sale_repo::SaleRepo},
     db::Db,
     kinds::{AppEvents, CatalogInputs, SaleInputs, UnitsMeasurement, Views},
     models::{
@@ -179,7 +179,7 @@ impl Application for App {
                         let mut loan = SaleLoan::from(&self.sale_controller.sale_info);
                         loan.sale_id = sale_id;
                         Command::perform(
-                            SaleRepo::save_new_loan(db_connection, loan),
+                            LoanRepo::save_new_loan(db_connection, loan),
                             AppEvents::SaleCreateNewSaleLoan,
                         )
                     }
