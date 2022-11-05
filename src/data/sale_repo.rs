@@ -23,7 +23,7 @@ impl SaleRepo {
     pub async fn process_new_sale_flow(
         connection: &Pool<Postgres>,
         sale: Sale,
-    ) -> Result<(), String> {
+    ) -> Result<Uuid, String> {
         let sale_id: Uuid = Self::save_new_sale(connection, &sale.client_payment).await?;
 
         // TODO: if sale is a loan, save it
@@ -43,7 +43,7 @@ impl SaleRepo {
             Self::update_related_sale_records(connection, &products, &sale_id).await?
         }
 
-        Ok(())
+        Ok(sale_id)
     }
 
     /// Insert a new sale
