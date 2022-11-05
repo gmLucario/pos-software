@@ -3,7 +3,7 @@ version: '3.8'
 services:
   db:
     container_name: 'pos-software-db'
-    image: postgres:14.5
+    image: postgres:15.0
     ports:
       - $DB_PORT:${DB_PORT}
     environment:
