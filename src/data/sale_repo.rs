@@ -7,10 +7,10 @@ use sqlx::{
 };
 
 use crate::{
-    models::sale::{CatalogAmount, Sale},
+    models::sale::{CatalogAmount, Sale, SaleLoan},
     queries::{
         CREATE_OPERATION_FROM_CATALOG, DELETE_CATALOG_RECORD, GET_PRODUCTS_CATALOG_UPDATE_SALE,
-        INSERT_NEW_SALE, INSERT_NEW_SALE_OPERATION, UPDATE_CATALOG_AMOUNT,
+        INSERT_NEW_LOAN, INSERT_NEW_SALE, INSERT_NEW_SALE_OPERATION, UPDATE_CATALOG_AMOUNT,
     },
 };
 
@@ -160,6 +160,23 @@ impl SaleRepo {
         sqlx::query(INSERT_NEW_SALE_OPERATION)
             .bind(sale_id)
             .bind(operation_id)
+            .execute(connection)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Ok(())
+    }
+
+    /// Save a new sale loan
+    pub async fn save_new_loan(connection: &Pool<Postgres>, loan: SaleLoan) -> Result<(), String> {
+        if !loan.is_valid {
+            return Ok(());
+        }
+
+        sqlx::query(INSERT_NEW_LOAN)
+            .bind(loan.sale_id)
+            .bind(loan.money_amount)
+            .bind(&loan.name_debtor)
             .execute(connection)
             .await
             .map_err(|err| err.to_string())?;
