@@ -51,6 +51,7 @@ impl Default for Sale {
 impl Sale {
     pub fn reset_sale_form_values(&mut self) {
         self.product_to_add.reset_values();
+        self.sale_info.payback_money = PgMoney(0);
         self.sale_info.client_pay.clear();
         self.sale_info.client_name.clear();
     }

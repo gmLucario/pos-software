@@ -14,7 +14,10 @@ use crate::{
     data::{product_repo::ProductRepo, sale_repo::SaleRepo},
     db::Db,
     kinds::{AppEvents, CatalogInputs, SaleInputs, UnitsMeasurement, Views},
-    models::{self, sale::Sale},
+    models::{
+        self,
+        sale::{Sale, SaleLoan},
+    },
     schemas::{catalog::LoadProduct, sale::ProductToAdd},
     views::sales_info,
 };
@@ -170,13 +173,26 @@ impl Application for App {
             ),
             AppEvents::SaleCreateNewSaleRequested(result) => {
                 self.current_view = Views::Sale;
+
+                let next_event = match result {
+                    Ok(sale_id) => {
+                        let mut loan = SaleLoan::from(&self.sale_controller.sale_info);
+                        loan.sale_id = sale_id;
+                        Command::perform(
+                            SaleRepo::save_new_loan(db_connection, loan),
+                            AppEvents::SaleCreateNewSaleLoan,
+                        )
+                    }
+                    Err(err) => {
+                        eprintln!("{err}");
+                        Command::none()
+                    }
+                };
+
+                self.sale_controller.reset_sale_form_values();
                 self.sale_controller.sale_info.products.clear();
 
-                if let Err(err) = result {
-                    eprintln!("{err}");
-                }
-
-                Command::none()
+                next_event
             }
             AppEvents::ShowCatalog => {
                 self.listen_barcode_device = true;

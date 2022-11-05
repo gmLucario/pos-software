@@ -145,3 +145,18 @@ values (
 	$2
 );
 "#;
+
+pub const INSERT_NEW_LOAN: &str = r#"
+insert into loan (
+	id,
+	price,
+	name_debtor,
+	status_loan
+)
+values (
+	$1,
+	$2,
+	$3,
+	3
+);
+"#;

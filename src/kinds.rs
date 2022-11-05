@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use sqlx::types::Uuid;
+
 use crate::models::{
     catalog::{LoadProduct, ProductsToBuy},
     sale::SaleProductInfo,
@@ -110,7 +112,8 @@ pub enum AppEvents {
     SaleProductsToBuyOk,
     SaleRemoveProductToBuyList(String),
     SaleCreateNewSale,
-    SaleCreateNewSaleRequested(Result<(), String>),
+    SaleCreateNewSaleRequested(Result<Uuid, String>),
+    SaleCreateNewSaleLoan(Result<(), String>),
 
     // ToBuy view
     ToBuyData(Result<Vec<ProductsToBuy>, String>),
