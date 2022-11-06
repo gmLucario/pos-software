@@ -1,3 +1,5 @@
+//! Constant app values
+
 // Labels
 pub const WINDOW_TITTLE: &str = "Pos Software";
 

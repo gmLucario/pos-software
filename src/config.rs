@@ -1,3 +1,5 @@
+//! Represent parameterizable values ​​of the application
+
 use async_std::sync::Mutex;
 use once_cell::sync::Lazy;
 use serde::Deserialize;

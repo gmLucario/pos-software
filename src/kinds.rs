@@ -1,3 +1,5 @@
+//! Commonly used types used across the crate
+
 use std::fmt::Display;
 
 use sqlx::types::Uuid;

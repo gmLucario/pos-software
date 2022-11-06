@@ -1,3 +1,5 @@
+//! Sql statements to be used by the data repositories
+
 pub const GET_PRODUCTS_TO_BUY: &str = r#"
 select
     product.full_name as product_name,
@@ -20,6 +22,18 @@ having count(1) < product.min_amount
 order by amount_to_buy asc;
 "#;
 
+/// Get minimum info, about a product by its `barcode` to the help the
+/// user to fill the catalog form
+///
+/// # Columns
+/// | column | description |
+/// |---------|---------|
+/// | `barcode`             | required barcode |
+/// | `product_name`        | full name of the product |
+/// | `user_price`          | price to be charged to the customer |
+/// | `min_amount`          | min quantity at the stock |
+/// | `cost`                | price that the store payed to own the product |
+/// | `unit_measurement_id` | unit type of the quantity |
 pub const GET_PRODUCT_CATALOG_INFO: &str = r#"
 select
     product.barcode,

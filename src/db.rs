@@ -1,3 +1,5 @@
+//! Database connection instance
+
 use once_cell::sync::OnceCell;
 use sqlx::{pool::Pool, postgres::Postgres};
 

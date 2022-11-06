@@ -1,3 +1,5 @@
+//! Handle main app logic and components
+
 use std::collections::HashMap;
 
 use iced::{
