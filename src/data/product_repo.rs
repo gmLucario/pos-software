@@ -1,6 +1,6 @@
 use crate::{
     models::{
-        catalog::{LoadProduct, ProductsToBuy},
+        catalog::{LoadProduct, ProductInfo, ProductsToBuy},
         sale::SaleProductInfo,
     },
     queries::{
@@ -30,8 +30,8 @@ impl ProductRepo {
     pub async fn get_product_info_catalog(
         connection: &Pool<Postgres>,
         barcode: String,
-    ) -> Result<Option<LoadProduct>, String> {
-        let result = sqlx::query_as::<_, LoadProduct>(GET_PRODUCT_CATALOG_INFO)
+    ) -> Result<Option<ProductInfo>, String> {
+        let result = sqlx::query_as::<_, ProductInfo>(GET_PRODUCT_CATALOG_INFO)
             .bind(barcode)
             .fetch_optional(connection)
             .await
