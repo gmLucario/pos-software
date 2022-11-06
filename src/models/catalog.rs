@@ -29,6 +29,16 @@ impl ProductsToBuy {
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
+pub struct ProductInfo {
+    pub barcode: String,
+    pub product_name: String,
+    pub user_price: sqlx::postgres::types::PgMoney,
+    pub min_amount: BigDecimal,
+    pub cost: sqlx::postgres::types::PgMoney,
+    pub unit_measurement_id: i16,
+}
+
+#[derive(sqlx::FromRow, Debug, Clone)]
 pub struct LoadProduct {
     pub barcode: String,
     pub product_name: String,
