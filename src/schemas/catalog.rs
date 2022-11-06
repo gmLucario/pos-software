@@ -20,8 +20,8 @@ impl LoadProduct {
     }
 }
 
-impl From<models::catalog::LoadProduct> for LoadProduct {
-    fn from(model: models::catalog::LoadProduct) -> Self {
+impl From<models::catalog::ProductInfo> for LoadProduct {
+    fn from(model: models::catalog::ProductInfo) -> Self {
         let unit_measurement = UnitsMeasurement::from(model.unit_measurement_id);
 
         Self {

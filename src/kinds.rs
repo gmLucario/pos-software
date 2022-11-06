@@ -3,7 +3,7 @@ use std::fmt::Display;
 use sqlx::types::Uuid;
 
 use crate::models::{
-    catalog::{LoadProduct, ProductsToBuy},
+    catalog::{ProductInfo, ProductsToBuy},
     sale::SaleProductInfo,
 };
 
@@ -95,7 +95,7 @@ pub enum AppEvents {
 
     //Catalog view
     CatalogInputChanged(String, CatalogInputs),
-    CatalogProductInfoRequested(Result<Option<LoadProduct>, String>),
+    CatalogProductInfoRequested(Result<Option<ProductInfo>, String>),
     CatalogNewRecordCancel,
     CatalogNewRecordOk,
     CatalogSaveAllRecords,
