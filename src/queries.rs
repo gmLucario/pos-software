@@ -27,8 +27,7 @@ select
     product.user_price,
     product.min_amount,
     "catalog"."cost",
-    unit_measurement_id,
-    "catalog".current_amount
+    unit_measurement_id
 from product
 left join "catalog" on (
     product.id = "catalog".product_id
@@ -36,7 +35,7 @@ left join "catalog" on (
 where
     product.barcode  = $1
     and "catalog".priced_at <= now()
-order by "catalog"."cost" desc
+order by "catalog".priced_at desc
 limit 1;
 "#;
 
