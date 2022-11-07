@@ -119,7 +119,7 @@ select product.id from product where barcode = $1;
 
 /// Retrieve the `catalog` records that sum the required amount of
 /// product to be sold
-/// 
+///
 /// # About
 /// ## CatalogSum
 /// Per each `product_id` that matches the `$1` provided, generate a accumulationsum records:
@@ -127,7 +127,7 @@ select product.id from product where barcode = $1;
 /// [1, 3, 2] -> accumulation_sum = [1, 4, 6]
 /// `
 /// ## General Query
-/// Use the `CatalogSum` query to get `catalog` items that 
+/// Use the `CatalogSum` query to get `catalog` items that
 /// sum the quantity required to be sold
 pub const GET_PRODUCTS_CATALOG_UPDATE_SALE: &str = r#"
 with CatalogSum as (
@@ -172,8 +172,8 @@ where id = $1;
 "#;
 
 /// Insert a new `operation` record in `operation` table
-/// 
-/// when a product is saled each n units of that are 
+///
+/// when a product is saled each n units of that are
 /// saved as an `operation`
 pub const CREATE_OPERATION_FROM_CATALOG: &str = r#"
 insert into operation (
@@ -210,7 +210,7 @@ values (
 "#;
 
 /// Insert a new item in `loan` table
-/// 
+///
 /// The `loan.id` value must be an exiting `sale.id`
 pub const INSERT_NEW_LOAN: &str = r#"
 insert into loan (
