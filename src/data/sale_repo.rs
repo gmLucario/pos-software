@@ -60,7 +60,7 @@ impl SaleRepo {
         Ok(sale_id)
     }
 
-    /// Update the product amount in the catalog based on the amount saled
+    /// Update the product amount in the catalog based on the amount sold
     fn process_catalog_amounts(
         products: &mut [CatalogAmount],
         amount: &BigDecimal,
