@@ -108,10 +108,10 @@ CREATE INDEX operation_condition_idx ON operation (condition_id);
 CREATE TABLE IF NOT EXISTS sale (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     client_payment MONEY,
-    saled_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City')
+    sold_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City')
 );
 
-CREATE INDEX sale_saled_at_idx ON sale (saled_at);
+CREATE INDEX sale_sold_at_idx ON sale (sold_at);
 
 
 -- ///////

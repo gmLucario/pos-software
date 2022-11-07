@@ -1,7 +1,7 @@
 INSERT INTO item_condition
     (id, description)
 VALUES
-    (1, 'SALED'),
+    (1, 'SOLD'),
     (3, 'MANUAL_DELETE');
 
 

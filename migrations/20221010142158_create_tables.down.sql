@@ -20,7 +20,7 @@ DROP INDEX IF EXISTS product_full_name_idx;
 DROP INDEX IF EXISTS product_created_at_idx;
 DROP INDEX IF EXISTS product_barcode_idx;
 DROP INDEX IF EXISTS catalog_priced_at_idx;
-DROP INDEX IF EXISTS sale_saled_at_idx;
+DROP INDEX IF EXISTS sale_sold_at_idx;
 DROP INDEX IF EXISTS loan_name_debtor_idx;
 DROP INDEX IF EXISTS unit_measurement_description_idx;
 DROP INDEX IF EXISTS operation_recorded_at_idx;
