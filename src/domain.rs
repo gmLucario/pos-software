@@ -202,7 +202,7 @@ impl Application for App {
                 self.current_view = Views::Catalog;
                 Command::none()
             }
-            AppEvents::EventOccurred(event) if self.listen_barcode_device => {
+            AppEvents::ExternalDeviceEventOccurred(event) if self.listen_barcode_device => {
                 match self.current_view {
                     Views::Sale => self
                         .sale_controller
@@ -313,7 +313,7 @@ impl Application for App {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        iced_native::subscription::events().map(AppEvents::EventOccurred)
+        iced_native::subscription::events().map(AppEvents::ExternalDeviceEventOccurred)
     }
 
     fn view(&mut self) -> Element<'_, Self::Message> {
