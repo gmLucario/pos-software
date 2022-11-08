@@ -89,6 +89,11 @@ Using [direnv](https://direnv.net/)
 $ direnv allow .
 ```
 
+## Open docs
+
+```bash
+$ cargo doc --no-deps --open
+```
 
 # Useful links
 1. [frontend-example-iced](https://github.com/zupzup/rust-frontend-example-iced/blob/main/src/main.rs)

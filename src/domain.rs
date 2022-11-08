@@ -1,3 +1,5 @@
+//! Handle main app logic and components
+
 use std::collections::HashMap;
 
 use iced::{
@@ -15,28 +17,40 @@ use crate::{
     db::Db,
     kinds::{AppEvents, CatalogInputs, SaleInputs, UnitsMeasurement, Views},
     models::{
-        self,
+        catalog::LoadProduct as ModelLoadProduct,
         sale::{Sale, SaleLoan},
     },
     schemas::{catalog::LoadProduct, sale::ProductToAdd},
     views::sales_info,
 };
 
+/// Represents app modules and components
 pub struct App {
+    /// Button to trigger Catalog module
     pub catalog_btn: button::State,
+    /// Button to trigger Sale module
     pub sale_btn: button::State,
+    /// Button to trigger Sales info module
     pub sales_info_btn: button::State,
+    /// Button to trigger Products to buy module
     pub to_buy_btn: button::State,
 
+    /// Current view user is interacting with
     pub current_view: Views,
+    /// Controller handles Catalog logic
     pub catalog_controller: controllers::catalog::Catalog,
+    /// Controller handles Sale logic
     pub sale_controller: controllers::sale::Sale,
+    /// Controller handles Sales Info logic
     pub sales_info_view: sales_info::SalesInfo,
+    /// Controller handles Products to buy logic
     pub to_buy_controller: controllers::to_buy::ToBuy,
 
+    /// Flag to start/stop listening the barcode scanner device
     pub listen_barcode_device: bool,
 }
 
+/// Implements the traits for an interactive cross-platform application.
 impl Application for App {
     type Message = AppEvents;
     type Executor = executor::Default;
@@ -67,7 +81,7 @@ impl Application for App {
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-        let db_connection = &Db::global().connection;
+        let db_connection = &Db::global().unwrap().connection;
 
         match message {
             AppEvents::ShowToBuy => Command::perform(
@@ -200,7 +214,7 @@ impl Application for App {
                 self.current_view = Views::Catalog;
                 Command::none()
             }
-            AppEvents::EventOccurred(event) if self.listen_barcode_device => {
+            AppEvents::ExternalDeviceEventOccurred(event) if self.listen_barcode_device => {
                 match self.current_view {
                     Views::Sale => self
                         .sale_controller
@@ -283,8 +297,8 @@ impl Application for App {
                     self.catalog_controller
                         .products_to_add
                         .values()
-                        .map(models::catalog::LoadProduct::from)
-                        .collect::<Vec<models::catalog::LoadProduct>>(),
+                        .map(ModelLoadProduct::from)
+                        .collect::<Vec<ModelLoadProduct>>(),
                 ),
                 AppEvents::CatalogNewRecordPerformed,
             ),
@@ -311,7 +325,7 @@ impl Application for App {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        iced_native::subscription::events().map(AppEvents::EventOccurred)
+        iced_native::subscription::events().map(AppEvents::ExternalDeviceEventOccurred)
     }
 
     fn view(&mut self) -> Element<'_, Self::Message> {
