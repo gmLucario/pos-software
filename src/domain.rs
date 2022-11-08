@@ -69,7 +69,7 @@ impl Application for App {
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-        let db_connection = &Db::global().connection;
+        let db_connection = &Db::global().unwrap().connection;
 
         match message {
             AppEvents::ShowToBuy => Command::perform(
