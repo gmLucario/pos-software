@@ -1,3 +1,5 @@
+//! Interaction with the database related with a sale
+
 use std::cmp::Ordering;
 
 use sqlx::{
@@ -7,6 +9,7 @@ use sqlx::{
 };
 
 use crate::{
+    data::product_repo::ProductRepo,
     models::sale::{CatalogAmount, Sale},
     queries::{
         CREATE_OPERATION_FROM_CATALOG, DELETE_CATALOG_RECORD, GET_PRODUCTS_CATALOG_UPDATE_SALE,
@@ -14,8 +17,8 @@ use crate::{
     },
 };
 
-use super::product_repo::ProductRepo;
-
+/// Struct to group the functionality related with
+/// the interaction of the database and a sale
 pub struct SaleRepo {}
 
 impl SaleRepo {
@@ -83,6 +86,8 @@ impl SaleRepo {
         Ok(())
     }
 
+    /// Update stock products based on each item of the sale
+    /// Each item will be an operation of type sale
     async fn update_related_sale_records(
         connection: &Pool<Postgres>,
         products: &Vec<CatalogAmount>,

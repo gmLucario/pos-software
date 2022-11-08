@@ -1,7 +1,11 @@
+//! Interaction with the database related with a loan
+
 use sqlx::{Pool, Postgres};
 
 use crate::{models::sale::SaleLoan, queries::INSERT_NEW_LOAN};
 
+/// Struct to group the functionality related with
+/// the interaction of the database and a loan
 pub struct LoanRepo {}
 
 impl LoanRepo {

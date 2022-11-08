@@ -1,3 +1,5 @@
+//! Interaction with the database related with a product
+
 use crate::{
     models::{
         catalog::{LoadProduct, ProductInfo, ProductsToBuy},
@@ -11,6 +13,8 @@ use crate::{
 
 use sqlx::{pool::Pool, postgres::Postgres, types::Uuid};
 
+/// Struct to group the functionality related with
+/// the interaction of the database and a product
 pub struct ProductRepo {}
 
 impl ProductRepo {
@@ -75,6 +79,7 @@ impl ProductRepo {
         Ok(result)
     }
 
+    /// Get product id by barcode
     pub async fn get_product_id(
         connection: &Pool<Postgres>,
         barcode: &str,
