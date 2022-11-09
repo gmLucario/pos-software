@@ -68,7 +68,7 @@ impl Application for App {
                 catalog_controller: controllers::catalog::Catalog::new(),
                 sale_controller: controllers::sale::Sale::default(),
                 sales_info_view: sales_info::SalesInfo::new(),
-                to_buy_controller: controllers::to_buy::ToBuy::new(),
+                to_buy_controller: controllers::to_buy::ToBuy::default(),
 
                 listen_barcode_device: false,
             },

@@ -46,7 +46,7 @@ pub struct Catalog {
     // Btns states
     /// Iced button state for button save product to `products_to_add`
     pub save_record_state: button::State,
-    /// Iced button state for button cancel form product to be 
+    /// Iced button state for button cancel form product to be
     /// added in `products_to_add`
     pub cancel_record_state: button::State,
     /// Iced button state for button triggers the saving process
@@ -55,8 +55,8 @@ pub struct Catalog {
 
     // Data
     /// Hashmap of products to be added in the catalog
-    /// 
-    /// key: `product barcode` 
+    ///
+    /// key: `product barcode`
     /// value: [`crate::schemas::catalog::LoadProduct`]
     pub products_to_add: HashMap<String, LoadProduct>,
     /// product info to create a new catalog record
