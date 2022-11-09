@@ -1,3 +1,6 @@
+//! Handle logic to link [`crate::views::sale`]
+//! module with the [`crate::data::sale_repo::SaleRepo`]
+
 use std::str::FromStr;
 
 use iced::{button, keyboard::Event, keyboard::KeyCode, scrollable, text_input, Command};
@@ -15,19 +18,30 @@ use crate::{
     schemas::sale::{ProductList, ProductToAdd, SaleInfo},
 };
 
+/// Controller links [`crate::views::sale`] module with the [`crate::data::sale_repo::SaleRepo`]
 pub struct Sale {
     // States
+    /// Iced text input state for product amount/quantity to sale
     pub amount_input_state: text_input::State,
+    /// Iced text input state for the amount of money that the client pays
     pub client_pay_input_state: text_input::State,
+    /// Iced text input state for the client name. If the sale is a loan
     pub client_name_input_state: text_input::State,
+    /// Iced button state to cancel adding a new product to sale list
     pub cancel_new_record_btn_state: button::State,
+    /// Iced button state to agree adding a new product to sale list
     pub ok_new_record_btn_state: button::State,
+    /// Iced scroll state for track sale products list
     pub scroll_list_state: scrollable::State,
+    /// Iced button state to agree list product to sale
     pub ok_list_to_pay_state: button::State,
+    /// Iced button cancel list product to sale
     pub cancel_list_to_pay_state: button::State,
 
     // Data
+    /// Product info which will be added to the list to sale
     pub product_to_add: ProductToAdd,
+    /// Info of the general sale
     pub sale_info: SaleInfo,
 }
 
@@ -49,6 +63,7 @@ impl Default for Sale {
 }
 
 impl Sale {
+    /// Reset values store user inputs
     pub fn reset_sale_form_values(&mut self) {
         self.product_to_add.reset_values();
         self.sale_info.payback_money = PgMoney(0);
@@ -56,6 +71,7 @@ impl Sale {
         self.sale_info.client_name.clear();
     }
 
+    /// Checks if everithing is set correctly to make the sale
     pub fn is_ok_charge(&self) -> bool {
         !self.sale_info.client_pay.is_empty() && !self.is_pay_later()
             || (!self.sale_info.client_pay.is_empty()
@@ -63,6 +79,7 @@ impl Sale {
                 && !self.sale_info.client_name.is_empty())
     }
 
+    /// Checks if the sale is a loan and client will pay later
     pub fn is_pay_later(&self) -> bool {
         self.sale_info
             .payback_money
@@ -70,6 +87,7 @@ impl Sale {
             < BigDecimal::default()
     }
 
+    /// Calculate money to be return to the client
     pub fn calculate_payback_money(&mut self) {
         let user_pay = PgMoney::from_bigdecimal(
             BigDecimal::from_str(&self.sale_info.client_pay).unwrap(),
@@ -80,6 +98,7 @@ impl Sale {
         self.sale_info.payback_money = user_pay - self.sale_info.total_pay;
     }
 
+    /// Add new product to the sale list
     pub fn add_new_product_to_sale(&mut self) {
         let barcode: String = self.product_to_add.barcode.to_string();
 
@@ -104,6 +123,7 @@ impl Sale {
         };
     }
 
+    /// Insert `c` into the product `barcode` if `c` is `is_alphanumeric`
     fn process_char_event(&mut self, c: &char) {
         if c.is_alphanumeric() {
             self.product_to_add.barcode.push(*c);
@@ -114,6 +134,7 @@ impl Sale {
         }
     }
 
+    /// Process `Keyboard` events to save the `barcode`
     pub fn process_barcode_input(
         &mut self,
         event: iced_native::Event,
