@@ -1,13 +1,20 @@
+//! Define application button styles
+
 use iced::{widget::button::StyleSheet, Color};
 
 use crate::constants::{DEFAULT_BLUE, DEFAULT_GREEN, DEFAULT_RED};
 
+/// Represents types buttons of the application
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Button {
-    #[default]
+    /// Button user agree
     Ok,
+    /// Button user is not agree
     Cancel,
+    /// General purpose button
+    #[default]
     Primary,
+    /// Main menu nav bar items
     MainMenu,
 }
 
