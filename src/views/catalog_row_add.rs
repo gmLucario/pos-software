@@ -25,7 +25,8 @@ impl LoadProduct {
                     &mut self.edit_button_state,
                     Text::new('\u{F1F8}'.to_string()).font(fonts::ICONS),
                 )
-                .on_press(AppEvents::CatalogRemoveRecordList(id)),
+                .on_press(AppEvents::CatalogRemoveRecordList(id))
+                .style(crate::style::btns::Button::Cancel),
             )
             .spacing(10)
             .width(iced::Length::Fill)

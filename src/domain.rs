@@ -333,22 +333,26 @@ impl Application for App {
             &mut self.catalog_btn,
             Text::new(CATALOG_BTN_MSG).size(SIZE_BTNS_TEXT),
         )
-        .on_press(AppEvents::ShowCatalog);
+        .on_press(AppEvents::ShowCatalog)
+        .style(crate::style::btns::Button::MainMenu);
         let sale_btn = Button::new(
             &mut self.sale_btn,
             Text::new(SALE_BTN_MSG).size(SIZE_BTNS_TEXT),
         )
-        .on_press(AppEvents::ShowSale);
+        .on_press(AppEvents::ShowSale)
+        .style(crate::style::btns::Button::MainMenu);
         let sales_info_btn = Button::new(
             &mut self.sales_info_btn,
             Text::new(SALES_INFO_BTN_MSG).size(SIZE_BTNS_TEXT),
         )
-        .on_press(AppEvents::ShowSalesInfo);
+        .on_press(AppEvents::ShowSalesInfo)
+        .style(crate::style::btns::Button::MainMenu);
         let to_buy_btn = Button::new(
             &mut self.to_buy_btn,
             Text::new(TO_BUY_BTN_MSG).size(SIZE_BTNS_TEXT),
         )
-        .on_press(AppEvents::ShowToBuy);
+        .on_press(AppEvents::ShowToBuy)
+        .style(crate::style::btns::Button::MainMenu);
         let box_buttons_next_views = Row::new()
             .spacing(SPACE_ROWS)
             .push(catalog_btn)

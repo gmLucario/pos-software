@@ -17,7 +17,9 @@ impl controllers::sale::Sale {
 
         let mut ok_btn = Button::new(&mut self.ok_new_record_btn_state, Text::new("Ok"));
         if is_ok_to_charge {
-            ok_btn = ok_btn.on_press(AppEvents::SaleCreateNewSale);
+            ok_btn = ok_btn
+                .on_press(AppEvents::SaleCreateNewSale)
+                .style(crate::style::btns::Button::Ok);
         }
 
         let pay_back_money = if is_pay_later {
@@ -73,7 +75,8 @@ impl controllers::sale::Sale {
             Row::new()
                 .push(
                     Button::new(&mut self.cancel_new_record_btn_state, Text::new("Cancelar"))
-                        .on_press(AppEvents::SaleNewProductCancel),
+                        .on_press(AppEvents::SaleNewProductCancel)
+                        .style(crate::style::btns::Button::Cancel),
                 )
                 .push(ok_btn)
                 .spacing(20),
@@ -122,11 +125,13 @@ impl controllers::sale::Sale {
                 Row::new()
                     .push(
                         Button::new(&mut self.cancel_new_record_btn_state, Text::new("Cancelar"))
-                            .on_press(AppEvents::SaleNewProductCancel),
+                            .on_press(AppEvents::SaleNewProductCancel)
+                            .style(crate::style::btns::Button::Cancel),
                     )
                     .push(
                         Button::new(&mut self.ok_new_record_btn_state, Text::new("Ok"))
-                            .on_press(AppEvents::SaleNewProductOk),
+                            .on_press(AppEvents::SaleNewProductOk)
+                            .style(crate::style::btns::Button::Ok),
                     )
                     .spacing(20),
             )
@@ -193,7 +198,8 @@ impl controllers::sale::Sale {
                         &mut product.delete_btn_state,
                         Text::new('\u{F1F8}'.to_string()).font(fonts::ICONS),
                     )
-                    .on_press(AppEvents::SaleRemoveProductToBuyList(key.to_string())),
+                    .on_press(AppEvents::SaleRemoveProductToBuyList(key.to_string()))
+                    .style(crate::style::btns::Button::Cancel),
                 ),
             );
         }
@@ -217,11 +223,13 @@ impl controllers::sale::Sale {
                     .spacing(10)
                     .push(
                         Button::new(&mut self.cancel_list_to_pay_state, Text::new("Cancelar"))
-                            .on_press(AppEvents::SaleProductsToBuyCancel),
+                            .on_press(AppEvents::SaleProductsToBuyCancel)
+                            .style(crate::style::btns::Button::Cancel),
                     )
                     .push(
                         Button::new(&mut self.ok_list_to_pay_state, Text::new("Ok"))
-                            .on_press(AppEvents::SaleProductsToBuyOk),
+                            .on_press(AppEvents::SaleProductsToBuyOk)
+                            .style(crate::style::btns::Button::Ok),
                     ),
             );
         }

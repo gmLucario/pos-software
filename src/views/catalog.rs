@@ -97,11 +97,13 @@ impl Catalog {
                 Row::new()
                     .push(
                         Button::new(&mut self.cancel_record_state, Text::new("Cancelar"))
-                            .on_press(AppEvents::CatalogNewRecordCancel),
+                            .on_press(AppEvents::CatalogNewRecordCancel)
+                            .style(crate::style::btns::Button::Cancel),
                     )
                     .push(
                         Button::new(&mut self.save_record_state, Text::new("Ok"))
-                            .on_press(AppEvents::CatalogNewRecordOk),
+                            .on_press(AppEvents::CatalogNewRecordOk)
+                            .style(crate::style::btns::Button::Ok),
                     )
                     .spacing(20),
             )
@@ -156,7 +158,9 @@ impl Catalog {
         );
 
         if !is_products_empty {
-            btn_save = btn_save.on_press(AppEvents::CatalogSaveAllRecords)
+            btn_save = btn_save
+                .on_press(AppEvents::CatalogSaveAllRecords)
+                .style(crate::style::btns::Button::Primary)
         }
 
         general_container = general_container.push(btn_save);

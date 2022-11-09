@@ -8,6 +8,7 @@ pub mod kinds;
 pub mod models;
 pub mod queries;
 pub mod schemas;
+pub mod style;
 pub mod views;
 
 use iced::{Application, Settings};
