@@ -1,5 +1,7 @@
 //! Constant app values
 
+use iced::Color;
+
 // Labels
 /// Text shows in the tittle bar of the main window app
 pub const WINDOW_TITTLE: &str = "Pos Software";
@@ -40,3 +42,34 @@ pub const TO_DECIMAL_DIGITS: i64 = 2;
 pub const PGMONEY_DECIMALS: u32 = 2;
 /// Number of connections allowed in the database pool
 pub const MAX_CONNECTIONS_POOL: u32 = 2;
+
+// Colors
+/// Default `green` color
+///
+/// Use [color picker](https://ajalt.github.io/colormath/converter/) as references
+pub const DEFAULT_GREEN: Color = Color {
+    r: 0.0,
+    g: 0.6,
+    b: 0.3,
+    a: 1.0,
+};
+
+/// Default `red` color
+///
+/// Use [color picker](https://ajalt.github.io/colormath/converter/) as references
+pub const DEFAULT_RED: Color = Color {
+    r: 0.75,
+    g: 0.101,
+    b: 0.157,
+    a: 1.0,
+};
+
+/// `Primary` color save records
+///
+/// Use [color picker](https://ajalt.github.io/colormath/converter/) as references
+pub const DEFAULT_BLUE: Color = Color {
+    r: 0.109,
+    g: 0.45,
+    b: 0.847,
+    a: 1.0,
+};
