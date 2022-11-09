@@ -40,7 +40,13 @@ Help to manage a small store like:
     - [ ] sale earnings and total list
 - [ ] logger handler
     - [ ] save logs file
-- [ ] rollback when db errors    
+- [ ] add general doc comments
+    - [ ] models module docs
+    - [ ] schemas module docs
+    - [ ] views module docs
+- [ ] add unit tests
+- [ ] add integration tests
+- [ ] rollback when db errors
 
 
 # For devs

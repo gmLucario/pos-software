@@ -1,3 +1,6 @@
+//! Handle logic to link [`crate::views::catalog`]
+//! module with the [`crate::data::product_repo::ProductRepo`]
+
 use std::collections::HashMap;
 
 use iced::{
@@ -15,32 +18,55 @@ use crate::{
     schemas::catalog::LoadProduct,
 };
 
+/// Controller links [`crate::views::catalog`] module with the [`crate::data::product_repo::ProductRepo`]
 #[derive(Default)]
 pub struct Catalog {
     // widgets states
+    /// Iced Scroll state
     pub scroll_list_state: scrollable::State,
+    /// Iced pick list state
     pub pick_list_state: pick_list::State<UnitsMeasurement>,
 
     // Text Input states
+    /// Iced text_input state for barcode input
     pub barcode_input_state: text_input::State,
+    /// Iced text_input state for product name input
     pub full_name_input_state: text_input::State,
+    /// Iced text_input state for barcode price for user input
     pub user_price_input_state: text_input::State,
+    /// Iced text_input state for product cost input
     pub cost_input_state: text_input::State,
+    /// Iced text_input state for product amount/quantity input
     pub amount_input_state: text_input::State,
+    /// Iced text_input state for minimum product amount/quantity input
     pub min_amount_input_state: text_input::State,
+    /// Iced text_input state for type of unit measurement input
     pub unit_measurement_input_state: text_input::State,
 
     // Btns states
+    /// Iced button state for button save product to `products_to_add`
     pub save_record_state: button::State,
+    /// Iced button state for button cancel form product to be
+    /// added in `products_to_add`
     pub cancel_record_state: button::State,
+    /// Iced button state for button triggers the saving process
+    /// of all the products in the catalog
     pub save_list_records_state: button::State,
 
     // Data
+    /// Hashmap of products to be added in the catalog
+    ///
+    /// key: `product barcode`
+    /// value: [`crate::schemas::catalog::LoadProduct`]
     pub products_to_add: HashMap<String, LoadProduct>,
+    /// product info to create a new catalog record
     pub load_product: LoadProduct,
 }
 
+/// Handles user input events and link the [`crate::views::catalog`] view with
+/// the [`crate::data::product_repo::ProductRepo`] repository
 impl Catalog {
+    /// Initialize the controller
     pub fn new() -> Self {
         Self {
             scroll_list_state: scrollable::State::new(),
@@ -63,6 +89,7 @@ impl Catalog {
         }
     }
 
+    /// Insert `c` into the product `barcode` if `c` is `is_alphanumeric`
     fn process_char_event(&mut self, c: &char) {
         if c.is_alphanumeric() {
             self.load_product.barcode.push(*c);
@@ -73,6 +100,7 @@ impl Catalog {
         }
     }
 
+    /// Process `Keyboard` events to save the `barcode`
     pub fn process_barcode_input(
         &mut self,
         event: iced_native::Event,
@@ -99,6 +127,7 @@ impl Catalog {
         Command::none()
     }
 
+    /// Reset variables that stores user input
     pub fn reset_values(&mut self) {
         self.load_product = LoadProduct::default();
     }
