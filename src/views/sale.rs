@@ -153,7 +153,7 @@ impl SaleView {
         for (key, product) in sale_info.products.iter() {
             products_container = products_container.push(
                 Self::format_product_row(product).push(
-                    button(text('\u{F1F8}'.to_string()).font(fonts::ICONS))
+                    button(text('\u{F1F8}'.to_string()).font(fonts::GARBAGE_ICON))
                         .on_press(AppEvents::SaleRemoveProductToBuyList(key.to_string()))
                         .style(crate::style::btns::get_style_btn_danger()),
                 ),

@@ -26,7 +26,7 @@ fn catalog_list_view_formatted_row(id: String, product: &LoadProduct) -> Element
         text(&product.cost)
             .size(SIZE_TEXT)
             .width(Length::FillPortion(2)),
-        button(text('\u{F1F8}'.to_string()).font(fonts::ICONS))
+        button(text('\u{F1F8}'.to_string()).font(fonts::GARBAGE_ICON))
             .on_press(AppEvents::CatalogRemoveRecordList(id))
             .style(crate::style::btns::get_style_btn_danger()),
     )
