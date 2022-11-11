@@ -64,12 +64,22 @@ pub const DEFAULT_RED: Color = Color {
     a: 1.0,
 };
 
-/// `Primary` color save records
+/// Default `deactivate` color
 ///
 /// Use [color picker](https://ajalt.github.io/colormath/converter/) as references
-pub const DEFAULT_BLUE: Color = Color {
-    r: 0.109,
-    g: 0.45,
-    b: 0.847,
+pub const DEFAULT_DEACTIVATE: Color = Color {
+    r: 0.7,
+    g: 0.7,
+    b: 0.7,
+    a: 0.5,
+};
+
+/// Default `menu` color
+///
+/// Use [color picker](https://ajalt.github.io/colormath/converter/) as references
+pub const DEFAULT_MENU: Color = Color {
+    r: 0.250,
+    g: 0.750,
+    b: 0.7,
     a: 1.0,
 };
