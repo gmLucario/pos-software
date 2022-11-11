@@ -4,56 +4,20 @@
 use std::collections::HashMap;
 
 use iced::{
-    button,
     keyboard::{Event, KeyCode},
-    pick_list, scrollable, text_input, Command,
+    Command,
 };
 use iced_native::Event::Keyboard;
 use sqlx::{pool::Pool, postgres::Postgres};
 
 use crate::{
-    constants::CHARS_SAVED_AS_BARCODE,
-    data::product_repo::ProductRepo,
-    kinds::{AppEvents, UnitsMeasurement},
+    constants::CHARS_SAVED_AS_BARCODE, data::product_repo::ProductRepo, kinds::AppEvents,
     schemas::catalog::LoadProduct,
 };
 
 /// Controller links [`crate::views::catalog`] module with the [`crate::data::product_repo::ProductRepo`]
 #[derive(Default)]
 pub struct Catalog {
-    // widgets states
-    /// Iced Scroll state
-    pub scroll_list_state: scrollable::State,
-    /// Iced pick list state
-    pub pick_list_state: pick_list::State<UnitsMeasurement>,
-
-    // Text Input states
-    /// Iced text_input state for barcode input
-    pub barcode_input_state: text_input::State,
-    /// Iced text_input state for product name input
-    pub full_name_input_state: text_input::State,
-    /// Iced text_input state for barcode price for user input
-    pub user_price_input_state: text_input::State,
-    /// Iced text_input state for product cost input
-    pub cost_input_state: text_input::State,
-    /// Iced text_input state for product amount/quantity input
-    pub amount_input_state: text_input::State,
-    /// Iced text_input state for minimum product amount/quantity input
-    pub min_amount_input_state: text_input::State,
-    /// Iced text_input state for type of unit measurement input
-    pub unit_measurement_input_state: text_input::State,
-
-    // Btns states
-    /// Iced button state for button save product to `products_to_add`
-    pub save_record_state: button::State,
-    /// Iced button state for button cancel form product to be
-    /// added in `products_to_add`
-    pub cancel_record_state: button::State,
-    /// Iced button state for button triggers the saving process
-    /// of all the products in the catalog
-    pub save_list_records_state: button::State,
-
-    // Data
     /// Hashmap of products to be added in the catalog
     ///
     /// key: `product barcode`
@@ -69,21 +33,6 @@ impl Catalog {
     /// Initialize the controller
     pub fn new() -> Self {
         Self {
-            scroll_list_state: scrollable::State::new(),
-            pick_list_state: pick_list::State::new(),
-
-            barcode_input_state: text_input::State::new(),
-            full_name_input_state: text_input::State::new(),
-            user_price_input_state: text_input::State::new(),
-            cost_input_state: text_input::State::new(),
-            amount_input_state: text_input::State::new(),
-            min_amount_input_state: text_input::State::new(),
-            unit_measurement_input_state: text_input::State::new(),
-
-            save_record_state: button::State::new(),
-            cancel_record_state: button::State::new(),
-            save_list_records_state: button::State::new(),
-
             products_to_add: HashMap::new(),
             load_product: LoadProduct::default(),
         }
