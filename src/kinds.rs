@@ -5,7 +5,7 @@ use std::fmt::Display;
 use sqlx::types::Uuid;
 
 use crate::models::{
-    catalog::{ProductInfo, ProductsToBuy},
+    catalog::{ProductInfo, ProductToBuy},
     sale::SaleProductInfo,
 };
 
@@ -166,9 +166,9 @@ pub enum AppEvents {
 
     // ToBuy view
     /// Event after button main menu was pressed to show to buy products module
-    ShowToBuy,
+    ToBuyDataRequested,
     /// Search list of products to be bought was triggered
-    ToBuyData(Result<Vec<ProductsToBuy>, String>),
+    ToBuyData(Result<Vec<ProductToBuy>, String>),
 
     // Sale Info view
     /// Event after button main menu was pressed to show sale info module
