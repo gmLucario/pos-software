@@ -1,3 +1,5 @@
+//! [`iced::Element`]s to be used in the products to buy view
+
 use iced::{
     widget::{column, container, scrollable, text},
     Alignment, Element, Length,
@@ -5,6 +7,7 @@ use iced::{
 
 use crate::{constants::SIZE_TEXT, kinds::AppEvents, models::catalog::ProductToBuy};
 
+/// Show the list of products to be bought
 pub fn show_list_products(products: &[ProductToBuy]) -> Element<AppEvents> {
     let mut col = column!()
         .align_items(Alignment::Start)

@@ -1,3 +1,5 @@
+//! [`iced::Element`]s to be used in the sale view
+
 use iced::{
     widget::{button, column, row, scrollable, text, text_input, Row},
     Alignment, Element, Length,
