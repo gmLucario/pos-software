@@ -10,7 +10,6 @@ use crate::models::{
 };
 
 /// All the possible app views
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Views {
     /// List products to be sold and total
     Sale,
