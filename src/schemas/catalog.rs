@@ -1,5 +1,3 @@
-use iced::button;
-
 use crate::{constants::TO_DECIMAL_DIGITS, kinds::UnitsMeasurement, models};
 
 #[derive(Default, Debug, Clone)]
@@ -11,8 +9,6 @@ pub struct LoadProduct {
     pub unit_measurement: UnitsMeasurement,
     pub min_amount: String,
     pub cost: String,
-
-    pub edit_button_state: button::State,
 }
 impl LoadProduct {
     pub fn get_id(&self) -> String {
@@ -35,8 +31,6 @@ impl From<models::catalog::ProductInfo> for LoadProduct {
                 .to_string(),
             min_amount: model.min_amount.to_string(),
             cost: model.cost.to_bigdecimal(TO_DECIMAL_DIGITS).to_string(),
-
-            edit_button_state: button::State::new(),
         }
     }
 }

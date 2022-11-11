@@ -6,8 +6,8 @@ authors = ["Gerardo Lucario <gmlukario@gmail.com>"]
 
 
 [dependencies]
-iced = {version = "0.4.2", features = ["tokio"] }
-iced_native = "0.5.1"
+iced = {version = "0.5.2", features = ["tokio"] }
+iced_native = "0.6.1"
 sqlx = {version = "0.6.2", features = [ "runtime-async-std-native-tls", "postgres", "uuid", "bigdecimal"] }
 serde = { version = "1.0.147", features = ["derive"] }
 envy = "0.4.2"

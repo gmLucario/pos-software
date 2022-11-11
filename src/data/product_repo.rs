@@ -2,7 +2,7 @@
 
 use crate::{
     models::{
-        catalog::{LoadProduct, ProductInfo, ProductsToBuy},
+        catalog::{LoadProduct, ProductInfo, ProductToBuy},
         sale::SaleProductInfo,
     },
     queries::{
@@ -21,8 +21,8 @@ impl ProductRepo {
     /// Return products have less than the minimum required
     pub async fn get_products_to_buy(
         connection: &Pool<Postgres>,
-    ) -> Result<Vec<ProductsToBuy>, String> {
-        let products = sqlx::query_as::<_, ProductsToBuy>(GET_PRODUCTS_TO_BUY)
+    ) -> Result<Vec<ProductToBuy>, String> {
+        let products = sqlx::query_as::<_, ProductToBuy>(GET_PRODUCTS_TO_BUY)
             .fetch_all(connection)
             .await
             .map_err(|err| err.to_string())?;

@@ -1,169 +1,134 @@
+//! Create [`iced::Element`]s to be shown in sale module
+
+use std::collections::HashMap;
+
 use iced::{
-    pick_list, Alignment, Button, Column, Element, Length, Row, Scrollable, Text, TextInput,
+    widget::{button, column, pick_list, row, scrollable, text, text_input},
+    Alignment, Element, Length,
 };
 
 use crate::{
-    constants::{SIZE_BTNS_TEXT, SPACE_COLUMNS},
-    constants::{SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL},
+    constants::{SIZE_BTNS_TEXT, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS},
     kinds::{AppEvents, CatalogInputs, UnitsMeasurement},
+    schemas::catalog::LoadProduct,
+    views::fonts,
 };
 
-use crate::controllers::catalog::Catalog;
+/// Get a new product row for the catalog list
+fn catalog_list_view_formatted_row(id: String, product: &LoadProduct) -> Element<AppEvents> {
+    row!(
+        text(format!("{}: {}", product.barcode, product.product_name))
+            .size(SIZE_TEXT)
+            .width(Length::FillPortion(6)),
+        text(&product.amount)
+            .size(SIZE_TEXT)
+            .width(Length::FillPortion(2)),
+        text(&product.cost)
+            .size(SIZE_TEXT)
+            .width(Length::FillPortion(2)),
+        button(text('\u{F1F8}'.to_string()).font(fonts::GARBAGE_ICON))
+            .on_press(AppEvents::CatalogRemoveRecordList(id))
+            .style(crate::style::btns::get_style_btn_danger()),
+    )
+    .spacing(10)
+    .width(iced::Length::Fill)
+    .into()
+}
 
-impl Catalog {
-    pub fn populate_record_view(&mut self) -> Element<AppEvents> {
-        Column::new()
-            .height(Length::Fill)
-            .width(Length::Fill)
-            .padding(60)
-            .spacing(10)
-            .align_items(Alignment::Start)
-            .push(
-                Text::new(format!("Código Barras:  {}", self.load_product.barcode)).size(SIZE_TEXT),
+/// Defines the form which the user will define the
+/// product info to be added in the catalog
+pub fn load_product_view(product: &LoadProduct) -> Element<AppEvents> {
+    column!(
+        text(format!("Código Barras:  {}", product.barcode)).size(SIZE_TEXT),
+        text("Producto:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.product_name, |input_value| {
+            AppEvents::CatalogInputChanged(input_value, CatalogInputs::ProductName)
+        })
+        .size(SIZE_TEXT_INPUT),
+        text("Cantidad:").size(SIZE_TEXT_LABEL),
+        row!(
+            text_input("", &product.amount, |input_value| {
+                AppEvents::CatalogInputChanged(input_value, CatalogInputs::AmountProduct)
+            })
+            .size(SIZE_TEXT_INPUT),
+            pick_list(
+                &UnitsMeasurement::ALL[..],
+                Some(product.unit_measurement),
+                AppEvents::CatalogPickListSelected,
             )
-            .push(Text::new("Producto:").size(SIZE_TEXT_LABEL))
-            .push(
-                TextInput::new(
-                    &mut self.full_name_input_state,
-                    "",
-                    &self.load_product.product_name,
-                    |input_value| {
-                        AppEvents::CatalogInputChanged(input_value, CatalogInputs::ProductName)
-                    },
-                )
-                .size(SIZE_TEXT_INPUT),
-            )
-            .push(Text::new("Cantidad:").size(SIZE_TEXT_LABEL))
-            .push(
-                Row::new()
-                    .push(
-                        TextInput::new(
-                            &mut self.amount_input_state,
-                            "",
-                            &self.load_product.amount,
-                            |input_value| {
-                                AppEvents::CatalogInputChanged(
-                                    input_value,
-                                    CatalogInputs::AmountProduct,
-                                )
-                            },
-                        )
-                        .size(SIZE_TEXT_INPUT),
-                    )
-                    .push(pick_list::PickList::new(
-                        &mut self.pick_list_state,
-                        &UnitsMeasurement::ALL[..],
-                        Some(self.load_product.unit_measurement),
-                        AppEvents::CatalogPickListSelected,
-                    )),
-            )
-            .push(Text::new("Cantidad Mínima:").size(SIZE_TEXT_LABEL))
-            .push(
-                TextInput::new(
-                    &mut self.min_amount_input_state,
-                    "",
-                    &self.load_product.min_amount,
-                    |input_value| {
-                        AppEvents::CatalogInputChanged(input_value, CatalogInputs::MinAmountProduct)
-                    },
-                )
-                .size(SIZE_TEXT_INPUT),
-            )
-            .push(Text::new("Precio Cliente:").size(SIZE_TEXT_LABEL))
-            .push(
-                TextInput::new(
-                    &mut self.user_price_input_state,
-                    "",
-                    &self.load_product.user_price,
-                    |input_value| {
-                        AppEvents::CatalogInputChanged(input_value, CatalogInputs::ClientPrice)
-                    },
-                )
-                .size(SIZE_TEXT_INPUT),
-            )
-            .push(Text::new("Costo:").size(SIZE_TEXT_LABEL))
-            .push(
-                TextInput::new(
-                    &mut self.cost_input_state,
-                    "",
-                    &self.load_product.cost,
-                    |input_value| {
-                        AppEvents::CatalogInputChanged(input_value, CatalogInputs::CostProduct)
-                    },
-                )
-                .size(SIZE_TEXT_INPUT),
-            )
-            .push(
-                Row::new()
-                    .push(
-                        Button::new(&mut self.cancel_record_state, Text::new("Cancelar"))
-                            .on_press(AppEvents::CatalogNewRecordCancel)
-                            .style(crate::style::btns::Button::Cancel),
-                    )
-                    .push(
-                        Button::new(&mut self.save_record_state, Text::new("Ok"))
-                            .on_press(AppEvents::CatalogNewRecordOk)
-                            .style(crate::style::btns::Button::Ok),
-                    )
-                    .spacing(20),
-            )
-            .into()
+        ),
+        text("Cantidad Mínima:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.min_amount, |input_value| {
+            AppEvents::CatalogInputChanged(input_value, CatalogInputs::MinAmountProduct)
+        })
+        .size(SIZE_TEXT_INPUT),
+        text("Precio Cliente:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.user_price, |input_value| {
+            AppEvents::CatalogInputChanged(input_value, CatalogInputs::ClientPrice)
+        })
+        .size(SIZE_TEXT_INPUT),
+        text("Costo:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.cost, |input_value| {
+            AppEvents::CatalogInputChanged(input_value, CatalogInputs::CostProduct)
+        })
+        .size(SIZE_TEXT_INPUT),
+        row!(
+            button(text("Cancelar"))
+                .on_press(AppEvents::CatalogNewRecordCancel)
+                .style(crate::style::btns::get_style_btn_danger()),
+            button(text("Ok"))
+                .on_press(AppEvents::CatalogNewRecordOk)
+                .style(crate::style::btns::get_style_btn_ok()),
+        )
+        .spacing(20),
+    )
+    .height(Length::Fill)
+    .width(Length::Fill)
+    .padding(60)
+    .spacing(SPACE_COLUMNS)
+    .align_items(Alignment::Start)
+    .into()
+}
+
+/// Defines list products to be added in the catalog
+pub fn catalog_list_view(products: &HashMap<String, LoadProduct>) -> Element<AppEvents> {
+    let mut container_products = column!()
+        .spacing(SPACE_COLUMNS)
+        .align_items(Alignment::Start);
+
+    let is_products_empty: bool = products.is_empty();
+
+    for (id, product) in products.iter() {
+        container_products =
+            container_products.push(catalog_list_view_formatted_row(id.to_string(), product))
     }
 
-    pub fn catalog_list_view(&mut self) -> Element<AppEvents> {
-        let mut container_products = Column::new()
-            .spacing(SPACE_COLUMNS)
-            .align_items(Alignment::Start);
+    let container_products = scrollable(container_products).height(Length::Fill);
 
-        let is_products_empty: bool = self.products_to_add.is_empty();
+    let mut general_container = column!(
+        row!(
+            text("Producto:")
+                .width(Length::FillPortion(5))
+                .size(SIZE_TEXT),
+            text("Cantidad:")
+                .width(Length::FillPortion(2))
+                .size(SIZE_TEXT),
+            text("Costo:").width(Length::FillPortion(2)).size(SIZE_TEXT),
+            text("").size(SIZE_TEXT)
+        ),
+        container_products,
+    )
+    .padding(20)
+    .spacing(SPACE_COLUMNS)
+    .align_items(Alignment::Center);
 
-        for (id, product) in self.products_to_add.iter_mut() {
-            container_products = container_products
-                .push::<Element<AppEvents>>(product.get_formatted_row(id.to_string()))
-        }
+    let mut btn_save =
+        button(text("Guardar").size(SIZE_BTNS_TEXT)).style(crate::style::btns::get_style_btn_ok());
 
-        let container_products = Scrollable::new(&mut self.scroll_list_state)
-            .push(container_products)
-            .width(Length::Fill)
-            .height(Length::Fill);
-
-        let mut general_container = Column::new()
-            .padding(20)
-            .spacing(SPACE_COLUMNS)
-            .align_items(Alignment::Center)
-            .push(
-                Row::new()
-                    .push(
-                        Text::new("Producto:")
-                            .width(Length::FillPortion(5))
-                            .size(SIZE_TEXT),
-                    )
-                    .push(
-                        Text::new("Cantidad:")
-                            .width(Length::FillPortion(2))
-                            .size(SIZE_TEXT),
-                    )
-                    .push(
-                        Text::new("Costo:")
-                            .width(Length::FillPortion(2))
-                            .size(SIZE_TEXT),
-                    )
-                    .push(Text::new("").size(SIZE_TEXT)),
-            )
-            .push(container_products);
-
-        let mut btn_save = Button::new(
-            &mut self.save_list_records_state,
-            Text::new("Guardar").size(SIZE_BTNS_TEXT),
-        );
-
-        if !is_products_empty {
-            btn_save = btn_save
-                .on_press(AppEvents::CatalogSaveAllRecords)
-                .style(crate::style::btns::Button::Primary)
-        }
-
-        general_container = general_container.push(btn_save);
-        general_container.into()
+    if !is_products_empty {
+        btn_save = btn_save.on_press(AppEvents::CatalogSaveAllRecords)
     }
+
+    general_container = general_container.push(btn_save);
+    general_container.into()
 }

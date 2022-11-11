@@ -1,6 +1,5 @@
 use std::{collections::HashMap, str::FromStr};
 
-use iced::button;
 use sqlx::{postgres::types::PgMoney, types::BigDecimal};
 
 use crate::{
@@ -45,7 +44,6 @@ pub struct ProductList {
     pub product_name: String,
     pub amount: BigDecimal,
     pub price: PgMoney,
-    pub delete_btn_state: button::State,
 }
 
 impl From<&ProductToAdd> for ProductList {
@@ -56,7 +54,6 @@ impl From<&ProductToAdd> for ProductList {
 
         Self {
             product_name: schema.product_name.to_string(),
-            delete_btn_state: button::State::new(),
             amount,
             price,
         }

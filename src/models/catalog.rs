@@ -5,13 +5,13 @@ use sqlx::types::BigDecimal;
 use crate::{constants::PGMONEY_DECIMALS, schemas};
 
 #[derive(sqlx::FromRow, Debug, Clone)]
-pub struct ProductsToBuy {
+pub struct ProductToBuy {
     pub product_name: String,
     pub amount_to_buy: BigDecimal,
     pub unit_measurement: String,
 }
 
-impl ProductsToBuy {
+impl ProductToBuy {
     pub fn get_formatted_item(&self) -> String {
         let amount_to_buy: String = if !self.unit_measurement.eq("Pieza") {
             format!("{:.3}", self.amount_to_buy)

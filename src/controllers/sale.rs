@@ -3,7 +3,7 @@
 
 use std::str::FromStr;
 
-use iced::{button, keyboard::Event, keyboard::KeyCode, scrollable, text_input, Command};
+use iced::{keyboard::Event, keyboard::KeyCode, Command};
 use iced_native::Event::Keyboard;
 use sqlx::{
     pool::Pool,
@@ -19,47 +19,12 @@ use crate::{
 };
 
 /// Controller links [`crate::views::sale`] module with the [`crate::data::sale_repo::SaleRepo`]
+#[derive(Default)]
 pub struct Sale {
-    // States
-    /// Iced text input state for product amount/quantity to sale
-    pub amount_input_state: text_input::State,
-    /// Iced text input state for the amount of money that the client pays
-    pub client_pay_input_state: text_input::State,
-    /// Iced text input state for the client name. If the sale is a loan
-    pub client_name_input_state: text_input::State,
-    /// Iced button state to cancel adding a new product to sale list
-    pub cancel_new_record_btn_state: button::State,
-    /// Iced button state to agree adding a new product to sale list
-    pub ok_new_record_btn_state: button::State,
-    /// Iced scroll state for track sale products list
-    pub scroll_list_state: scrollable::State,
-    /// Iced button state to agree list product to sale
-    pub ok_list_to_pay_state: button::State,
-    /// Iced button cancel list product to sale
-    pub cancel_list_to_pay_state: button::State,
-
-    // Data
     /// Product info which will be added to the list to sale
     pub product_to_add: ProductToAdd,
     /// Info of the general sale
     pub sale_info: SaleInfo,
-}
-
-impl Default for Sale {
-    fn default() -> Self {
-        Self {
-            amount_input_state: text_input::State::focused(),
-            client_pay_input_state: text_input::State::focused(),
-            client_name_input_state: text_input::State::new(),
-            cancel_new_record_btn_state: Default::default(),
-            ok_new_record_btn_state: Default::default(),
-            scroll_list_state: Default::default(),
-            ok_list_to_pay_state: Default::default(),
-            cancel_list_to_pay_state: Default::default(),
-            product_to_add: ProductToAdd::default(),
-            sale_info: SaleInfo::default(),
-        }
-    }
 }
 
 impl Sale {
@@ -159,5 +124,13 @@ impl Sale {
             _ => (),
         }
         Command::none()
+    }
+
+    /// Update the total the client will pay for the products
+    pub fn update_total_pay(&mut self) {
+        self.sale_info.total_pay = PgMoney(0);
+        for (_, product) in self.sale_info.products.iter() {
+            self.sale_info.total_pay += product.price;
+        }
     }
 }
