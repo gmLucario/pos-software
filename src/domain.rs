@@ -3,8 +3,9 @@
 use std::collections::HashMap;
 
 use iced::{
-    button, executor, Alignment, Application, Button, Column, Command, Element, Row, Subscription,
-    Text,
+    executor, theme,
+    widget::{button, column, row, text},
+    Alignment, Application, Command, Element, Subscription,
 };
 
 use crate::{
@@ -21,56 +22,37 @@ use crate::{
         sale::{Sale, SaleLoan},
     },
     schemas::{catalog::LoadProduct, sale::ProductToAdd},
-    views::sales_info,
+    views::{catalog, sale::SaleView, sales_info, to_buy},
 };
 
 /// Represents app modules and components
-pub struct App {
-    /// Button to trigger Catalog module
-    pub catalog_btn: button::State,
-    /// Button to trigger Sale module
-    pub sale_btn: button::State,
-    /// Button to trigger Sales info module
-    pub sales_info_btn: button::State,
-    /// Button to trigger Products to buy module
-    pub to_buy_btn: button::State,
-
+pub struct App<'a> {
     /// Current view user is interacting with
     pub current_view: Views,
+    pub current_content: Option<Element<'a, AppEvents>>,
     /// Controller handles Catalog logic
     pub catalog_controller: controllers::catalog::Catalog,
     /// Controller handles Sale logic
     pub sale_controller: controllers::sale::Sale,
-    /// Controller handles Sales Info logic
-    pub sales_info_view: sales_info::SalesInfo,
     /// Controller handles Products to buy logic
     pub to_buy_controller: controllers::to_buy::ToBuy,
-
-    /// Flag to start/stop listening the barcode scanner device
-    pub listen_barcode_device: bool,
 }
 
 /// Implements the traits for an interactive cross-platform application.
-impl Application for App {
+impl Application for App<'_> {
     type Message = AppEvents;
     type Executor = executor::Default;
     type Flags = ();
+    type Theme = theme::Theme;
 
     fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
         (
             Self {
-                catalog_btn: button::State::new(),
-                sale_btn: button::State::new(),
-                sales_info_btn: button::State::new(),
-                to_buy_btn: button::State::new(),
-
                 current_view: Views::Sale,
+                current_content: None,
                 catalog_controller: controllers::catalog::Catalog::new(),
                 sale_controller: controllers::sale::Sale::default(),
-                sales_info_view: sales_info::SalesInfo::new(),
                 to_buy_controller: controllers::to_buy::ToBuy::default(),
-
-                listen_barcode_device: false,
             },
             Command::none(),
         )
@@ -84,7 +66,7 @@ impl Application for App {
         let db_connection = &Db::global().unwrap().connection;
 
         match message {
-            AppEvents::ShowToBuy => Command::perform(
+            AppEvents::ToBuyDataRequested => Command::perform(
                 ProductRepo::get_products_to_buy(db_connection),
                 AppEvents::ToBuyData,
             ),
@@ -101,37 +83,40 @@ impl Application for App {
                 Command::none()
             }
             AppEvents::ShowSale => {
-                self.listen_barcode_device = true;
                 self.current_view = Views::Sale;
+                self.sale_controller.update_total_pay();
                 Command::none()
             }
-            AppEvents::SaleProductInfoRequested(result) => {
-                match result {
-                    Err(err) => eprintln!("{err}"),
-                    Ok(record) => match record {
-                        Some(data) => {
-                            let unit = UnitsMeasurement::from(data.unit_measurement_id);
-                            self.sale_controller.product_to_add = ProductToAdd::from(data);
+            AppEvents::SaleProductInfoRequested(result) => match result {
+                Err(err) => {
+                    eprintln!("{err}");
+                    Command::none()
+                }
+                Ok(record) => match record {
+                    Some(data) => {
+                        let unit = UnitsMeasurement::from(data.unit_measurement_id);
+                        self.sale_controller.product_to_add = ProductToAdd::from(data);
 
-                            match unit {
-                                UnitsMeasurement::Pieces => {
-                                    self.sale_controller.add_new_product_to_sale();
+                        match unit {
+                            UnitsMeasurement::Pieces => {
+                                self.sale_controller.add_new_product_to_sale();
+                                self.sale_controller.product_to_add.reset_values();
 
-                                    self.current_view = Views::Sale;
-                                    self.listen_barcode_device = true;
-                                    self.sale_controller.product_to_add.reset_values();
-                                }
-                                _ => {
-                                    self.listen_barcode_device = false;
-                                    self.current_view = Views::SaleAddProductForm;
-                                }
+                                self.current_view = Views::Sale;
+                                Command::perform(async {}, |_| AppEvents::ShowSale)
+                            }
+                            _ => {
+                                self.current_view = Views::SaleAddProductForm;
+                                Command::none()
                             }
                         }
-                        None => self.sale_controller.product_to_add.barcode.clear(),
-                    },
-                }
-                Command::none()
-            }
+                    }
+                    None => {
+                        self.sale_controller.product_to_add.reset_values();
+                        Command::perform(async {}, |_| AppEvents::ShowSale)
+                    }
+                },
+            },
             AppEvents::SaleInputChanged(input_value, input_type) => {
                 match input_type {
                     SaleInputs::AmountProduct if input_value.parse::<f64>().is_ok() => {
@@ -152,23 +137,21 @@ impl Application for App {
             AppEvents::SaleNewProductCancel => {
                 self.current_view = Views::Sale;
 
-                self.listen_barcode_device = true;
                 self.sale_controller.reset_sale_form_values();
-                Command::none()
+                Command::perform(async {}, |_| AppEvents::ShowSale)
             }
             AppEvents::SaleNewProductOk => {
                 self.sale_controller.add_new_product_to_sale();
 
                 self.current_view = Views::Sale;
-                self.listen_barcode_device = true;
                 self.sale_controller.product_to_add.reset_values();
 
-                Command::none()
+                Command::perform(async {}, |_| AppEvents::ShowSale)
             }
             AppEvents::SaleProductsToBuyCancel => {
                 self.current_view = Views::Sale;
                 self.sale_controller.sale_info.products.clear();
-                Command::none()
+                Command::perform(async {}, |_| AppEvents::ShowSale)
             }
             AppEvents::SaleProductsToBuyOk => {
                 self.current_view = Views::SaleChargeForm;
@@ -176,7 +159,7 @@ impl Application for App {
             }
             AppEvents::SaleRemoveProductToBuyList(id) => {
                 self.sale_controller.sale_info.products.remove(&id);
-                Command::none()
+                Command::perform(async {}, |_| AppEvents::ShowSale)
             }
             AppEvents::SaleCreateNewSale => Command::perform(
                 SaleRepo::process_new_sale_flow(
@@ -192,14 +175,17 @@ impl Application for App {
                     Ok(sale_id) => {
                         let mut loan = SaleLoan::from(&self.sale_controller.sale_info);
                         loan.sale_id = sale_id;
-                        Command::perform(
-                            LoanRepo::save_new_loan(db_connection, loan),
-                            AppEvents::SaleCreateNewSaleLoan,
-                        )
+                        Command::batch(vec![
+                            Command::perform(
+                                LoanRepo::save_new_loan(db_connection, loan),
+                                AppEvents::SaleCreateNewSaleLoan,
+                            ),
+                            Command::perform(async {}, |_| AppEvents::ShowSale),
+                        ])
                     }
                     Err(err) => {
                         eprintln!("{err}");
-                        Command::none()
+                        Command::perform(async {}, |_| AppEvents::ShowSale)
                     }
                 };
 
@@ -208,26 +194,22 @@ impl Application for App {
 
                 next_event
             }
+            AppEvents::ExternalDeviceEventOccurred(event) => match self.current_view {
+                Views::Sale => self
+                    .sale_controller
+                    .process_barcode_input(event, db_connection),
+                Views::Catalog => self
+                    .catalog_controller
+                    .process_barcode_input(event, db_connection),
+                _ => Command::none(),
+            },
             AppEvents::ShowCatalog => {
-                self.listen_barcode_device = true;
                 self.catalog_controller.reset_values();
                 self.current_view = Views::Catalog;
                 Command::none()
             }
-            AppEvents::ExternalDeviceEventOccurred(event) if self.listen_barcode_device => {
-                match self.current_view {
-                    Views::Sale => self
-                        .sale_controller
-                        .process_barcode_input(event, db_connection),
-                    Views::Catalog => self
-                        .catalog_controller
-                        .process_barcode_input(event, db_connection),
-                    _ => Command::none(),
-                }
-            }
             AppEvents::CatalogProductInfoRequested(result) => {
                 self.current_view = Views::CatalogAddRecord;
-                self.listen_barcode_device = false;
                 match result {
                     Err(err) => eprintln!("{err}"),
                     Ok(record) => match record {
@@ -277,9 +259,8 @@ impl Application for App {
             }
             AppEvents::CatalogNewRecordCancel => {
                 self.current_view = Views::Catalog;
-                self.listen_barcode_device = true;
                 self.catalog_controller.reset_values();
-                Command::none()
+                Command::perform(async {}, |_| AppEvents::ShowCatalog)
             }
             AppEvents::CatalogNewRecordOk => {
                 self.current_view = Views::Catalog;
@@ -287,9 +268,8 @@ impl Application for App {
                     self.catalog_controller.load_product.get_id(),
                     self.catalog_controller.load_product.clone(),
                 );
-                self.listen_barcode_device = true;
                 self.catalog_controller.reset_values();
-                Command::none()
+                Command::perform(async {}, |_| AppEvents::ShowCatalog)
             }
             AppEvents::CatalogSaveAllRecords => Command::perform(
                 ProductRepo::save_products_catalog(
@@ -308,8 +288,7 @@ impl Application for App {
                     Err(err) => eprintln!("{:#?}", err),
                 };
                 self.catalog_controller.products_to_add = HashMap::new();
-                self.current_view = Views::Catalog;
-                Command::none()
+                Command::perform(async {}, |_| AppEvents::ShowCatalog)
             }
             AppEvents::CatalogPickListSelected(unit) => {
                 self.catalog_controller.load_product.unit_measurement = unit;
@@ -325,63 +304,55 @@ impl Application for App {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        iced_native::subscription::events().map(AppEvents::ExternalDeviceEventOccurred)
+        match self.current_view {
+            Views::Sale | Views::Catalog => {
+                iced_native::subscription::events().map(AppEvents::ExternalDeviceEventOccurred)
+            }
+            _ => Subscription::none(),
+        }
     }
 
-    fn view(&mut self) -> Element<'_, Self::Message> {
-        let catalog_btn = Button::new(
-            &mut self.catalog_btn,
-            Text::new(CATALOG_BTN_MSG).size(SIZE_BTNS_TEXT),
-        )
-        .on_press(AppEvents::ShowCatalog)
-        .style(crate::style::btns::Button::MainMenu);
-        let sale_btn = Button::new(
-            &mut self.sale_btn,
-            Text::new(SALE_BTN_MSG).size(SIZE_BTNS_TEXT),
-        )
-        .on_press(AppEvents::ShowSale)
-        .style(crate::style::btns::Button::MainMenu);
-        let sales_info_btn = Button::new(
-            &mut self.sales_info_btn,
-            Text::new(SALES_INFO_BTN_MSG).size(SIZE_BTNS_TEXT),
-        )
-        .on_press(AppEvents::ShowSalesInfo)
-        .style(crate::style::btns::Button::MainMenu);
-        let to_buy_btn = Button::new(
-            &mut self.to_buy_btn,
-            Text::new(TO_BUY_BTN_MSG).size(SIZE_BTNS_TEXT),
-        )
-        .on_press(AppEvents::ShowToBuy)
-        .style(crate::style::btns::Button::MainMenu);
-        let box_buttons_next_views = Row::new()
-            .spacing(SPACE_ROWS)
-            .push(catalog_btn)
-            .push(sale_btn)
-            .push(sales_info_btn)
-            .push(to_buy_btn);
-
-        let col = Column::new()
-            .spacing(SPACE_COLUMNS)
-            .padding(10)
-            .align_items(Alignment::Center)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .push(box_buttons_next_views);
+    fn view(&self) -> Element<'_, Self::Message, iced::Renderer<Self::Theme>> {
+        let catalog_btn = button(text(CATALOG_BTN_MSG).size(SIZE_BTNS_TEXT))
+            .on_press(AppEvents::ShowCatalog)
+            .style(crate::style::btns::get_style_btn_main_menu());
+        let sale_btn = button(text(SALE_BTN_MSG).size(SIZE_BTNS_TEXT))
+            .on_press(AppEvents::ShowSale)
+            .style(crate::style::btns::get_style_btn_main_menu());
+        let sales_info_btn = button(text(SALES_INFO_BTN_MSG).size(SIZE_BTNS_TEXT))
+            .on_press(AppEvents::ShowSalesInfo)
+            .style(crate::style::btns::get_style_btn_main_menu());
+        let to_buy_btn = button(text(TO_BUY_BTN_MSG).size(SIZE_BTNS_TEXT))
+            .on_press(AppEvents::ToBuyDataRequested)
+            .style(crate::style::btns::get_style_btn_main_menu());
 
         let content = match self.current_view {
-            Views::Sale => {
-                self.listen_barcode_device = true;
-                self.sale_controller.scan_barcodes_view()
+            Views::Sale => SaleView::scan_barcodes_view(&self.sale_controller.sale_info),
+            Views::SaleAddProductForm => {
+                SaleView::product_to_add_view(&self.sale_controller.product_to_add)
             }
-            Views::SaleAddProductForm => self.sale_controller.product_to_add_view(),
-            Views::SaleChargeForm => self.sale_controller.charge_sale_view(),
-            Views::SalesInfo => self.sales_info_view.view(),
-            Views::ToBuy => self.to_buy_controller.view(),
-            Views::Catalog => self.catalog_controller.catalog_list_view(),
-            Views::CatalogAddRecord => self.catalog_controller.populate_record_view(),
+            Views::SaleChargeForm => SaleView::charge_sale_view(
+                &self.sale_controller.sale_info,
+                self.sale_controller.is_pay_later(),
+                self.sale_controller.is_ok_charge(),
+            ),
+            Views::ToBuy => to_buy::show_list_products(&self.to_buy_controller.products),
+            Views::Catalog => catalog::catalog_list_view(&self.catalog_controller.products_to_add),
+            Views::CatalogAddRecord => {
+                catalog::load_product_view(&self.catalog_controller.load_product)
+            }
+            Views::SalesInfo => sales_info::view(),
         };
 
-        let col = col.push(content);
+        let col = column!(
+            row!(catalog_btn, sale_btn, sales_info_btn, to_buy_btn).spacing(SPACE_ROWS),
+            content
+        )
+        .spacing(SPACE_COLUMNS)
+        .padding(10)
+        .align_items(Alignment::Center)
+        .width(iced::Length::Fill)
+        .height(iced::Length::Fill);
 
         col.into()
     }
