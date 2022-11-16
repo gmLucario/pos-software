@@ -42,8 +42,8 @@ Help to manage a small store like:
     - [ ] save logs file
 - [ ] add general doc comments
     - [ ] models module docs
-    - [ ] schemas module docs
-    - [ ] views module docs
+    - [x] schemas module docs
+    - [x] views module docs
 - [ ] add unit tests
 - [ ] add integration tests
 - [ ] rollback when db errors
