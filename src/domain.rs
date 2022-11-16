@@ -10,19 +10,21 @@ use iced::{
 
 use crate::{
     constants::{
-        CATALOG_BTN_MSG, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT, SPACE_COLUMNS,
-        SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
+        CATALOG_BTN_MSG, LOAN_BTN_MSG, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT,
+        SPACE_COLUMNS, SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
     },
     controllers,
     data::{loan_repo::LoanRepo, product_repo::ProductRepo, sale_repo::SaleRepo},
     db::Db,
-    kinds::{AppEvents, CatalogInputs, SaleInputs, UnitsMeasurement, Views},
+    kinds::{
+        AppEvents, CatalogInputs, LoanDatePicker, LoanInputs, SaleInputs, UnitsMeasurement, Views,
+    },
     models::{
         catalog::LoadProduct as ModelLoadProduct,
         sale::{Sale, SaleLoan},
     },
-    schemas::{catalog::LoadProduct, sale::ProductToAdd},
-    views::{catalog, sale::SaleView, sales_info, to_buy},
+    schemas::{catalog::LoadProduct, loan::LoanSchema, sale::ProductToAdd},
+    views::{catalog, loan, sale::SaleView, sales_info, to_buy},
 };
 
 /// Represents app modules and components
@@ -36,6 +38,8 @@ pub struct App<'a> {
     pub sale_controller: controllers::sale::Sale,
     /// Controller handles Products to buy logic
     pub to_buy_controller: controllers::to_buy::ToBuy,
+    /// Controller handles Loan details/info logic
+    pub loan_info_controller: controllers::loan::Loan,
 }
 
 /// Implements the traits for an interactive cross-platform application.
@@ -53,6 +57,7 @@ impl Application for App<'_> {
                 catalog_controller: controllers::catalog::Catalog::new(),
                 sale_controller: controllers::sale::Sale::default(),
                 to_buy_controller: controllers::to_buy::ToBuy::default(),
+                loan_info_controller: controllers::loan::Loan::default(),
             },
             Command::none(),
         )
@@ -299,6 +304,44 @@ impl Application for App<'_> {
                 self.catalog_controller.products_to_add.remove(&id);
                 Command::none()
             }
+            AppEvents::ShowLoanInfo => {
+                self.current_view = Views::LoanInfo;
+                self.loan_info_controller.search_info = LoanSchema::default();
+                Command::none()
+            }
+            AppEvents::LoanShowDatePicker(state, date_picker) => {
+                match date_picker {
+                    LoanDatePicker::StartDatePicker => {
+                        self.loan_info_controller.date_picker_states.show_start_date = state
+                    }
+                    LoanDatePicker::EndDatePicker => {
+                        self.loan_info_controller.date_picker_states.show_end_date = state
+                    }
+                };
+
+                Command::none()
+            }
+            AppEvents::LoanSubmitDatePicker(date, date_picker) => {
+                match date_picker {
+                    LoanDatePicker::StartDatePicker => {
+                        self.loan_info_controller.date_picker_states.show_start_date = false;
+                        self.loan_info_controller.search_info.start_date = date
+                    }
+                    LoanDatePicker::EndDatePicker => {
+                        self.loan_info_controller.date_picker_states.show_end_date = false;
+                        self.loan_info_controller.search_info.end_date = date
+                    }
+                };
+                Command::none()
+            }
+            AppEvents::LoanInputChanged(input_value, input_type) => {
+                match input_type {
+                    LoanInputs::DebtorNameLike => {
+                        self.loan_info_controller.search_info.client = input_value;
+                    }
+                }
+                Command::none()
+            }
             _ => Command::none(),
         }
     }
@@ -313,19 +356,6 @@ impl Application for App<'_> {
     }
 
     fn view(&self) -> Element<'_, Self::Message, iced::Renderer<Self::Theme>> {
-        let catalog_btn = button(text(CATALOG_BTN_MSG).size(SIZE_BTNS_TEXT))
-            .on_press(AppEvents::ShowCatalog)
-            .style(crate::style::btns::get_style_btn_main_menu());
-        let sale_btn = button(text(SALE_BTN_MSG).size(SIZE_BTNS_TEXT))
-            .on_press(AppEvents::ShowSale)
-            .style(crate::style::btns::get_style_btn_main_menu());
-        let sales_info_btn = button(text(SALES_INFO_BTN_MSG).size(SIZE_BTNS_TEXT))
-            .on_press(AppEvents::ShowSalesInfo)
-            .style(crate::style::btns::get_style_btn_main_menu());
-        let to_buy_btn = button(text(TO_BUY_BTN_MSG).size(SIZE_BTNS_TEXT))
-            .on_press(AppEvents::ToBuyDataRequested)
-            .style(crate::style::btns::get_style_btn_main_menu());
-
         let content = match self.current_view {
             Views::Sale => SaleView::scan_barcodes_view(&self.sale_controller.sale_info),
             Views::SaleAddProductForm => {
@@ -342,18 +372,38 @@ impl Application for App<'_> {
                 catalog::load_product_view(&self.catalog_controller.load_product)
             }
             Views::SalesInfo => sales_info::view(),
+            Views::LoanInfo => loan::LoanView::search_results(
+                &self.loan_info_controller.date_picker_states,
+                &self.loan_info_controller.search_info,
+            ),
         };
 
-        let col = column!(
-            row!(catalog_btn, sale_btn, sales_info_btn, to_buy_btn).spacing(SPACE_ROWS),
+        column!(
+            row!(
+                button(text(CATALOG_BTN_MSG).size(SIZE_BTNS_TEXT))
+                    .on_press(AppEvents::ShowCatalog)
+                    .style(crate::style::btns::get_style_btn_main_menu()),
+                button(text(SALE_BTN_MSG).size(SIZE_BTNS_TEXT))
+                    .on_press(AppEvents::ShowSale)
+                    .style(crate::style::btns::get_style_btn_main_menu()),
+                button(text(LOAN_BTN_MSG).size(SIZE_BTNS_TEXT))
+                    .on_press(AppEvents::ShowLoanInfo)
+                    .style(crate::style::btns::get_style_btn_main_menu()),
+                button(text(TO_BUY_BTN_MSG).size(SIZE_BTNS_TEXT))
+                    .on_press(AppEvents::ToBuyDataRequested)
+                    .style(crate::style::btns::get_style_btn_main_menu()),
+                button(text(SALES_INFO_BTN_MSG).size(SIZE_BTNS_TEXT))
+                    .on_press(AppEvents::ShowSalesInfo)
+                    .style(crate::style::btns::get_style_btn_main_menu()),
+            )
+            .spacing(SPACE_ROWS),
             content
         )
         .spacing(SPACE_COLUMNS)
         .padding(10)
         .align_items(Alignment::Center)
         .width(iced::Length::Fill)
-        .height(iced::Length::Fill);
-
-        col.into()
+        .height(iced::Length::Fill)
+        .into()
     }
 }

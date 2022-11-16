@@ -13,8 +13,10 @@ pub const CATALOG_BTN_MSG: &str = "Catálogo";
 pub const SALE_BTN_MSG: &str = "Venta";
 /// Sales info button label
 pub const SALES_INFO_BTN_MSG: &str = "Estadísticas";
-/// Producto to buy button label
+/// Product to buy button label
 pub const TO_BUY_BTN_MSG: &str = "Lista Compra";
+/// Loans button label
+pub const LOAN_BTN_MSG: &str = "Prestamos";
 
 // Sizes
 /// Limit of characters saved to be considered as a barcode
@@ -32,6 +34,8 @@ pub const SIZE_BTNS_TEXT: u16 = 30;
 pub const SPACE_ROWS: u16 = 10;
 /// Vertical space between each element of a column container
 pub const SPACE_COLUMNS: u16 = 10;
+/// Padding for column items
+pub const COLUMN_PADDING: u16 = 20;
 
 // Data
 /// Number of decimals from [`sqlx::postgres::types::PgMoney`] to

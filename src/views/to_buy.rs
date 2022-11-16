@@ -5,13 +5,17 @@ use iced::{
     Alignment, Element, Length,
 };
 
-use crate::{constants::SIZE_TEXT, kinds::AppEvents, models::catalog::ProductToBuy};
+use crate::{
+    constants::{COLUMN_PADDING, SIZE_TEXT},
+    kinds::AppEvents,
+    models::catalog::ProductToBuy,
+};
 
 /// Show the list of products to be bought
 pub fn show_list_products(products: &[ProductToBuy]) -> Element<AppEvents> {
     let mut col = column!()
         .align_items(Alignment::Start)
-        .padding(20)
+        .padding(COLUMN_PADDING)
         .spacing(20);
     for product in products.iter() {
         col = col.push(text(product.get_formatted_item()).size(SIZE_TEXT));
