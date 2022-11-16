@@ -2,6 +2,7 @@
 
 use std::fmt::Display;
 
+use iced_aw::date_picker::Date;
 use sqlx::types::Uuid;
 
 use crate::models::{
@@ -25,6 +26,8 @@ pub enum Views {
     Catalog,
     /// Form input product details to be added to the catalog
     CatalogAddRecord,
+    /// Info about Loans
+    LoanInfo,
 }
 
 /// Types of valid units measurement
@@ -112,6 +115,19 @@ pub enum SaleInputs {
     ClientName,
 }
 
+/// Types of user inputs in [`crate::kinds::Views::LoanInfo`] view type
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LoanInputs {
+    DebtorNameLike,
+}
+
+/// Types of date picker in [`crate::kinds::Views::LoanInfo`] view type
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LoanDatePicker {
+    StartDatePicker,
+    EndDatePicker,
+}
+
 /// Events variants that can be send in the app
 #[derive(Debug, Clone)]
 pub enum AppEvents {
@@ -173,4 +189,16 @@ pub enum AppEvents {
     // Sale Info view
     /// Event after button main menu was pressed to show sale info module
     ShowSalesInfo,
+
+    // Loan View
+    /// Event after loan btn pressed in the main menu
+    ShowLoanInfo,
+    /// Event to show a date picker
+    LoanShowDatePicker(bool, LoanDatePicker),
+    /// Event to submit the value selected in the date picker
+    LoanSubmitDatePicker(Date, LoanDatePicker),
+    /// An input field element change its state
+    LoanInputChanged(String, LoanInputs),
+    /// Event to start searching loans
+    LoanSearchRequested,
 }
