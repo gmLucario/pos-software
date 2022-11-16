@@ -8,7 +8,9 @@ use iced::{
 };
 
 use crate::{
-    constants::{SIZE_BTNS_TEXT, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS},
+    constants::{
+        COLUMN_PADDING, SIZE_BTNS_TEXT, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS,
+    },
     kinds::{AppEvents, CatalogInputs, UnitsMeasurement},
     schemas::catalog::LoadProduct,
     views::fonts,
@@ -26,7 +28,7 @@ fn catalog_list_view_formatted_row(id: String, product: &LoadProduct) -> Element
         text(&product.cost)
             .size(SIZE_TEXT)
             .width(Length::FillPortion(2)),
-        button(text('\u{F1F8}'.to_string()).font(fonts::GARBAGE_ICON))
+        button(text('\u{F1F8}').font(fonts::FONT_ICONS))
             .on_press(AppEvents::CatalogRemoveRecordList(id))
             .style(crate::style::btns::get_style_btn_danger()),
     )
@@ -118,7 +120,7 @@ pub fn catalog_list_view(products: &HashMap<String, LoadProduct>) -> Element<App
         ),
         container_products,
     )
-    .padding(20)
+    .padding(COLUMN_PADDING)
     .spacing(SPACE_COLUMNS)
     .align_items(Alignment::Center);
 

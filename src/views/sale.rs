@@ -7,7 +7,7 @@ use iced::{
 use sqlx::postgres::types::PgMoney;
 
 use crate::{
-    constants::{SIZE_TEXT, SPACE_COLUMNS, TO_DECIMAL_DIGITS},
+    constants::{COLUMN_PADDING, SIZE_TEXT, SPACE_COLUMNS, TO_DECIMAL_DIGITS},
     kinds::{AppEvents, SaleInputs},
     schemas::sale::{ProductList, ProductToAdd, SaleInfo},
     views::fonts,
@@ -143,7 +143,7 @@ impl SaleView {
     /// Shows main info current sale
     pub fn scan_barcodes_view(sale_info: &SaleInfo) -> Element<AppEvents> {
         let mut general_container = column!()
-            .padding(20)
+            .padding(COLUMN_PADDING)
             .spacing(SPACE_COLUMNS)
             .align_items(iced::Alignment::Center);
 
@@ -155,7 +155,7 @@ impl SaleView {
         for (key, product) in sale_info.products.iter() {
             products_container = products_container.push(
                 Self::format_product_row(product).push(
-                    button(text('\u{F1F8}'.to_string()).font(fonts::GARBAGE_ICON))
+                    button(text('\u{F1F8}').font(fonts::FONT_ICONS))
                         .on_press(AppEvents::SaleRemoveProductToBuyList(key.to_string()))
                         .style(crate::style::btns::get_style_btn_danger()),
                 ),
