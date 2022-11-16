@@ -1,3 +1,5 @@
+//! [`iced::Element`]s to be used in the loan info view
+
 use iced::{
     widget::{button, column, row, text, text_input},
     Alignment, Element, Length,
@@ -11,10 +13,12 @@ use crate::{
     views::fonts,
 };
 
+/// Groups the different views, loan info has
 #[derive(Default)]
 pub struct LoanView {}
 
 impl LoanView {
+    /// View to search specific loans and list them
     pub fn search_results<'a>(
         states: &'a LoanDatePickerStates,
         info: &'a LoanSchema,
