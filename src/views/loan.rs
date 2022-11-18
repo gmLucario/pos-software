@@ -56,6 +56,7 @@ impl LoanView {
                 text_input("", &info.client, |input_value| {
                     AppEvents::LoanInputChanged(input_value, LoanInputs::DebtorNameLike)
                 })
+                .on_submit(AppEvents::LoanSearchRequested)
                 .size(SIZE_TEXT_INPUT),
                 search_btn,
             )
