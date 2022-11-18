@@ -2,6 +2,7 @@
 
 use iced_aw::date_picker::Date;
 
+#[derive(Clone)]
 /// Represents user input values
 pub struct LoanSchema {
     /// Date start for lookig loans
