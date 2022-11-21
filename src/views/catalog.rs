@@ -100,7 +100,7 @@ pub fn catalog_list_view(products: &HashMap<String, LoadProduct>) -> Element<App
 
     let is_products_empty: bool = products.is_empty();
 
-    for (id, product) in products.iter() {
+    for (id, product) in products {
         container_products =
             container_products.push(catalog_list_view_formatted_row(id.to_string(), product))
     }
