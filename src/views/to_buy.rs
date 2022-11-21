@@ -17,7 +17,7 @@ pub fn show_list_products(products: &[ProductToBuy]) -> Element<AppEvents> {
         .align_items(Alignment::Start)
         .padding(COLUMN_PADDING)
         .spacing(20);
-    for product in products.iter() {
+    for product in products {
         col = col.push(text(product.get_formatted_item()).size(SIZE_TEXT));
     }
 
