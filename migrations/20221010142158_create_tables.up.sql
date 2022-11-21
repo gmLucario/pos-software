@@ -154,7 +154,7 @@ CREATE INDEX loan_name_debtor_idx ON loan (name_debtor);
 -- ///////
 
 CREATE TABLE IF NOT EXISTS loan_payment (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     loan_id UUID,
     money_amount MONEY,
     payed_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
