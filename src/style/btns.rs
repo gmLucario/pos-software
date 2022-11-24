@@ -2,7 +2,9 @@
 
 use iced::{widget::button::StyleSheet, Color};
 
-use crate::constants::{DEFAULT_DEACTIVATE, DEFAULT_GREEN, DEFAULT_MENU, DEFAULT_RED};
+use crate::constants::{
+    COLUMN_LIST_BTNS, DEFAULT_DEACTIVATE, DEFAULT_GREEN, DEFAULT_MENU, DEFAULT_RED,
+};
 
 /// Represents types buttons of the application
 #[derive(Default)]
@@ -14,6 +16,8 @@ enum Button {
     Danger,
     /// Main menu nav bar items
     MainMenu,
+    /// Listed Items
+    ListedItems,
 }
 
 impl StyleSheet for Button {
@@ -33,6 +37,7 @@ impl StyleSheet for Button {
             Button::Ok => basic_appearance(DEFAULT_GREEN),
             Button::Danger => basic_appearance(DEFAULT_RED),
             Button::MainMenu => basic_appearance(DEFAULT_MENU),
+            Button::ListedItems => basic_appearance(COLUMN_LIST_BTNS),
         }
     }
 
@@ -61,4 +66,9 @@ pub fn get_style_btn_ok() -> iced::theme::Button {
 /// Return the style for buttons `main menu`
 pub fn get_style_btn_main_menu() -> iced::theme::Button {
     iced::theme::Button::Custom(Box::from(crate::style::btns::Button::MainMenu))
+}
+
+/// Return the style for buttons of type `ListedItems`
+pub fn get_style_btn_listed_items() -> iced::theme::Button {
+    iced::theme::Button::Custom(Box::from(crate::style::btns::Button::ListedItems))
 }

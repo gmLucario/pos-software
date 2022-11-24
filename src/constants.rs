@@ -87,3 +87,13 @@ pub const DEFAULT_MENU: Color = Color {
     b: 0.7,
     a: 1.0,
 };
+
+/// Color for list btns
+///
+/// Use [color picker](https://ajalt.github.io/colormath/converter/) as references
+pub const COLUMN_LIST_BTNS: Color = Color {
+    r: 0.592,
+    g: 0.251,
+    b: 0.749,
+    a: 1.0,
+};
