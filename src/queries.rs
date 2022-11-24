@@ -226,3 +226,53 @@ values (
 	3
 );
 "#;
+
+/// Return the loans match the date range and
+/// name debtor like input
+pub const GET_LOAN_LIST: &str = r#"
+select
+	loan.id,
+	name_debtor,
+	sale.sold_at,
+	price - COALESCE(
+		sum(loan_payment.money_amount),
+		0::money
+	) as loan_balance
+from loan
+left join sale on (
+	sale.id = loan.id 
+)
+left join loan_payment on (
+	loan_payment.loan_id = loan.id
+)
+where
+	to_date(sale.sold_at::text, 'YYYY/MM/DD')
+		between 
+			to_date($1, 'YYYY-MM-DD')
+			and to_date($2, 'YYYY-MM-DD')
+	and loan.name_debtor like concat('%',$3,'%')
+group by
+	loan.id,
+	sale.sold_at
+order by sale.sold_at desc;
+"#;
+
+/// Return the payments of a loan
+pub const GET_PAYMENTS_LOAN: &str = r#"
+select
+	money_amount,
+	payed_at
+from loan_payment
+left join loan on (
+	loan_payment.loan_id = loan.id
+)
+where 
+	loan_id = $1
+	and loan.status_loan != 1
+order by loan_payment.payed_at desc;
+"#;
+
+/// Insert a new loan payment
+pub const INSERT_NEW_PAYMENT_LOAN: &str = r#"
+insert into loan_payment (loan_id, money_amount) values ($1, $2);
+"#;
