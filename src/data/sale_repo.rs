@@ -10,10 +10,10 @@ use sqlx::{
 
 use crate::{
     data::product_repo::ProductRepo,
-    models::sale::{CatalogAmount, Sale},
+    models::sale::{CatalogAmount, ProductSale, Sale},
     queries::{
         CREATE_OPERATION_FROM_CATALOG, DELETE_CATALOG_RECORD, GET_PRODUCTS_CATALOG_UPDATE_SALE,
-        INSERT_NEW_SALE, INSERT_NEW_SALE_OPERATION, UPDATE_CATALOG_AMOUNT,
+        GET_PRODUCTS_SALE, INSERT_NEW_SALE, INSERT_NEW_SALE_OPERATION, UPDATE_CATALOG_AMOUNT,
     },
 };
 
@@ -170,5 +170,19 @@ impl SaleRepo {
             .map_err(|err| err.to_string())?;
 
         Ok(())
+    }
+
+    /// Return list produts of a sale
+    pub async fn get_products_sale(
+        connection: &Pool<Postgres>,
+        sale_id: Uuid,
+    ) -> Result<Vec<ProductSale>, String> {
+        let products = sqlx::query_as::<_, ProductSale>(GET_PRODUCTS_SALE)
+            .bind(sale_id)
+            .fetch_all(connection)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Ok(products)
     }
 }
