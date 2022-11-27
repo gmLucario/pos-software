@@ -15,10 +15,10 @@ use crate::{
         TO_DECIMAL_DIGITS,
     },
     controllers::loan::LoanData,
+    helpers::{get_btn_check_icon, get_btn_plus_icon, get_btn_trash_icon},
     kinds::{AppEvents, LoanDatePicker, LoanInputs, LoanModal},
     models::{loan::LoanPayment, sale::ProductSale},
-    style::btns::{get_style_btn_danger, get_style_btn_listed_items, get_style_btn_ok},
-    views::fonts,
+    style::btns::get_style_btn_listed_items,
 };
 
 /// Groups the different views, loan info has
@@ -32,9 +32,7 @@ impl LoanView {
         modal: &'a LoanModal,
         produts_sale: &'a [ProductSale],
     ) -> Element<'a, AppEvents> {
-        let search_btn = button(text('\u{f00c}').font(fonts::FONT_ICONS))
-            .style(get_style_btn_ok())
-            .on_press(AppEvents::LoanSearchRequested);
+        let search_btn = get_btn_check_icon().on_press(AppEvents::LoanSearchRequested);
 
         let mut list_loans = column!()
             .align_items(Alignment::Start)
@@ -56,9 +54,7 @@ impl LoanView {
                     .on_press(AppEvents::LoanShowLoanSale(loan.id))
                     .style(get_style_btn_listed_items())
                     .width(Length::Fill),
-                    button(text("+").size(SIZE_TEXT))
-                        .style(get_style_btn_ok())
-                        .on_press(AppEvents::LoanShowPaymentsDetails(loan.id))
+                    get_btn_plus_icon().on_press(AppEvents::LoanShowPaymentsDetails(loan.id))
                 )
                 .spacing(SPACE_ROWS),
             );
@@ -93,9 +89,7 @@ impl LoanView {
                 .on_submit(AppEvents::LoanSearchRequested)
                 .size(SIZE_TEXT_INPUT),
                 search_btn,
-                button(text('\u{F1F8}').font(fonts::FONT_ICONS))
-                    .style(get_style_btn_danger())
-                    .on_press(AppEvents::LoanClearLoanViewData),
+                get_btn_trash_icon().on_press(AppEvents::LoanClearLoanViewData),
             )
             .spacing(SPACE_ROWS),
             scrollable(list_loans).height(Length::Fill)
@@ -163,9 +157,7 @@ impl LoanView {
                 })
                 .on_submit(AppEvents::LoanAddNewPaymentToLoan)
                 .size(SIZE_TEXT),
-                button(text("+").size(SIZE_TEXT))
-                    .style(get_style_btn_ok())
-                    .on_press(AppEvents::LoanAddNewPaymentToLoan)
+                get_btn_plus_icon().on_press(AppEvents::LoanAddNewPaymentToLoan)
             )
             .spacing(SPACE_ROWS),
             scrollable(list_payments.width(Length::Fill)),

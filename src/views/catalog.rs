@@ -3,17 +3,15 @@
 use std::collections::HashMap;
 
 use iced::{
-    widget::{button, column, pick_list, row, scrollable, text, text_input},
+    widget::{column, pick_list, row, scrollable, text, text_input},
     Alignment, Element, Length,
 };
 
 use crate::{
-    constants::{
-        COLUMN_PADDING, SIZE_BTNS_TEXT, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS,
-    },
+    constants::{COLUMN_PADDING, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS},
+    helpers::{get_btn_cancel, get_btn_ok, get_btn_save, get_btn_trash_icon},
     kinds::{AppEvents, CatalogInputs, UnitsMeasurement},
     schemas::catalog::LoadProduct,
-    views::fonts,
 };
 
 /// Get a new product row for the catalog list
@@ -28,9 +26,7 @@ fn catalog_list_view_formatted_row(id: String, product: &LoadProduct) -> Element
         text(&product.cost)
             .size(SIZE_TEXT)
             .width(Length::FillPortion(2)),
-        button(text('\u{F1F8}').font(fonts::FONT_ICONS))
-            .on_press(AppEvents::CatalogRemoveRecordList(id))
-            .style(crate::style::btns::get_style_btn_danger()),
+        get_btn_trash_icon().on_press(AppEvents::CatalogRemoveRecordList(id)),
     )
     .spacing(10)
     .width(iced::Length::Fill)
@@ -75,12 +71,8 @@ pub fn load_product_view(product: &LoadProduct) -> Element<AppEvents> {
         })
         .size(SIZE_TEXT_INPUT),
         row!(
-            button(text("Cancelar"))
-                .on_press(AppEvents::CatalogNewRecordCancel)
-                .style(crate::style::btns::get_style_btn_danger()),
-            button(text("Ok"))
-                .on_press(AppEvents::CatalogNewRecordOk)
-                .style(crate::style::btns::get_style_btn_ok()),
+            get_btn_cancel().on_press(AppEvents::CatalogNewRecordCancel),
+            get_btn_ok().on_press(AppEvents::CatalogNewRecordOk),
         )
         .spacing(20),
     )
@@ -124,8 +116,7 @@ pub fn catalog_list_view(products: &HashMap<String, LoadProduct>) -> Element<App
     .spacing(SPACE_COLUMNS)
     .align_items(Alignment::Center);
 
-    let mut btn_save =
-        button(text("Guardar").size(SIZE_BTNS_TEXT)).style(crate::style::btns::get_style_btn_ok());
+    let mut btn_save = get_btn_save();
 
     if !is_products_empty {
         btn_save = btn_save.on_press(AppEvents::CatalogSaveAllRecords)
