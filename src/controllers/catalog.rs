@@ -80,4 +80,10 @@ impl Catalog {
     pub fn reset_values(&mut self) {
         self.load_product = LoadProduct::default();
     }
+
+    /// Reset inputs products amount depends type of units measurement
+    pub fn reset_product_amounts(&mut self) {
+        self.load_product.amount = "1".to_string();
+        self.load_product.min_amount = "1".to_string();
+    }
 }
