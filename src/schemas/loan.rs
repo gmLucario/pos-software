@@ -3,8 +3,8 @@
 use iced_aw::date_picker::Date;
 
 #[derive(Clone)]
-/// Represents user input values
-pub struct LoanSchema {
+/// Represents user input values to search loans
+pub struct LoanSearchSchema {
     /// Date start for lookig loans
     pub start_date: Date,
     /// Until this date to lookig loans
@@ -13,7 +13,7 @@ pub struct LoanSchema {
     pub client: String,
 }
 
-impl Default for LoanSchema {
+impl Default for LoanSearchSchema {
     fn default() -> Self {
         let today = Date::today();
         Self {
@@ -26,9 +26,11 @@ impl Default for LoanSchema {
 
 /// Represents states of the date picker
 #[derive(Default)]
-pub struct LoanDatePickerStates {
+pub struct LoanWidgetsStates {
     /// If start_date picker is shown or not
     pub show_start_date: bool,
     /// If end_date picker is shown or not
     pub show_end_date: bool,
+    /// If the modal of payments of a loan should be render or not
+    pub show_modal: bool,
 }
