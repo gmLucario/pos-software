@@ -1,16 +1,16 @@
 //! [`iced::Element`]s to be used in the sale view
 
 use iced::{
-    widget::{button, column, row, scrollable, text, text_input, Row},
+    widget::{column, row, scrollable, text, text_input, Row},
     Alignment, Element, Length,
 };
 use sqlx::postgres::types::PgMoney;
 
 use crate::{
     constants::{COLUMN_PADDING, SIZE_TEXT, SPACE_COLUMNS, TO_DECIMAL_DIGITS},
+    helpers::{get_btn_cancel, get_btn_ok, get_btn_trash_icon},
     kinds::{AppEvents, SaleInputs},
     schemas::sale::{ProductList, ProductToAdd, SaleInfo},
-    views::fonts,
 };
 
 /// Groups the different views Sale module has
@@ -23,7 +23,7 @@ impl SaleView {
         is_pay_later: bool,
         is_ok_to_charge: bool,
     ) -> Element<AppEvents> {
-        let mut ok_btn = button(text("Ok")).style(crate::style::btns::get_style_btn_ok());
+        let mut ok_btn = get_btn_ok();
         if is_ok_to_charge {
             ok_btn = ok_btn.on_press(AppEvents::SaleCreateNewSale);
         }
@@ -68,9 +68,7 @@ impl SaleView {
         }
         container = container.push(
             row!(
-                button(text("Cancelar"))
-                    .on_press(AppEvents::SaleNewProductCancel)
-                    .style(crate::style::btns::get_style_btn_danger()),
+                get_btn_cancel().on_press(AppEvents::SaleNewProductCancel),
                 ok_btn,
             )
             .spacing(20),
@@ -95,12 +93,8 @@ impl SaleView {
                 .width(Length::Units(100)),
             ),
             row!(
-                button(text("Cancelar"))
-                    .on_press(AppEvents::SaleNewProductCancel)
-                    .style(crate::style::btns::get_style_btn_danger()),
-                button(text("Ok"))
-                    .on_press(AppEvents::SaleNewProductOk)
-                    .style(crate::style::btns::get_style_btn_ok()),
+                get_btn_cancel().on_press(AppEvents::SaleNewProductCancel),
+                get_btn_ok().on_press(AppEvents::SaleNewProductOk),
             )
             .spacing(20),
         )
@@ -155,9 +149,8 @@ impl SaleView {
         for (key, product) in sale_info.products.iter() {
             products_container = products_container.push(
                 Self::format_product_row(product).push(
-                    button(text('\u{F1F8}').font(fonts::FONT_ICONS))
-                        .on_press(AppEvents::SaleRemoveProductToBuyList(key.to_string()))
-                        .style(crate::style::btns::get_style_btn_danger()),
+                    get_btn_trash_icon()
+                        .on_press(AppEvents::SaleRemoveProductToBuyList(key.to_string())),
                 ),
             );
         }
@@ -177,12 +170,8 @@ impl SaleView {
         if are_products {
             general_container = general_container.push(
                 row!(
-                    button(text("Cancelar"))
-                        .on_press(AppEvents::SaleProductsToBuyCancel)
-                        .style(crate::style::btns::get_style_btn_danger()),
-                    button(text("OK"))
-                        .on_press(AppEvents::SaleProductsToBuyOk)
-                        .style(crate::style::btns::get_style_btn_ok())
+                    get_btn_cancel().on_press(AppEvents::SaleProductsToBuyCancel),
+                    get_btn_ok().on_press(AppEvents::SaleProductsToBuyOk)
                 )
                 .spacing(10),
             );
