@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS product (
     barcode VARCHAR(100) UNIQUE,
     full_name VARCHAR(100),
     user_price MONEY,
-    min_amount NUMERIC(5,3),
+    min_amount NUMERIC(8, 3),
     unit_measurement_id SMALLINT,
     created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
 
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS catalog (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID,
     cost MONEY,
-    current_amount NUMERIC(5, 3),
+    current_amount NUMERIC(8, 3),
     priced_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
 
   CONSTRAINT fk_catalog_product_id
@@ -84,7 +84,7 @@ CREATE INDEX catalog_priced_at_idx ON catalog (priced_at);
 CREATE TABLE IF NOT EXISTS operation (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID,
-    amount_product NUMERIC(5,3),
+    amount_product NUMERIC(8, 3),
     cost MONEY,
     earning MONEY,
     condition_id SMALLINT,
