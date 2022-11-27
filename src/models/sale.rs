@@ -27,6 +27,17 @@ pub struct CatalogAmount {
     pub cost: PgMoney,
 }
 
+#[derive(sqlx::FromRow, Debug, Clone)]
+/// Represents a sale's product info
+pub struct ProductSale {
+    /// Full name of a product
+    pub product_name: String,
+    /// Details about the amount: amount (unit)
+    pub amount_description: String,
+    /// Money the client payed
+    pub charge: PgMoney,
+}
+
 #[derive(Debug, Clone)]
 pub struct SaleProductAmount {
     pub barcode: String,
@@ -76,9 +87,16 @@ impl From<&SaleInfo> for SaleLoan {
 
         let money_amount = schema.total_pay - client_payment;
         let is_valid = money_amount.to_bigdecimal(TO_DECIMAL_DIGITS) > zero_amount;
+        let name_debtor = schema
+            .client_name
+            .to_lowercase()
+            .split_whitespace()
+            .collect::<Vec<&str>>()
+            .join(" ");
+
         Self {
             sale_id: Uuid::default(),
-            name_debtor: schema.client_name.to_string(),
+            name_debtor,
             money_amount,
             is_valid,
         }

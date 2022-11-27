@@ -7,7 +7,8 @@ use sqlx::types::Uuid;
 
 use crate::models::{
     catalog::{ProductInfo, ProductToBuy},
-    sale::SaleProductInfo,
+    loan::{LoanItem, LoanPayment},
+    sale::{ProductSale, SaleProductInfo},
 };
 
 /// All the possible app views
@@ -31,11 +32,12 @@ pub enum Views {
 }
 
 /// Types of valid units measurement
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum UnitsMeasurement {
     Kilograms, // 1
     Liters,    // 2
-    Pieces,    // 3
+    #[default]
+    Pieces, // 3
 }
 
 /// Converts from `i16` to [crate::kinds::UnitsMeasurement] enum
@@ -82,13 +84,6 @@ impl UnitsMeasurement {
     ];
 }
 
-impl Default for UnitsMeasurement {
-    /// Default instance of [`crate::kinds::UnitsMeasurement`]
-    fn default() -> Self {
-        UnitsMeasurement::Pieces
-    }
-}
-
 /// Types of user inputs in [`crate::kinds::Views::Catalog`] view type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CatalogInputs {
@@ -118,14 +113,29 @@ pub enum SaleInputs {
 /// Types of user inputs in [`crate::kinds::Views::LoanInfo`] view type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoanInputs {
+    /// Name debtor to be searched
     DebtorNameLike,
+    /// New payment to a loan
+    PaymentLoanAmount,
 }
 
 /// Types of date picker in [`crate::kinds::Views::LoanInfo`] view type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoanDatePicker {
+    /// Date search starts
     StartDatePicker,
+    /// Date search ends
     EndDatePicker,
+}
+
+/// Modal variant in `loan` view
+#[derive(Default)]
+pub enum LoanModal {
+    #[default]
+    /// Payments of a loan
+    LoanPayments,
+    /// Loan's sale
+    LoanSale,
 }
 
 /// Events variants that can be send in the app
@@ -201,4 +211,23 @@ pub enum AppEvents {
     LoanInputChanged(String, LoanInputs),
     /// Event to start searching loans
     LoanSearchRequested,
+    /// Clear data loan view
+    LoanClearLoanViewData,
+    /// Event is sent after the loans search was performed
+    LoanSearchData(Result<Vec<LoanItem>, String>),
+    /// Show the main info of the id loan
+    LoanShowLoanSale(Uuid),
+    /// Show details about payments made to a loan
+    LoanShowPaymentsDetails(Uuid),
+    /// Event receive data send by the loan repo about
+    /// payments of a loan
+    LoanPaymentDetailsData(Result<Vec<LoanPayment>, String>),
+    /// User request to close the modal shows payment to a loan
+    LoanCloseModalPaymentsLoan,
+    /// Add new loan event
+    LoanAddNewPaymentToLoan,
+    /// A new loan paymend was requested
+    LoanAddNewPaymentToLoanRequested(Result<(), String>),
+    /// Result query sale's products of a loan
+    LoanSaleProductsData(Result<Vec<ProductSale>, String>),
 }

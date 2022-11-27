@@ -226,3 +226,75 @@ values (
 	3
 );
 "#;
+
+/// Return the loans match the date range and
+/// name debtor like input
+pub const GET_LOAN_LIST: &str = r#"
+select
+	loan.id,
+	name_debtor,
+	sale.sold_at,
+	price - COALESCE(
+		sum(loan_payment.money_amount),
+		0::money
+	) as loan_balance
+from loan
+left join sale on (
+	sale.id = loan.id 
+)
+left join loan_payment on (
+	loan_payment.loan_id = loan.id
+)
+where
+	to_date(sale.sold_at::text, 'YYYY/MM/DD')
+		between 
+			to_date($1, 'YYYY-MM-DD')
+			and to_date($2, 'YYYY-MM-DD')
+	and (
+		loan.name_debtor like concat('%',$3,'%')
+		or $3 = ''
+	)
+	and loan.status_loan != 1
+group by
+	loan.id,
+	sale.sold_at
+order by sale.sold_at desc;
+"#;
+
+/// Return the payments of a loan
+pub const GET_PAYMENTS_LOAN: &str = r#"
+select
+	money_amount,
+	payed_at
+from loan_payment
+left join loan on (
+	loan_payment.loan_id = loan.id
+)
+where 
+	loan_id = $1
+order by loan_payment.payed_at desc;
+"#;
+
+/// Insert a new loan payment
+pub const INSERT_NEW_PAYMENT_LOAN: &str = r#"
+call sp_new_payment_loan($1, $2);
+"#;
+
+/// Get products list of a sale
+pub const GET_PRODUCTS_SALE: &str = r#"
+select
+	pct.full_name as product_name,
+	concat(op.amount_product, ' (', um.description, ')') as amount_description	,
+	op.amount_product * op."cost" as charge
+from operation op
+left join sale_operation sop on (
+	sop.operation_id = op.id 
+)
+left join product pct on (
+	pct.id = op.product_id
+)
+left join unit_measurement um on (
+	um.id = pct.unit_measurement_id
+)
+where sop.sale_id = $1;
+"#;

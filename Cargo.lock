@@ -2268,10 +2268,12 @@ name = "pos-software"
 version = "0.1.0"
 dependencies = [
  "async-std",
+ "chrono",
  "envy",
  "iced",
  "iced_aw",
  "iced_native",
+ "num-traits",
  "once_cell",
  "serde",
  "sqlx",
@@ -2731,6 +2733,7 @@ dependencies = [
  "bitflags",
  "byteorder",
  "bytes",
+ "chrono",
  "crc",
  "crossbeam-queue",
  "dirs",
