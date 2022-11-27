@@ -4,6 +4,7 @@ pub mod controllers;
 pub mod data;
 pub mod db;
 pub mod domain;
+pub mod helpers;
 pub mod kinds;
 pub mod models;
 pub mod queries;
