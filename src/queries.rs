@@ -250,7 +250,11 @@ where
 		between 
 			to_date($1, 'YYYY-MM-DD')
 			and to_date($2, 'YYYY-MM-DD')
-	and loan.name_debtor like concat('%',$3,'%')
+	and (
+		loan.name_debtor like concat('%',$3,'%')
+		or $3 = ''
+	)
+	and loan.status_loan != 1
 group by
 	loan.id,
 	sale.sold_at
@@ -268,11 +272,29 @@ left join loan on (
 )
 where 
 	loan_id = $1
-	and loan.status_loan != 1
 order by loan_payment.payed_at desc;
 "#;
 
 /// Insert a new loan payment
 pub const INSERT_NEW_PAYMENT_LOAN: &str = r#"
-insert into loan_payment (loan_id, money_amount) values ($1, $2);
+call sp_new_payment_loan($1, $2);
+"#;
+
+/// Get products list of a sale
+pub const GET_PRODUCTS_SALE: &str = r#"
+select
+	pct.full_name as product_name,
+	concat(op.amount_product, ' (', um.description, ')') as amount_description	,
+	op.amount_product * op."cost" as charge
+from operation op
+left join sale_operation sop on (
+	sop.operation_id = op.id 
+)
+left join product pct on (
+	pct.id = op.product_id
+)
+left join unit_measurement um on (
+	um.id = pct.unit_measurement_id
+)
+where sop.sale_id = $1;
 "#;
