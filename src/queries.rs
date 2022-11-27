@@ -90,7 +90,7 @@ select
 	product.full_name as product_name,
 	product.user_price as price,
 	product.unit_measurement_id,
-	1::numeric(5,3) as amount,
+	1::NUMERIC(8, 3) as amount,
 	product.unit_measurement_id,
 	sum("catalog".current_amount) as total_amount
 from product
