@@ -1,3 +1,4 @@
+use iced_aw::date_picker::Date;
 use sqlx::{
     postgres::types::PgMoney,
     types::{BigDecimal, Uuid},
@@ -6,7 +7,7 @@ use std::str::FromStr;
 
 use crate::{
     constants::PGMONEY_DECIMALS,
-    kinds::LoanModal,
+    kinds::{LoanDatePicker, LoanModal},
     models::{
         loan::{LoanItem, LoanPayment},
         sale::ProductSale,
@@ -40,6 +41,28 @@ pub struct Loan {
 }
 
 impl Loan {
+    /// Set the state to a datepicker
+    pub fn set_state_datepicker(&mut self, date_picker: LoanDatePicker, state: bool) {
+        match date_picker {
+            LoanDatePicker::StartDatePicker => self.data.widgets_states.show_start_date = state,
+            LoanDatePicker::EndDatePicker => self.data.widgets_states.show_end_date = state,
+        }
+    }
+
+    /// Set a value to a date picker and hide it
+    pub fn set_datepicker_value(&mut self, date_picker: LoanDatePicker, date: Date) {
+        match date_picker {
+            LoanDatePicker::StartDatePicker => {
+                self.data.search_info.start_date = date;
+                self.data.widgets_states.show_start_date = false;
+            }
+            LoanDatePicker::EndDatePicker => {
+                self.data.search_info.end_date = date;
+                self.data.widgets_states.show_end_date = false;
+            }
+        }
+    }
+
     /// Get the loan search data
     pub fn get_loan_search(&self) -> LoanSearchSchema {
         let mut data = self.data.search_info.clone();
