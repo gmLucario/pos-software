@@ -13,17 +13,18 @@ use crate::{
         CATALOG_BTN_MSG, LOAN_BTN_MSG, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT,
         SPACE_COLUMNS, SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
     },
-    controllers,
+    controllers::{self},
     data::{loan_repo::LoanRepo, product_repo::ProductRepo, sale_repo::SaleRepo},
     db::Db,
     kinds::{
-        AppEvents, CatalogInputs, LoanDatePicker, LoanInputs, SaleInputs, UnitsMeasurement, Views,
+        AppEvents, CatalogInputs, LoanDatePicker, LoanInputs, LoanModal, SaleInputs,
+        UnitsMeasurement, Views,
     },
     models::{
         catalog::LoadProduct as ModelLoadProduct,
         sale::{Sale, SaleLoan},
     },
-    schemas::{catalog::LoadProduct, loan::LoanSchema, sale::ProductToAdd},
+    schemas::{catalog::LoadProduct, sale::ProductToAdd},
     views::{catalog, loan, sale::SaleView, sales_info, to_buy},
 };
 
@@ -253,7 +254,17 @@ impl Application for App<'_> {
                         self.catalog_controller.load_product.user_price = input_value
                     }
                     CatalogInputs::MinAmountProduct if input_value.parse::<f64>().is_ok() => {
-                        self.catalog_controller.load_product.min_amount = input_value
+                        match self.catalog_controller.load_product.unit_measurement {
+                            UnitsMeasurement::Kilograms | UnitsMeasurement::Liters
+                                if input_value.parse::<f64>().is_ok() =>
+                            {
+                                self.catalog_controller.load_product.min_amount = input_value
+                            }
+                            UnitsMeasurement::Pieces if input_value.parse::<u64>().is_ok() => {
+                                self.catalog_controller.load_product.min_amount = input_value
+                            }
+                            _ => (),
+                        }
                     }
                     CatalogInputs::CostProduct if input_value.parse::<f64>().is_ok() => {
                         self.catalog_controller.load_product.cost = input_value
@@ -297,7 +308,7 @@ impl Application for App<'_> {
             }
             AppEvents::CatalogPickListSelected(unit) => {
                 self.catalog_controller.load_product.unit_measurement = unit;
-                self.catalog_controller.load_product.amount = "1".to_string();
+                self.catalog_controller.reset_product_amounts();
                 Command::none()
             }
             AppEvents::CatalogRemoveRecordList(id) => {
@@ -306,16 +317,18 @@ impl Application for App<'_> {
             }
             AppEvents::ShowLoanInfo => {
                 self.current_view = Views::LoanInfo;
-                self.loan_info_controller.search_info = LoanSchema::default();
                 Command::none()
             }
             AppEvents::LoanShowDatePicker(state, date_picker) => {
                 match date_picker {
                     LoanDatePicker::StartDatePicker => {
-                        self.loan_info_controller.date_picker_states.show_start_date = state
+                        self.loan_info_controller
+                            .data
+                            .widgets_states
+                            .show_start_date = state
                     }
                     LoanDatePicker::EndDatePicker => {
-                        self.loan_info_controller.date_picker_states.show_end_date = state
+                        self.loan_info_controller.data.widgets_states.show_end_date = state
                     }
                 };
 
@@ -324,12 +337,15 @@ impl Application for App<'_> {
             AppEvents::LoanSubmitDatePicker(date, date_picker) => {
                 match date_picker {
                     LoanDatePicker::StartDatePicker => {
-                        self.loan_info_controller.date_picker_states.show_start_date = false;
-                        self.loan_info_controller.search_info.start_date = date
+                        self.loan_info_controller
+                            .data
+                            .widgets_states
+                            .show_start_date = false;
+                        self.loan_info_controller.data.search_info.start_date = date
                     }
                     LoanDatePicker::EndDatePicker => {
-                        self.loan_info_controller.date_picker_states.show_end_date = false;
-                        self.loan_info_controller.search_info.end_date = date
+                        self.loan_info_controller.data.widgets_states.show_end_date = false;
+                        self.loan_info_controller.data.search_info.end_date = date
                     }
                 };
                 Command::none()
@@ -337,9 +353,101 @@ impl Application for App<'_> {
             AppEvents::LoanInputChanged(input_value, input_type) => {
                 match input_type {
                     LoanInputs::DebtorNameLike => {
-                        self.loan_info_controller.search_info.client = input_value;
+                        self.loan_info_controller.data.search_info.client = input_value;
+                    }
+                    LoanInputs::PaymentLoanAmount => {
+                        if input_value.parse::<f64>().is_ok() {
+                            self.loan_info_controller.data.loan_payment = input_value;
+                        }
                     }
                 }
+                Command::none()
+            }
+            AppEvents::LoanSearchRequested => {
+                let data = self.loan_info_controller.get_loan_search();
+
+                Command::perform(
+                    LoanRepo::get_loans_user_by_date_range(db_connection, data),
+                    AppEvents::LoanSearchData,
+                )
+            }
+            AppEvents::LoanClearLoanViewData => {
+                self.loan_info_controller.reset_loan_data();
+                Command::none()
+            }
+            AppEvents::LoanSearchData(data) => {
+                match data {
+                    Ok(loans) => {
+                        self.loan_info_controller.data.loans = loans;
+                    }
+                    Err(err) => eprintln!("{err}"),
+                }
+                Command::perform(async {}, |_| AppEvents::ShowLoanInfo)
+            }
+            AppEvents::LoanShowPaymentsDetails(loan_id) => {
+                self.loan_info_controller.data.loan_id = loan_id;
+                self.loan_info_controller.data.loan_payment.clear();
+
+                Command::perform(
+                    LoanRepo::get_payments_loan(db_connection, loan_id),
+                    AppEvents::LoanPaymentDetailsData,
+                )
+            }
+            AppEvents::LoanPaymentDetailsData(result) => {
+                match result {
+                    Ok(payments) => {
+                        self.loan_info_controller
+                            .set_modal_show(LoanModal::LoanPayments);
+                        self.loan_info_controller.data.payments_loan = payments;
+                    }
+                    Err(err) => eprintln!("{err}"),
+                };
+                Command::perform(async {}, |_| AppEvents::ShowLoanInfo)
+            }
+            AppEvents::LoanCloseModalPaymentsLoan => {
+                self.loan_info_controller.hide_modal();
+                self.loan_info_controller.data.payments_loan = vec![];
+
+                Command::perform(async {}, |_| AppEvents::LoanSearchRequested)
+            }
+            AppEvents::LoanAddNewPaymentToLoan => {
+                let payment_amount = self.loan_info_controller.get_payment_loan();
+
+                Command::perform(
+                    LoanRepo::add_new_payment_loan(
+                        db_connection,
+                        self.loan_info_controller.data.loan_id,
+                        payment_amount,
+                    ),
+                    AppEvents::LoanAddNewPaymentToLoanRequested,
+                )
+            }
+            AppEvents::LoanAddNewPaymentToLoanRequested(result) => {
+                if result.is_err() {
+                    eprintln!("{:#?}", result.err());
+                }
+
+                let loan_id = self.loan_info_controller.data.loan_id;
+                let lambda_fn = async move { loan_id };
+
+                Command::perform(lambda_fn, AppEvents::LoanShowPaymentsDetails)
+            }
+            AppEvents::LoanShowLoanSale(sale_id) => Command::perform(
+                SaleRepo::get_products_sale(db_connection, sale_id),
+                AppEvents::LoanSaleProductsData,
+            ),
+            AppEvents::LoanSaleProductsData(result) => {
+                match result {
+                    Ok(products) => {
+                        self.loan_info_controller
+                            .set_modal_show(LoanModal::LoanSale);
+                        self.loan_info_controller.sale_products = products;
+                    }
+                    Err(err) => {
+                        eprintln!("{err}")
+                    }
+                }
+
                 Command::none()
             }
             _ => Command::none(),
@@ -373,8 +481,9 @@ impl Application for App<'_> {
             }
             Views::SalesInfo => sales_info::view(),
             Views::LoanInfo => loan::LoanView::search_results(
-                &self.loan_info_controller.date_picker_states,
-                &self.loan_info_controller.search_info,
+                &self.loan_info_controller.data,
+                &self.loan_info_controller.modal_show,
+                &self.loan_info_controller.sale_products,
             ),
         };
 
