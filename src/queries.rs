@@ -179,14 +179,14 @@ pub const CREATE_OPERATION_FROM_CATALOG: &str = r#"
 insert into operation (
 	product_id,
 	amount_product,
-	"cost",
+	user_price,
 	earning,
 	condition_id
 )
 	select
 		p.id as product_id,
 		(c.current_amount - $2) as amount_product,
-		p.user_price as "cost",
+		p.user_price,
 		(c.current_amount - $2) * (p.user_price - c."cost") as earning,
 		1 as condition_id
 	from product p
@@ -285,7 +285,7 @@ pub const GET_PRODUCTS_SALE: &str = r#"
 select
 	pct.full_name as product_name,
 	concat(op.amount_product, ' (', um.description, ')') as amount_description	,
-	op.amount_product * op."cost" as charge
+	op.amount_product * op.user_price as charge
 from operation op
 left join sale_operation sop on (
 	sop.operation_id = op.id 

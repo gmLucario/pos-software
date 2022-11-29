@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS operation (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID,
     amount_product NUMERIC(8, 3),
-    cost MONEY,
+    user_price MONEY,
     earning MONEY,
     condition_id SMALLINT,
     recorded_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Mexico_City'),
