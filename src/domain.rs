@@ -11,15 +11,12 @@ use iced::{
 use crate::{
     constants::{
         CATALOG_BTN_MSG, LOAN_BTN_MSG, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT,
-        SPACE_COLUMNS, SPACE_ROWS, TO_BUY_BTN_MSG, WINDOW_TITTLE,
+        SPACE_COLUMNS, SPACE_ROWS, TO_BUY_BTN_MSG, TO_DECIMAL_DIGITS, WINDOW_TITTLE,
     },
     controllers::{self},
     data::{loan_repo::LoanRepo, product_repo::ProductRepo, sale_repo::SaleRepo},
     db::Db,
-    kinds::{
-        AppEvents, CatalogInputs, LoanDatePicker, LoanInputs, LoanModal, SaleInputs,
-        UnitsMeasurement, Views,
-    },
+    kinds::{AppEvents, CatalogInputs, LoanInputs, LoanModal, SaleInputs, UnitsMeasurement, Views},
     models::{
         catalog::LoadProduct as ModelLoadProduct,
         sale::{Sale, SaleLoan},
@@ -28,11 +25,11 @@ use crate::{
     views::{catalog, loan, sale::SaleView, sales_info, to_buy},
 };
 
+#[derive(Default)]
 /// Represents app modules and components
-pub struct App<'a> {
+pub struct App {
     /// Current view user is interacting with
     pub current_view: Views,
-    pub current_content: Option<Element<'a, AppEvents>>,
     /// Controller handles Catalog logic
     pub catalog_controller: controllers::catalog::Catalog,
     /// Controller handles Sale logic
@@ -41,27 +38,19 @@ pub struct App<'a> {
     pub to_buy_controller: controllers::to_buy::ToBuy,
     /// Controller handles Loan details/info logic
     pub loan_info_controller: controllers::loan::Loan,
+    /// Controller handles Sale info logic
+    pub sale_info_controller: controllers::sale_info::SaleInfo,
 }
 
 /// Implements the traits for an interactive cross-platform application.
-impl Application for App<'_> {
+impl Application for App {
     type Message = AppEvents;
     type Executor = executor::Default;
     type Flags = ();
     type Theme = theme::Theme;
 
     fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        (
-            Self {
-                current_view: Views::Sale,
-                current_content: None,
-                catalog_controller: controllers::catalog::Catalog::new(),
-                sale_controller: controllers::sale::Sale::default(),
-                to_buy_controller: controllers::to_buy::ToBuy::default(),
-                loan_info_controller: controllers::loan::Loan::default(),
-            },
-            Command::none(),
-        )
+        (Self::default(), Command::none())
     }
 
     fn title(&self) -> String {
@@ -86,7 +75,8 @@ impl Application for App<'_> {
             }
             AppEvents::ShowSalesInfo => {
                 self.current_view = Views::SalesInfo;
-                Command::none()
+
+                Command::perform(async {}, |_| AppEvents::SaleInfoSearchStats)
             }
             AppEvents::ShowSale => {
                 self.current_view = Views::Sale;
@@ -320,34 +310,13 @@ impl Application for App<'_> {
                 Command::none()
             }
             AppEvents::LoanShowDatePicker(state, date_picker) => {
-                match date_picker {
-                    LoanDatePicker::StartDatePicker => {
-                        self.loan_info_controller
-                            .data
-                            .widgets_states
-                            .show_start_date = state
-                    }
-                    LoanDatePicker::EndDatePicker => {
-                        self.loan_info_controller.data.widgets_states.show_end_date = state
-                    }
-                };
-
+                self.loan_info_controller
+                    .set_state_datepicker(date_picker, state);
                 Command::none()
             }
             AppEvents::LoanSubmitDatePicker(date, date_picker) => {
-                match date_picker {
-                    LoanDatePicker::StartDatePicker => {
-                        self.loan_info_controller
-                            .data
-                            .widgets_states
-                            .show_start_date = false;
-                        self.loan_info_controller.data.search_info.start_date = date
-                    }
-                    LoanDatePicker::EndDatePicker => {
-                        self.loan_info_controller.data.widgets_states.show_end_date = false;
-                        self.loan_info_controller.data.search_info.end_date = date
-                    }
-                };
+                self.loan_info_controller
+                    .set_datepicker_value(date_picker, date);
                 Command::none()
             }
             AppEvents::LoanInputChanged(input_value, input_type) => {
@@ -450,6 +419,89 @@ impl Application for App<'_> {
 
                 Command::none()
             }
+            AppEvents::SaleInfoShowDatePicker(state, date_picker) => {
+                self.sale_info_controller
+                    .set_state_datepicker(date_picker, state);
+                Command::none()
+            }
+            AppEvents::SaleInfoSubmitDatePicker(date, date_picker) => {
+                self.sale_info_controller
+                    .set_datepicker_value(date_picker, date);
+                Command::perform(async {}, |_| AppEvents::SaleInfoSearchStats)
+            }
+            AppEvents::SaleInfoSearchStats => {
+                let start_date = self
+                    .sale_info_controller
+                    .data
+                    .search_info
+                    .start_date
+                    .to_string();
+                let end_date = self
+                    .sale_info_controller
+                    .data
+                    .search_info
+                    .end_date
+                    .to_string();
+
+                let events = vec![
+                    Command::perform(
+                        SaleRepo::get_total_earnings(
+                            db_connection,
+                            start_date.to_string(),
+                            end_date.to_string(),
+                        ),
+                        AppEvents::SaleInfoEarningsData,
+                    ),
+                    Command::perform(
+                        SaleRepo::get_total_sales(
+                            db_connection,
+                            start_date.to_string(),
+                            end_date.to_string(),
+                        ),
+                        AppEvents::SaleInfoTotalSales,
+                    ),
+                    Command::perform(
+                        LoanRepo::get_total_loans(db_connection, start_date, end_date),
+                        AppEvents::SaleInfoTotalLoans,
+                    ),
+                ];
+
+                Command::batch(events)
+            }
+            AppEvents::SaleInfoEarningsData(result) => {
+                match result {
+                    Ok(total_earnings) => {
+                        self.sale_info_controller.data.data_stats.earnings =
+                            total_earnings.to_bigdecimal(TO_DECIMAL_DIGITS)
+                    }
+                    Err(err) => eprintln!("{err}"),
+                };
+
+                Command::none()
+            }
+            AppEvents::SaleInfoTotalSales(result) => {
+                match result {
+                    Ok(totals) => {
+                        self.sale_info_controller.data.data_stats.sales = totals.sales;
+                        self.sale_info_controller.data.data_stats.total_sales =
+                            totals.total_sales.to_bigdecimal(TO_DECIMAL_DIGITS);
+                    }
+                    Err(err) => eprintln!("{err}"),
+                }
+
+                Command::none()
+            }
+            AppEvents::SaleInfoTotalLoans(result) => {
+                match result {
+                    Ok(totals) => {
+                        self.sale_info_controller.data.data_stats.loans = totals.loans;
+                        self.sale_info_controller.data.data_stats.total_loans =
+                            totals.money_loans.to_bigdecimal(TO_DECIMAL_DIGITS);
+                    }
+                    Err(err) => eprintln!("{err}"),
+                };
+                Command::none()
+            }
             _ => Command::none(),
         }
     }
@@ -479,7 +531,7 @@ impl Application for App<'_> {
             Views::CatalogAddRecord => {
                 catalog::load_product_view(&self.catalog_controller.load_product)
             }
-            Views::SalesInfo => sales_info::view(),
+            Views::SalesInfo => sales_info::view(&self.sale_info_controller.data),
             Views::LoanInfo => loan::LoanView::search_results(
                 &self.loan_info_controller.data,
                 &self.loan_info_controller.modal_show,
