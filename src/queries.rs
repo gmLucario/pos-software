@@ -28,7 +28,7 @@ group by
     product.full_name,
     product.min_amount,
     unit_measurement.description
-having count(1) < product.min_amount
+having sum("catalog".current_amount) < product.min_amount
 order by amount_to_buy asc;
 "#;
 
@@ -297,4 +297,59 @@ left join unit_measurement um on (
 	um.id = pct.unit_measurement_id
 )
 where sop.sale_id = $1;
+"#;
+
+/// Get total earnings between a date range
+pub const GET_EARNINGS: &str = r#"
+select
+	COALESCE(
+		sp_earnings($1, $2),
+		0::money
+	)
+as earnings;
+"#;
+
+/// Get total sales, number and money
+pub const GET_SALE_TOTAL: &str = r#"
+with TotalPerSale as (
+	select	
+		s.id as sales, 
+		sum(op.user_price) as total_sale 
+	from operation op
+	left join sale_operation so on (
+		so.operation_id = op.id 
+	)
+	left join sale s on (
+		so.sale_id = s.id
+	)
+	where 
+		to_date(op.recorded_at::text, 'YYYY/MM/DD')
+		between 
+			to_date($1, 'YYYY-MM-DD')
+			and to_date($2, 'YYYY-MM-DD')
+		and op.condition_id = 1
+	group by
+		s.id
+)
+select
+	count(1) as sales,
+	coalesce(sum(total_sale), 0::money) as total_sales
+from TotalPerSale;
+"#;
+
+/// Get total loans, number and money
+pub const GET_LOAN_TOTAL: &str = r#"
+select 
+	count(1) as loans,
+	COALESCE(sum(loan.price), 0::money) as money_loans
+from loan
+left join sale on (
+	sale.id = loan.id
+)
+where 
+	loan.status_loan != 1
+	and to_date(sale.sold_at::text, 'YYYY/MM/DD')
+		between 
+			to_date($1, 'YYYY-MM-DD')
+			and to_date($2, 'YYYY-MM-DD');
 "#;

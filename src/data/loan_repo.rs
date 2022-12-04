@@ -4,10 +4,12 @@ use sqlx::{postgres::types::PgMoney, types::Uuid, Pool, Postgres};
 
 use crate::{
     models::{
-        loan::{LoanItem, LoanPayment},
+        loan::{LoanItem, LoanPayment, TotalLoans},
         sale::SaleLoan,
     },
-    queries::{GET_LOAN_LIST, GET_PAYMENTS_LOAN, INSERT_NEW_LOAN, INSERT_NEW_PAYMENT_LOAN},
+    queries::{
+        GET_LOAN_LIST, GET_LOAN_TOTAL, GET_PAYMENTS_LOAN, INSERT_NEW_LOAN, INSERT_NEW_PAYMENT_LOAN,
+    },
     schemas::loan::LoanSearchSchema,
 };
 
@@ -77,5 +79,21 @@ impl LoanRepo {
             .map_err(|err| err.to_string())?;
 
         Ok(())
+    }
+
+    /// Get total stats loans
+    pub async fn get_total_loans(
+        connection: &Pool<Postgres>,
+        start_date: String,
+        end_date: String,
+    ) -> Result<TotalLoans, String> {
+        let totals: TotalLoans = sqlx::query_as(GET_LOAN_TOTAL)
+            .bind(start_date)
+            .bind(end_date)
+            .fetch_one(connection)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Ok(totals)
     }
 }

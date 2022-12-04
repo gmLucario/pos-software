@@ -30,14 +30,6 @@ pub struct Catalog {
 /// Handles user input events and link the [`crate::views::catalog`] view with
 /// the [`crate::data::product_repo::ProductRepo`] repository
 impl Catalog {
-    /// Initialize the controller
-    pub fn new() -> Self {
-        Self {
-            products_to_add: HashMap::new(),
-            load_product: LoadProduct::default(),
-        }
-    }
-
     /// Insert `c` into the product `barcode` if `c` is `is_alphanumeric`
     fn process_char_event(&mut self, c: &char) {
         if c.is_alphanumeric() {

@@ -10,10 +10,11 @@ use sqlx::{
 
 use crate::{
     data::product_repo::ProductRepo,
-    models::sale::{CatalogAmount, ProductSale, Sale},
+    models::sale::{CatalogAmount, ProductSale, Sale, TotalSales},
     queries::{
-        CREATE_OPERATION_FROM_CATALOG, DELETE_CATALOG_RECORD, GET_PRODUCTS_CATALOG_UPDATE_SALE,
-        GET_PRODUCTS_SALE, INSERT_NEW_SALE, INSERT_NEW_SALE_OPERATION, UPDATE_CATALOG_AMOUNT,
+        CREATE_OPERATION_FROM_CATALOG, DELETE_CATALOG_RECORD, GET_EARNINGS,
+        GET_PRODUCTS_CATALOG_UPDATE_SALE, GET_PRODUCTS_SALE, GET_SALE_TOTAL, INSERT_NEW_SALE,
+        INSERT_NEW_SALE_OPERATION, UPDATE_CATALOG_AMOUNT,
     },
 };
 
@@ -28,8 +29,6 @@ impl SaleRepo {
         sale: Sale,
     ) -> Result<Uuid, String> {
         let sale_id: Uuid = Self::save_new_sale(connection, &sale.client_payment).await?;
-
-        // TODO: if sale is a loan, save it
 
         for product in sale.products {
             let product_id = ProductRepo::get_product_id(connection, &product.barcode).await?;
@@ -184,5 +183,37 @@ impl SaleRepo {
             .map_err(|err| err.to_string())?;
 
         Ok(products)
+    }
+
+    /// Get total earnings of a period
+    pub async fn get_total_earnings(
+        connection: &Pool<Postgres>,
+        start_date: String,
+        end_date: String,
+    ) -> Result<PgMoney, String> {
+        let (earnings,): (PgMoney,) = sqlx::query_as(GET_EARNINGS)
+            .bind(start_date)
+            .bind(end_date)
+            .fetch_one(connection)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Ok(earnings)
+    }
+
+    /// Get total stats sales
+    pub async fn get_total_sales(
+        connection: &Pool<Postgres>,
+        start_date: String,
+        end_date: String,
+    ) -> Result<TotalSales, String> {
+        let totals: TotalSales = sqlx::query_as(GET_SALE_TOTAL)
+            .bind(start_date)
+            .bind(end_date)
+            .fetch_one(connection)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Ok(totals)
     }
 }
