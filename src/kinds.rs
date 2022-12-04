@@ -3,16 +3,18 @@
 use std::fmt::Display;
 
 use iced_aw::date_picker::Date;
-use sqlx::types::Uuid;
+use sqlx::{postgres::types::PgMoney, types::Uuid};
 
 use crate::models::{
     catalog::{ProductInfo, ProductToBuy},
-    loan::{LoanItem, LoanPayment},
-    sale::{ProductSale, SaleProductInfo},
+    loan::{LoanItem, LoanPayment, TotalLoans},
+    sale::{ProductSale, SaleProductInfo, TotalSales},
 };
 
+#[derive(Default)]
 /// All the possible app views
 pub enum Views {
+    #[default]
     /// List products to be sold and total
     Sale,
     /// Form to add a new product to the [`crate::kinds::Views::Sale`] view
@@ -138,6 +140,15 @@ pub enum LoanModal {
     LoanSale,
 }
 
+/// Types of date picker in [`crate::kinds::Views::SalesInfo`] view type
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SaleInfoDatePicker {
+    /// Date search starts
+    StartDatePicker,
+    /// Date search ends
+    EndDatePicker,
+}
+
 /// Events variants that can be send in the app
 #[derive(Debug, Clone)]
 pub enum AppEvents {
@@ -230,4 +241,16 @@ pub enum AppEvents {
     LoanAddNewPaymentToLoanRequested(Result<(), String>),
     /// Result query sale's products of a loan
     LoanSaleProductsData(Result<Vec<ProductSale>, String>),
+    /// Start searching stats
+    SaleInfoSearchStats,
+    /// Event to show a date picker
+    SaleInfoShowDatePicker(bool, SaleInfoDatePicker),
+    /// Event to submit the value selected in the date picker
+    SaleInfoSubmitDatePicker(Date, SaleInfoDatePicker),
+    /// Event after earnings were retrieved
+    SaleInfoEarningsData(Result<PgMoney, String>),
+    /// Event after sale totals were retrieved
+    SaleInfoTotalSales(Result<TotalSales, String>),
+    /// Event after loans totals were retrieved
+    SaleInfoTotalLoans(Result<TotalLoans, String>),
 }
