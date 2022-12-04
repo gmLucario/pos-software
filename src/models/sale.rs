@@ -38,6 +38,15 @@ pub struct ProductSale {
     pub charge: PgMoney,
 }
 
+#[derive(sqlx::FromRow, Debug, Clone)]
+/// Represents total stats about sales
+pub struct TotalSales {
+    /// Number of sales made
+    pub sales: i64,
+    /// Total money made in sales
+    pub total_sales: PgMoney,
+}
+
 #[derive(Debug, Clone)]
 pub struct SaleProductAmount {
     pub barcode: String,
