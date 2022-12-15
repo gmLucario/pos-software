@@ -35,6 +35,7 @@ Help to manage a small store like:
     - [ ] show message products can't be added to sale list
 - [ ] sale loan info
     - [ ] query get paginated loans by `name_debtor` and `range_dates`
+    - [x] name client like lower case and remove spaces
     - [ ] view search loans
 - [ ] sale info statics
     - [ ] sale earnings and total list

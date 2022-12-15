@@ -36,7 +36,7 @@ impl SaleView {
 
         let mut container = column!(
             text(format!(
-                "Total: {}",
+                "Total: ${}",
                 sale_info.total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
             ))
             .size(SIZE_TEXT),
@@ -47,7 +47,7 @@ impl SaleView {
             .size(SIZE_TEXT)
             .width(Length::Units(100)),
             text(format!(
-                "Cambio: {}",
+                "Cambio: ${}",
                 pay_back_money.to_bigdecimal(TO_DECIMAL_DIGITS)
             ))
             .size(SIZE_TEXT),
@@ -161,7 +161,7 @@ impl SaleView {
 
         general_container = general_container.push(products_container).push(
             text(format!(
-                "Total: {}",
+                "Total: ${}",
                 sale_info.total_pay.to_bigdecimal(TO_DECIMAL_DIGITS)
             ))
             .size(SIZE_TEXT),
