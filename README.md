@@ -52,6 +52,22 @@ Help to manage a small store like:
 
 # For devs
 
+## Build
+
+### Linux
+
+```bash
+$ cargo build --release
+```
+
+### Linux to Windows
+
+> Previosly [these steps](https://bevy-cheatbook.github.io/setup/cross/linux-windows.html) must be followed
+
+```bash
+$ cargo build --target=x86_64-pc-windows-gnu --release
+```
+
 ## Run locally the app
 
 1. start docker compose
