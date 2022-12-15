@@ -339,17 +339,32 @@ from TotalPerSale;
 
 /// Get total loans, number and money
 pub const GET_LOAN_TOTAL: &str = r#"
+with loans as (
+	select	
+		price - COALESCE(
+			sum(loan_payment.money_amount),
+			0::money
+		) as money_loans
+	from loan
+	left join sale on (
+		sale.id = loan.id 
+	)
+	left join loan_payment on (
+		loan_payment.loan_id = loan.id
+	)
+	where
+		loan.status_loan != 1
+		and to_date(sale.sold_at::text, 'YYYY/MM/DD')
+			between 
+				to_date($1, 'YYYY-MM-DD')
+				and to_date($2, 'YYYY-MM-DD')
+	group by
+		loan.id,
+		sale.sold_at
+	order by sale.sold_at desc
+)
 select 
 	count(1) as loans,
-	COALESCE(sum(loan.price), 0::money) as money_loans
-from loan
-left join sale on (
-	sale.id = loan.id
-)
-where 
-	loan.status_loan != 1
-	and to_date(sale.sold_at::text, 'YYYY/MM/DD')
-		between 
-			to_date($1, 'YYYY-MM-DD')
-			and to_date($2, 'YYYY-MM-DD');
+	sum(money_loans) as money_loans
+from loans;
 "#;
