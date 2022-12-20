@@ -3,9 +3,9 @@
 use std::collections::HashMap;
 
 use iced::{
-    executor, theme,
-    widget::{button, column, row, text},
-    Alignment, Application, Command, Element, Subscription,
+    executor, keyboard, theme,
+    widget::{self, button, column, row, text},
+    Alignment, Application, Command, Element, Event, Subscription,
 };
 
 use crate::{
@@ -190,14 +190,26 @@ impl Application for App {
 
                 next_event
             }
-            AppEvents::ExternalDeviceEventOccurred(event) => match self.current_view {
-                Views::Sale => self
-                    .sale_controller
-                    .process_barcode_input(event, db_connection),
-                Views::Catalog => self
-                    .catalog_controller
-                    .process_barcode_input(event, db_connection),
-                _ => Command::none(),
+            AppEvents::ExternalDeviceEventOccurred(event) => match event {
+                Event::Keyboard(keyboard::Event::KeyPressed {
+                    key_code: keyboard::KeyCode::Tab,
+                    modifiers,
+                }) => {
+                    if modifiers.shift() {
+                        widget::focus_previous()
+                    } else {
+                        widget::focus_next()
+                    }
+                }
+                _ => match self.current_view {
+                    Views::Sale => self
+                        .sale_controller
+                        .process_barcode_input(event, db_connection),
+                    Views::Catalog => self
+                        .catalog_controller
+                        .process_barcode_input(event, db_connection),
+                    _ => Command::none(),
+                },
             },
             AppEvents::ShowCatalog => {
                 self.catalog_controller.reset_values();
@@ -507,12 +519,7 @@ impl Application for App {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        match self.current_view {
-            Views::Sale | Views::Catalog => {
-                iced_native::subscription::events().map(AppEvents::ExternalDeviceEventOccurred)
-            }
-            _ => Subscription::none(),
-        }
+        iced_native::subscription::events().map(AppEvents::ExternalDeviceEventOccurred)
     }
 
     fn view(&self) -> Element<'_, Self::Message, iced::Renderer<Self::Theme>> {
