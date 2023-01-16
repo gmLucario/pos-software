@@ -48,7 +48,7 @@ select
     product.full_name as product_name,
     product.user_price,
     product.min_amount,
-    "catalog"."cost",
+    coalesce("catalog"."cost", 0::money) as "cost",
     unit_measurement_id
 from product
 left join "catalog" on (
@@ -56,7 +56,6 @@ left join "catalog" on (
 )
 where
     product.barcode  = $1
-    and "catalog".priced_at <= now()
 order by "catalog".priced_at desc
 limit 1;
 "#;
