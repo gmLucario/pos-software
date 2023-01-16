@@ -13,22 +13,20 @@
 pub const GET_PRODUCTS_TO_BUY: &str = r#"
 select
     product.full_name as product_name,
-    product.min_amount - sum("catalog".current_amount)  as amount_to_buy,
+    COALESCE(product.min_amount - sum("catalog".current_amount), product.min_amount) as amount_to_buy,
     unit_measurement.description as unit_measurement
-from "catalog"
-left join product on (
-    product.id = catalog.product_id 
+from product
+left join "catalog" on (
+    "catalog".product_id = product.id 
 )
 left join unit_measurement on (
 	product.unit_measurement_id = unit_measurement.id
 )
-where
-    "catalog".current_amount > 0.0
 group by 
     product.full_name,
     product.min_amount,
     unit_measurement.description
-having sum("catalog".current_amount) < product.min_amount
+having COALESCE(sum("catalog".current_amount), 0) < product.min_amount
 order by amount_to_buy asc;
 "#;
 
@@ -50,7 +48,7 @@ select
     product.full_name as product_name,
     product.user_price,
     product.min_amount,
-    "catalog"."cost",
+    coalesce("catalog"."cost", 0::money) as "cost",
     unit_measurement_id
 from product
 left join "catalog" on (
@@ -58,7 +56,6 @@ left join "catalog" on (
 )
 where
     product.barcode  = $1
-    and "catalog".priced_at <= now()
 order by "catalog".priced_at desc
 limit 1;
 "#;
