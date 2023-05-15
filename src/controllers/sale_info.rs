@@ -3,14 +3,11 @@
 
 use iced_aw::date_picker::Date;
 
-use crate::{
-    kinds::SaleInfoDatePicker,
-    schemas::sale_info::{SaleInfoSearchSchema, SaleInfoStats, SaleInfoWidgetsStates},
-};
+use crate::schemas::sale_info::{SaleInfoSearchSchema, SaleInfoStats, SaleInfoWidgetsStates};
 
 #[derive(Default)]
-/// Data to be render in [`crate::views::sales_info`] view
-pub struct SaleInfoData {
+/// SaleInfo controller
+pub struct SaleInfo {
     /// Data to be used to search the loans
     pub search_info: SaleInfoSearchSchema,
     /// states to show the date pickers
@@ -19,33 +16,24 @@ pub struct SaleInfoData {
     pub data_stats: SaleInfoStats,
 }
 
-#[derive(Default)]
-/// SaleInfo controller
-pub struct SaleInfo {
-    /// Data to be render in [`crate::views::sales_info`] view
-    pub data: SaleInfoData,
-}
-
 impl SaleInfo {
-    /// Set the state to a datepicker
-    pub fn set_state_datepicker(&mut self, date_picker: SaleInfoDatePicker, state: bool) {
-        match date_picker {
-            SaleInfoDatePicker::StartDatePicker => self.data.widgets_states.show_start_date = state,
-            SaleInfoDatePicker::EndDatePicker => self.data.widgets_states.show_end_date = state,
-        }
+    /// Show/Hide start date picker
+    pub fn show_start_date(&mut self, to_show: bool) {
+        self.widgets_states.show_start_date = to_show;
     }
 
-    /// Set a value to a date picker and hide it
-    pub fn set_datepicker_value(&mut self, date_picker: SaleInfoDatePicker, date: Date) {
-        match date_picker {
-            SaleInfoDatePicker::StartDatePicker => {
-                self.data.search_info.start_date = date;
-                self.data.widgets_states.show_start_date = false;
-            }
-            SaleInfoDatePicker::EndDatePicker => {
-                self.data.search_info.end_date = date;
-                self.data.widgets_states.show_end_date = false;
-            }
-        }
+    /// Show/Hide end date picker
+    pub fn show_end_date(&mut self, to_show: bool) {
+        self.widgets_states.show_end_date = to_show;
+    }
+
+    /// Set start date picker value
+    pub fn set_start_date_value(&mut self, value: Date) {
+        self.search_info.start_date = value;
+    }
+
+    /// Set end date picker value
+    pub fn set_end_date_value(&mut self, value: Date) {
+        self.search_info.end_date = value;
     }
 }

@@ -52,6 +52,12 @@ Help to manage a small store like:
 
 # For devs
 
+## Env
+
+```
+DB_HOST=host.docker.internal
+```
+
 ## Build
 
 ### Linux

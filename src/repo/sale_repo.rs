@@ -3,217 +3,241 @@
 use std::cmp::Ordering;
 
 use sqlx::{
-    postgres::types::PgMoney,
+    postgres::{types::PgMoney, PgPool},
     types::{BigDecimal, Uuid},
-    Pool, Postgres,
 };
 
 use crate::{
-    data::product_repo::ProductRepo,
-    models::sale::{CatalogAmount, ProductSale, Sale, TotalSales},
-    queries::{
-        CREATE_OPERATION_FROM_CATALOG, DELETE_CATALOG_RECORD, GET_EARNINGS,
-        GET_PRODUCTS_CATALOG_UPDATE_SALE, GET_PRODUCTS_SALE, GET_SALE_TOTAL, INSERT_NEW_SALE,
-        INSERT_NEW_SALE_OPERATION, UPDATE_CATALOG_AMOUNT,
+    db::queries::{
+        CREATE_OPERATION_FROM_CATALOG, DELETE_CATALOG_RECORD, GET_EARNINGS, GET_PRODUCTS_SALE,
+        GET_SALE_TOTAL, INSERT_NEW_SALE, INSERT_NEW_SALE_OPERATION, UPDATE_CATALOG_AMOUNT,
     },
+    errors::AppError,
+    models::sale::{CatalogAmount, ProductSale, Sale, TotalSales},
+    repo::product_repo,
+    result::AppResult,
 };
 
-/// Struct to group the functionality related with
-/// the interaction of the database and a sale
-pub struct SaleRepo {}
+/// Get a [crate::errors::AppError] of type [crate::errors::ErrorType::DbError] with a custom `raw_msg`
+fn get_db_error<T>(raw_msg: &str, msg: &str, function_name: &str) -> AppResult<T> {
+    AppError::db_error(
+        &format!("src/repo/sale_repo.rs::{function_name}"),
+        msg,
+        raw_msg,
+    )
+}
 
-impl SaleRepo {
-    /// Handle all the logic to run a new sale
-    pub async fn process_new_sale_flow(
-        connection: &Pool<Postgres>,
-        sale: Sale,
-    ) -> Result<Uuid, String> {
-        let sale_id: Uuid = Self::save_new_sale(connection, &sale.client_payment).await?;
+/// Handle all the logic to run a new sale
+pub async fn process_new_sale_flow(connection: &PgPool, sale: Sale) -> AppResult<Uuid> {
+    let sale_id: Uuid = save_new_sale(connection, &sale.client_payment).await?;
 
-        for product in sale.products {
-            let product_id = ProductRepo::get_product_id(connection, &product.barcode).await?;
+    for product in sale.products {
+        let product_id = product_repo::get_product_id(connection, &product.barcode).await?;
 
-            let mut products: Vec<CatalogAmount> =
-                sqlx::query_as::<_, CatalogAmount>(GET_PRODUCTS_CATALOG_UPDATE_SALE)
-                    .bind(product_id)
-                    .bind(&product.amount)
-                    .fetch_all(connection)
-                    .await
-                    .map_err(|err| err.to_string())?;
+        let mut products =
+            product_repo::get_current_state_products(connection, &product_id, &product.amount)
+                .await?;
 
-            Self::process_catalog_amounts(&mut products, &product.amount)?;
-            Self::update_related_sale_records(connection, &products, &sale_id).await?
+        process_catalog_amounts(&mut products, &product.amount);
+        update_related_sale_records(connection, &products, &sale_id).await?
+    }
+
+    Ok(sale_id)
+}
+
+/// Insert a new sale
+async fn save_new_sale(connection: &PgPool, client_payment: &PgMoney) -> AppResult<Uuid> {
+    let result = sqlx::query_as::<_, (Uuid,)>(INSERT_NEW_SALE)
+        .bind(client_payment)
+        .fetch_one(connection)
+        .await;
+
+    match result {
+        Ok((sale_id,)) => Ok(sale_id),
+        Err(err) => get_db_error(&err.to_string(), "Error al crear la venta", "save_new_sale"),
+    }
+}
+
+/// Return list produts of a sale
+pub async fn get_products_sale(connection: &PgPool, sale_id: Uuid) -> AppResult<Vec<ProductSale>> {
+    let result = sqlx::query_as::<_, ProductSale>(GET_PRODUCTS_SALE)
+        .bind(sale_id)
+        .fetch_all(connection)
+        .await;
+
+    match result {
+        Ok(products) => Ok(products),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "No se pudo obtener los productos de la venta",
+            "get_products_sale",
+        ),
+    }
+}
+
+/// Update stock products based on each item of the sale
+/// Update the product amount in the catalog based on the amount sold
+fn process_catalog_amounts(products: &mut [CatalogAmount], amount: &BigDecimal) {
+    let mut current_amount: BigDecimal = amount.clone();
+    let zero_amount = BigDecimal::default();
+    for product in products.iter_mut() {
+        if current_amount <= BigDecimal::default() {
+            return;
         }
 
-        Ok(sale_id)
-    }
-
-    /// Insert a new sale
-    async fn save_new_sale(
-        connection: &Pool<Postgres>,
-        client_payment: &PgMoney,
-    ) -> Result<Uuid, String> {
-        let (sale_id,): (Uuid,) = sqlx::query_as(INSERT_NEW_SALE)
-            .bind(client_payment)
-            .fetch_one(connection)
-            .await
-            .map_err(|err| err.to_string())?;
-
-        Ok(sale_id)
-    }
-
-    /// Update the product amount in the catalog based on the amount sold
-    fn process_catalog_amounts(
-        products: &mut [CatalogAmount],
-        amount: &BigDecimal,
-    ) -> Result<(), String> {
-        let mut current_amount: BigDecimal = amount.clone();
-        let zero_amount = BigDecimal::default();
-        for product in products.iter_mut() {
-            if current_amount <= BigDecimal::default() {
-                return Ok(());
+        (current_amount, product.amount) = match product.amount.cmp(&current_amount) {
+            Ordering::Less | Ordering::Equal => {
+                (current_amount - product.amount.clone(), zero_amount.clone())
             }
+            Ordering::Greater => (zero_amount.clone(), product.amount.clone() - current_amount),
+        };
+    }
+}
 
-            (current_amount, product.amount) = match product.amount.cmp(&current_amount) {
-                Ordering::Less | Ordering::Equal => {
-                    (current_amount - product.amount.clone(), zero_amount.clone())
-                }
-                Ordering::Greater => (zero_amount.clone(), product.amount.clone() - current_amount),
-            };
+/// Each item will be an operation of type sale
+async fn update_related_sale_records(
+    connection: &PgPool,
+    products: &Vec<CatalogAmount>,
+    sale_id: &Uuid,
+) -> AppResult<()> {
+    let zero_amount = BigDecimal::default();
+
+    for product in products {
+        let operation_id: Uuid = create_new_operation(connection, product).await?;
+
+        create_new_sale_operation(connection, sale_id, &operation_id).await?;
+
+        if product.amount == zero_amount {
+            delete_catalog_record(connection, &product.catalog_id).await?;
+        } else {
+            update_catalog_amount(connection, &product.catalog_id, &product.amount).await?;
         }
-
-        Ok(())
     }
 
-    /// Update stock products based on each item of the sale
-    /// Each item will be an operation of type sale
-    async fn update_related_sale_records(
-        connection: &Pool<Postgres>,
-        products: &Vec<CatalogAmount>,
-        sale_id: &Uuid,
-    ) -> Result<(), String> {
-        let zero_amount = BigDecimal::default();
+    Ok(())
+}
+/// Create a new sale operation record
+async fn create_new_operation(connection: &PgPool, product: &CatalogAmount) -> AppResult<Uuid> {
+    let result = sqlx::query_as::<_, (Uuid,)>(CREATE_OPERATION_FROM_CATALOG)
+        .bind(product.catalog_id)
+        .bind(&product.amount)
+        .fetch_one(connection)
+        .await;
 
-        for product in products {
-            let operation_id: Uuid = Self::create_new_operation(connection, product).await?;
+    match result {
+        Ok((operation_id,)) => Ok(operation_id),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "Error al crear una operacion de la venta",
+            "create_new_sale_operation",
+        ),
+    }
+}
 
-            Self::create_new_sale_operation(connection, sale_id, &operation_id).await?;
+/// Link the sale with the operation
+async fn create_new_sale_operation(
+    connection: &PgPool,
+    sale_id: &Uuid,
+    operation_id: &Uuid,
+) -> AppResult<()> {
+    let result = sqlx::query(INSERT_NEW_SALE_OPERATION)
+        .bind(sale_id)
+        .bind(operation_id)
+        .execute(connection)
+        .await;
 
-            if product.amount == zero_amount {
-                Self::delete_catalog_record(connection, &product.catalog_id).await?;
-            } else {
-                Self::update_catalog_amount(connection, &product.catalog_id, &product.amount)
-                    .await?;
-            }
-        }
-
-        Ok(())
+    if let Err(err) = result {
+        return get_db_error(
+            &err.to_string(),
+            "Error al crear una operacion de la venta",
+            "create_new_sale_operation",
+        );
     }
 
-    /// Update current_amount field of a catalog item
-    async fn update_catalog_amount(
-        connection: &Pool<Postgres>,
-        catalog_id: &Uuid,
-        amount: &BigDecimal,
-    ) -> Result<(), String> {
-        sqlx::query(UPDATE_CATALOG_AMOUNT)
-            .bind(catalog_id)
-            .bind(amount)
-            .execute(connection)
-            .await
-            .map_err(|err| err.to_string())?;
+    Ok(())
+}
 
-        Ok(())
+/// Delete the product from the catalog
+async fn delete_catalog_record(connection: &PgPool, catalog_id: &Uuid) -> AppResult<()> {
+    let result = sqlx::query(DELETE_CATALOG_RECORD)
+        .bind(catalog_id)
+        .execute(connection)
+        .await;
+
+    if let Err(err) = result {
+        return get_db_error(
+            &err.to_string(),
+            "Error al eliminar el producto del catalogo",
+            "delete_catalog_record",
+        );
     }
 
-    /// Delete the product from the catalog
-    async fn delete_catalog_record(
-        connection: &Pool<Postgres>,
-        catalog_id: &Uuid,
-    ) -> Result<(), String> {
-        sqlx::query(DELETE_CATALOG_RECORD)
-            .bind(catalog_id)
-            .execute(connection)
-            .await
-            .map_err(|err| err.to_string())?;
+    Ok(())
+}
 
-        Ok(())
+/// Update current_amount field of a catalog item
+async fn update_catalog_amount(
+    connection: &PgPool,
+    catalog_id: &Uuid,
+    amount: &BigDecimal,
+) -> AppResult<()> {
+    let result = sqlx::query(UPDATE_CATALOG_AMOUNT)
+        .bind(catalog_id)
+        .bind(amount)
+        .execute(connection)
+        .await;
+
+    if let Err(err) = result {
+        return get_db_error(
+            &err.to_string(),
+            "Error al aztualizar la cantidad en el catalogo",
+            "update_catalog_amount",
+        );
     }
 
-    /// Create a new sale operation record
-    async fn create_new_operation(
-        connection: &Pool<Postgres>,
-        product: &CatalogAmount,
-    ) -> Result<Uuid, String> {
-        let (operation_id,): (Uuid,) = sqlx::query_as(CREATE_OPERATION_FROM_CATALOG)
-            .bind(product.catalog_id)
-            .bind(&product.amount)
-            .fetch_one(connection)
-            .await
-            .map_err(|err| err.to_string())?;
+    Ok(())
+}
 
-        Ok(operation_id)
+/// Get total earnings of a period
+pub async fn get_total_earnings(
+    connection: &PgPool,
+    start_date: String,
+    end_date: String,
+) -> AppResult<PgMoney> {
+    let result = sqlx::query_as::<_, (PgMoney,)>(GET_EARNINGS)
+        .bind(start_date)
+        .bind(end_date)
+        .fetch_one(connection)
+        .await;
+
+    match result {
+        Ok((earnings,)) => Ok(earnings),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "Error al obtner el total de las ganancias",
+            "get_total_earnings",
+        ),
     }
+}
 
-    /// Link the sale with the operation
-    async fn create_new_sale_operation(
-        connection: &Pool<Postgres>,
-        sale_id: &Uuid,
-        operation_id: &Uuid,
-    ) -> Result<(), String> {
-        sqlx::query(INSERT_NEW_SALE_OPERATION)
-            .bind(sale_id)
-            .bind(operation_id)
-            .execute(connection)
-            .await
-            .map_err(|err| err.to_string())?;
+/// Get total stats sales
+pub async fn get_total_sales(
+    connection: &PgPool,
+    start_date: String,
+    end_date: String,
+) -> AppResult<TotalSales> {
+    let result = sqlx::query_as(GET_SALE_TOTAL)
+        .bind(start_date)
+        .bind(end_date)
+        .fetch_one(connection)
+        .await;
 
-        Ok(())
-    }
-
-    /// Return list produts of a sale
-    pub async fn get_products_sale(
-        connection: &Pool<Postgres>,
-        sale_id: Uuid,
-    ) -> Result<Vec<ProductSale>, String> {
-        let products = sqlx::query_as::<_, ProductSale>(GET_PRODUCTS_SALE)
-            .bind(sale_id)
-            .fetch_all(connection)
-            .await
-            .map_err(|err| err.to_string())?;
-
-        Ok(products)
-    }
-
-    /// Get total earnings of a period
-    pub async fn get_total_earnings(
-        connection: &Pool<Postgres>,
-        start_date: String,
-        end_date: String,
-    ) -> Result<PgMoney, String> {
-        let (earnings,): (PgMoney,) = sqlx::query_as(GET_EARNINGS)
-            .bind(start_date)
-            .bind(end_date)
-            .fetch_one(connection)
-            .await
-            .map_err(|err| err.to_string())?;
-
-        Ok(earnings)
-    }
-
-    /// Get total stats sales
-    pub async fn get_total_sales(
-        connection: &Pool<Postgres>,
-        start_date: String,
-        end_date: String,
-    ) -> Result<TotalSales, String> {
-        let totals: TotalSales = sqlx::query_as(GET_SALE_TOTAL)
-            .bind(start_date)
-            .bind(end_date)
-            .fetch_one(connection)
-            .await
-            .map_err(|err| err.to_string())?;
-
-        Ok(totals)
+    match result {
+        Ok(totals) => Ok(totals),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "Error al obtner el total de las ganancias",
+            "get_total_sales",
+        ),
     }
 }

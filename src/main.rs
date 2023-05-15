@@ -1,37 +1,30 @@
+//! Entry point of the application
+
 pub mod config;
 pub mod constants;
 pub mod controllers;
-pub mod data;
 pub mod db;
 pub mod domain;
+pub mod errors;
+pub mod events;
 pub mod helpers;
 pub mod kinds;
 pub mod models;
-pub mod queries;
+pub mod repo;
+pub mod result;
 pub mod schemas;
-pub mod style;
+pub mod setup;
 pub mod views;
 
+use domain::AppProcessor;
 use iced::{Application, Settings};
-use sqlx::postgres::PgPoolOptions;
-
-use crate::{
-    config::APP_CONFIG,
-    constants::MAX_CONNECTIONS_POOL,
-    db::{Db, INSTANCE_DB},
-    domain::App,
-};
 
 #[async_std::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = PgPoolOptions::new()
-        .max_connections(MAX_CONNECTIONS_POOL)
-        .connect(&APP_CONFIG.lock().await.get_db_url())
-        .await?;
-    let pool_db = Db::with_pool_connection(pool);
-    INSTANCE_DB.set(pool_db).unwrap();
+async fn main() -> result::GenericReturn<()> {
+    setup::setup_app_config()?;
 
-    App::run(Settings::default())?;
+    setup::setup_db(config::AppConfig::get()).await?;
 
+    AppProcessor::run(Settings::default())?;
     Ok(())
 }

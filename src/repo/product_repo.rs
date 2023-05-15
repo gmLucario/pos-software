@@ -1,95 +1,183 @@
 //! Interaction with the database related with a product
 
-use crate::{
-    models::{
-        catalog::{LoadProduct, ProductInfo, ProductToBuy},
-        sale::SaleProductInfo,
-    },
-    queries::{
-        GET_PRODUCTS_TO_BUY, GET_PRODUCT_CATALOG_INFO, GET_PRODUCT_ID_BY_BARCODE,
-        GET_SALE_PRODUCT_INFO, INSERT_PRODUCT_CATALOG,
-    },
+use sqlx::{
+    postgres::PgPool,
+    types::{BigDecimal, Uuid},
 };
 
-use sqlx::{pool::Pool, postgres::Postgres, types::Uuid};
+use crate::{
+    db::queries::{
+        GET_CATALOG_PRODUCTS, GET_PRODUCTS_CATALOG_UPDATE_SALE, GET_PRODUCTS_TO_BUY,
+        GET_PRODUCT_CATALOG_INFO, GET_PRODUCT_ID_BY_BARCODE, GET_SALE_PRODUCT_INFO,
+        INSERT_PRODUCT_CATALOG,
+    },
+    errors::AppError,
+    models::{
+        catalog::{LoadProduct, ProductAmount, ProductInfo, ProductToBuy},
+        sale::{CatalogAmount, SaleProductInfo},
+    },
+    result::AppResult,
+};
 
-/// Struct to group the functionality related with
-/// the interaction of the database and a product
-pub struct ProductRepo {}
+/// Gets a [crate::errors::AppError] of type [crate::errors::ErrorType::DbError] with a custom `raw_msg`
+fn get_db_error<T>(raw_msg: &str, msg: &str, function_name: &str) -> AppResult<T> {
+    AppError::db_error(
+        &format!("src/repo/product_repo.rs::{function_name}"),
+        msg,
+        raw_msg,
+    )
+}
 
-impl ProductRepo {
-    /// Return products have less than the minimum required
-    pub async fn get_products_to_buy(
-        connection: &Pool<Postgres>,
-    ) -> Result<Vec<ProductToBuy>, String> {
-        let products = sqlx::query_as::<_, ProductToBuy>(GET_PRODUCTS_TO_BUY)
-            .fetch_all(connection)
-            .await
-            .map_err(|err| err.to_string())?;
+/// Gets product id by barcode
+pub async fn get_product_id(connection: &PgPool, barcode: &str) -> AppResult<Uuid> {
+    let result = sqlx::query_as::<_, (Uuid,)>(GET_PRODUCT_ID_BY_BARCODE)
+        .bind(barcode)
+        .fetch_one(connection)
+        .await;
 
-        Ok(products)
+    match result {
+        Ok((product_id,)) => Ok(product_id),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "error al obtener el product_id",
+            "get_product_id",
+        ),
     }
+}
 
-    /// Return product info by barcode used in catalog form view
-    pub async fn get_product_info_catalog(
-        connection: &Pool<Postgres>,
-        barcode: String,
-    ) -> Result<Option<ProductInfo>, String> {
-        let result = sqlx::query_as::<_, ProductInfo>(GET_PRODUCT_CATALOG_INFO)
-            .bind(barcode)
-            .fetch_optional(connection)
-            .await
-            .map_err(|err| err.to_string())?;
+/// Retrieves the current amount of each product in the catalog like `product_name_like`
+pub async fn get_products_catalog_like(
+    connection: &PgPool,
+    product_name_like: String,
+) -> AppResult<Vec<ProductAmount>> {
+    let result = sqlx::query_as::<_, ProductAmount>(GET_CATALOG_PRODUCTS)
+        .bind(product_name_like)
+        .fetch_all(connection)
+        .await;
 
-        Ok(result)
+    match result {
+        Ok(products) => Ok(products),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "error retrieving the current amount of each product in the catalog",
+            "get_products_catalog_like",
+        ),
     }
+}
 
-    /// Save new records to "catalog"
-    pub async fn save_products_catalog(
-        connection: &Pool<Postgres>,
-        products: Vec<LoadProduct>,
-    ) -> Result<(), String> {
-        for product in products {
-            sqlx::query(INSERT_PRODUCT_CATALOG)
-                .bind(product.barcode)
-                .bind(product.product_name)
-                .bind(product.user_price)
-                .bind(product.min_amount)
-                .bind(product.unit_measurement_id)
-                .bind(product.cost)
-                .bind(product.current_amount)
-                .execute(connection)
-                .await
-                .map_err(|err| err.to_string())?;
+/// Retrieves the products to be bought that matches `product_name_like`
+pub async fn get_products_tobuy_like(
+    connection: &PgPool,
+    product_name_like: String,
+) -> AppResult<Vec<ProductToBuy>> {
+    let result = sqlx::query_as::<_, ProductToBuy>(GET_PRODUCTS_TO_BUY)
+        .bind(product_name_like)
+        .fetch_all(connection)
+        .await;
+
+    match result {
+        Ok(products) => Ok(products),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "error retrieving the products to be bought",
+            "get_products_tobuy_like",
+        ),
+    }
+}
+
+/// Returns product info by barcode used in catalog form view
+pub async fn get_product_info_catalog(
+    connection: &PgPool,
+    barcode: String,
+) -> AppResult<Option<ProductInfo>> {
+    let result = sqlx::query_as::<_, ProductInfo>(GET_PRODUCT_CATALOG_INFO)
+        .bind(barcode)
+        .fetch_optional(connection)
+        .await;
+
+    match result {
+        Ok(info) => Ok(info),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "Error retrieving product info for catalog form",
+            "get_product_info_catalog",
+        ),
+    }
+}
+
+/// Saves new records to "catalog"
+pub async fn save_products_catalog(
+    connection: &PgPool,
+    products: Vec<LoadProduct>,
+) -> AppResult<()> {
+    let mut barcodes_not_inserted: Vec<String> = vec![];
+
+    for product in products {
+        let result = sqlx::query(INSERT_PRODUCT_CATALOG)
+            .bind(&product.barcode)
+            .bind(product.product_name)
+            .bind(product.user_price)
+            .bind(product.min_amount)
+            .bind(product.unit_measurement_id)
+            .bind(product.cost)
+            .bind(product.current_amount)
+            .execute(connection)
+            .await;
+
+        if result.is_err() {
+            barcodes_not_inserted.push(product.barcode)
         }
-        Ok(())
     }
 
-    /// Get product info by barcode used in sale form view
-    pub async fn get_product_info_sale(
-        connection: &Pool<Postgres>,
-        barcode: String,
-    ) -> Result<Option<SaleProductInfo>, String> {
-        let result = sqlx::query_as::<_, SaleProductInfo>(GET_SALE_PRODUCT_INFO)
-            .bind(barcode)
-            .fetch_optional(connection)
-            .await
-            .map_err(|err| err.to_string())?;
-
-        Ok(result)
+    if !barcodes_not_inserted.is_empty() {
+        return get_db_error(
+            "Some barcodes were not inserted",
+            "Some barcodes were not inserted",
+            "save_products_catalog",
+        );
     }
 
-    /// Get product id by barcode
-    pub async fn get_product_id(
-        connection: &Pool<Postgres>,
-        barcode: &str,
-    ) -> Result<Uuid, String> {
-        let (product_id,): (Uuid,) = sqlx::query_as(GET_PRODUCT_ID_BY_BARCODE)
-            .bind(barcode)
-            .fetch_one(connection)
-            .await
-            .map_err(|err| err.to_string())?;
+    Ok(())
+}
 
-        Ok(product_id)
+/// Gets product info by barcode used in sale form view
+pub async fn get_product_info_sale(
+    connection: &PgPool,
+    barcode: String,
+) -> AppResult<Option<SaleProductInfo>> {
+    let result = sqlx::query_as::<_, SaleProductInfo>(GET_SALE_PRODUCT_INFO)
+        .bind(barcode)
+        .fetch_optional(connection)
+        .await;
+
+    match result {
+        Ok(info) => Ok(info),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "Error retrieving product info by barcode used in sale form view",
+            "get_product_info_sale",
+        ),
+    }
+}
+
+/// Gets the current state info related to product_id
+pub async fn get_current_state_products(
+    connection: &PgPool,
+    product_id: &Uuid,
+    amount: &BigDecimal,
+) -> AppResult<Vec<CatalogAmount>> {
+    let result = sqlx::query_as::<_, CatalogAmount>(GET_PRODUCTS_CATALOG_UPDATE_SALE)
+        .bind(product_id)
+        .bind(amount)
+        .fetch_all(connection)
+        .await;
+
+    match result {
+        Ok(products) => Ok(products),
+        Err(err) => get_db_error(
+            &err.to_string(),
+            "Error al obtener la info de ese producto en catalogo",
+            "get_current_state_products",
+        ),
     }
 }

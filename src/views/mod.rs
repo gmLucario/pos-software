@@ -1,8 +1,10 @@
-//! Define the modules views of the app
-
+pub mod body;
 pub mod catalog;
-pub mod fonts;
+pub mod icon;
 pub mod loan;
+pub mod menu;
+pub mod modal;
 pub mod sale;
 pub mod sales_info;
+pub mod style;
 pub mod to_buy;
