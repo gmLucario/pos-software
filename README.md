@@ -84,6 +84,8 @@ $ cargo run
 
 ## Migrations
 
+### Installing sqlx
+
 Install [sqlx-cli](https://crates.io/crates/sqlx-cli) to run the migrations:
 
 ```bash
@@ -96,6 +98,16 @@ $ sqlx migrate run
 
 ```bash
 $ sqlx migrate revert
+```
+
+### Using docker
+
+```bash
+docker compose up -d
+```
+
+```bash
+docker compose exec sqlx bash
 ```
 
 ## Define enviroment variables
