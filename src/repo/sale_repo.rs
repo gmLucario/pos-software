@@ -19,7 +19,7 @@ use crate::{
 };
 
 /// Get a [crate::errors::AppError] of type [crate::errors::ErrorType::DbError] with a custom `raw_msg`
-fn get_db_error<T>(raw_msg: &str, msg: &str, function_name: &str) -> AppResult<T> {
+fn get_db_error(raw_msg: &str, msg: &str, function_name: &str) -> AppError {
     AppError::db_error(
         &format!("src/repo/sale_repo.rs::{function_name}"),
         msg,
@@ -47,32 +47,27 @@ pub async fn process_new_sale_flow(connection: &PgPool, sale: Sale) -> AppResult
 
 /// Insert a new sale
 async fn save_new_sale(connection: &PgPool, client_payment: &PgMoney) -> AppResult<Uuid> {
-    let result = sqlx::query_as::<_, (Uuid,)>(INSERT_NEW_SALE)
+    sqlx::query_as::<_, (Uuid,)>(INSERT_NEW_SALE)
         .bind(client_payment)
         .fetch_one(connection)
-        .await;
-
-    match result {
-        Ok((sale_id,)) => Ok(sale_id),
-        Err(err) => get_db_error(&err.to_string(), "Error al crear la venta", "save_new_sale"),
-    }
+        .await
+        .map_err(|err| get_db_error(&err.to_string(), "Error al crear la venta", "save_new_sale"))
+        .and_then(|(sale_id,)| Ok(sale_id))
 }
 
 /// Return list produts of a sale
 pub async fn get_products_sale(connection: &PgPool, sale_id: Uuid) -> AppResult<Vec<ProductSale>> {
-    let result = sqlx::query_as::<_, ProductSale>(GET_PRODUCTS_SALE)
+    sqlx::query_as::<_, ProductSale>(GET_PRODUCTS_SALE)
         .bind(sale_id)
         .fetch_all(connection)
-        .await;
-
-    match result {
-        Ok(products) => Ok(products),
-        Err(err) => get_db_error(
-            &err.to_string(),
-            "No se pudo obtener los productos de la venta",
-            "get_products_sale",
-        ),
-    }
+        .await
+        .map_err(|err| {
+            get_db_error(
+                &err.to_string(),
+                "No se pudo obtener los productos de la venta",
+                "get_products_sale",
+            )
+        })
 }
 
 /// Update stock products based on each item of the sale
@@ -118,20 +113,19 @@ async fn update_related_sale_records(
 }
 /// Create a new sale operation record
 async fn create_new_operation(connection: &PgPool, product: &CatalogAmount) -> AppResult<Uuid> {
-    let result = sqlx::query_as::<_, (Uuid,)>(CREATE_OPERATION_FROM_CATALOG)
+    sqlx::query_as::<_, (Uuid,)>(CREATE_OPERATION_FROM_CATALOG)
         .bind(product.catalog_id)
         .bind(&product.amount)
         .fetch_one(connection)
-        .await;
-
-    match result {
-        Ok((operation_id,)) => Ok(operation_id),
-        Err(err) => get_db_error(
-            &err.to_string(),
-            "Error al crear una operacion de la venta",
-            "create_new_sale_operation",
-        ),
-    }
+        .await
+        .map_err(|err| {
+            get_db_error(
+                &err.to_string(),
+                "Error al crear una operacion de la venta",
+                "create_new_sale_operation",
+            )
+        })
+        .and_then(|(operation_id,)| Ok(operation_id))
 }
 
 /// Link the sale with the operation
@@ -140,39 +134,35 @@ async fn create_new_sale_operation(
     sale_id: &Uuid,
     operation_id: &Uuid,
 ) -> AppResult<()> {
-    let result = sqlx::query(INSERT_NEW_SALE_OPERATION)
+    sqlx::query(INSERT_NEW_SALE_OPERATION)
         .bind(sale_id)
         .bind(operation_id)
         .execute(connection)
-        .await;
-
-    if let Err(err) = result {
-        return get_db_error(
-            &err.to_string(),
-            "Error al crear una operacion de la venta",
-            "create_new_sale_operation",
-        );
-    }
-
-    Ok(())
+        .await
+        .map_err(|err| {
+            get_db_error(
+                &err.to_string(),
+                "Error al crear una operacion de la venta",
+                "create_new_sale_operation",
+            )
+        })
+        .and_then(|_| Ok(()))
 }
 
 /// Delete the product from the catalog
 async fn delete_catalog_record(connection: &PgPool, catalog_id: &Uuid) -> AppResult<()> {
-    let result = sqlx::query(DELETE_CATALOG_RECORD)
+    sqlx::query(DELETE_CATALOG_RECORD)
         .bind(catalog_id)
         .execute(connection)
-        .await;
-
-    if let Err(err) = result {
-        return get_db_error(
-            &err.to_string(),
-            "Error al eliminar el producto del catalogo",
-            "delete_catalog_record",
-        );
-    }
-
-    Ok(())
+        .await
+        .map_err(|err| {
+            get_db_error(
+                &err.to_string(),
+                "Error al eliminar el producto del catalogo",
+                "delete_catalog_record",
+            )
+        })
+        .and_then(|_| Ok(()))
 }
 
 /// Update current_amount field of a catalog item
@@ -181,21 +171,19 @@ async fn update_catalog_amount(
     catalog_id: &Uuid,
     amount: &BigDecimal,
 ) -> AppResult<()> {
-    let result = sqlx::query(UPDATE_CATALOG_AMOUNT)
+    sqlx::query(UPDATE_CATALOG_AMOUNT)
         .bind(catalog_id)
         .bind(amount)
         .execute(connection)
-        .await;
-
-    if let Err(err) = result {
-        return get_db_error(
-            &err.to_string(),
-            "Error al aztualizar la cantidad en el catalogo",
-            "update_catalog_amount",
-        );
-    }
-
-    Ok(())
+        .await
+        .map_err(|err| {
+            get_db_error(
+                &err.to_string(),
+                "Error al aztualizar la cantidad en el catalogo",
+                "update_catalog_amount",
+            )
+        })
+        .and_then(|_| Ok(()))
 }
 
 /// Get total earnings of a period
@@ -204,20 +192,19 @@ pub async fn get_total_earnings(
     start_date: String,
     end_date: String,
 ) -> AppResult<PgMoney> {
-    let result = sqlx::query_as::<_, (PgMoney,)>(GET_EARNINGS)
+    sqlx::query_as::<_, (PgMoney,)>(GET_EARNINGS)
         .bind(start_date)
         .bind(end_date)
         .fetch_one(connection)
-        .await;
-
-    match result {
-        Ok((earnings,)) => Ok(earnings),
-        Err(err) => get_db_error(
-            &err.to_string(),
-            "Error al obtner el total de las ganancias",
-            "get_total_earnings",
-        ),
-    }
+        .await
+        .map_err(|err| {
+            get_db_error(
+                &err.to_string(),
+                "Error al obtner el total de las ganancias",
+                "get_total_earnings",
+            )
+        })
+        .and_then(|(earnings,)| Ok(earnings))
 }
 
 /// Get total stats sales
@@ -226,18 +213,16 @@ pub async fn get_total_sales(
     start_date: String,
     end_date: String,
 ) -> AppResult<TotalSales> {
-    let result = sqlx::query_as(GET_SALE_TOTAL)
+    sqlx::query_as(GET_SALE_TOTAL)
         .bind(start_date)
         .bind(end_date)
         .fetch_one(connection)
-        .await;
-
-    match result {
-        Ok(totals) => Ok(totals),
-        Err(err) => get_db_error(
-            &err.to_string(),
-            "Error al obtner el total de las ganancias",
-            "get_total_sales",
-        ),
-    }
+        .await
+        .map_err(|err| {
+            get_db_error(
+                &err.to_string(),
+                "Error al obtner el total de las ganancias",
+                "get_total_sales",
+            )
+        })
 }
