@@ -48,13 +48,13 @@ impl AppError {
             ErrorType::SetUpError,
         ))
     }
-    pub fn db_error<T>(component_name: &str, msg: &str, raw_msg: &str) -> AppResult<T> {
-        Err(Self::get_error(
+    pub fn db_error(component_name: &str, msg: &str, raw_msg: &str) -> Self {
+        Self::get_error(
             component_name,
             msg,
             raw_msg,
             ErrorType::DbError,
-        ))
+        )
     }
     pub fn validation_error<T>(component_name: &str, msg: &str, raw_msg: &str) -> AppResult<T> {
         Err(Self::get_error(
