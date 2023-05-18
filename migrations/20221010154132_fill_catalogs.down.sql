@@ -1,2 +1,2 @@
-DELETE FROM item_condition; 
-DELETE FROM status_loan; 
+DELETE FROM item_condition;
+DELETE FROM status_loan;

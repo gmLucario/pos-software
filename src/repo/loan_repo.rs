@@ -39,7 +39,7 @@ pub async fn save_new_loan(connection: &PgPool, loan: SaleLoan) -> AppResult<()>
                 "save_new_loan",
             )
         })
-        .and_then(|_| Ok(()))
+        .map(|_| ())
 }
 
 /// Return the loans that match the data filter
@@ -93,7 +93,7 @@ pub async fn add_new_payment_loan(
                 "get_payments_loan",
             )
         })
-        .and_then(|_| Ok(()))
+        .map(|_| ())
 }
 
 /// Get total stats loans

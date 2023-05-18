@@ -17,12 +17,12 @@ select
     unit_measurement.description as unit_measurement
 from product
 left join "catalog" on (
-    "catalog".product_id = product.id 
+    "catalog".product_id = product.id
 )
 left join unit_measurement on (
 	product.unit_measurement_id = unit_measurement.id
 )
-group by 
+group by
     product.full_name,
     product.min_amount,
     unit_measurement.description
@@ -136,18 +136,18 @@ with CatalogSum as (
 	where
 		"catalog".product_id  = $1
 )
-select 
+select
 	"catalog".id as catalog_id,
 	"catalog".current_amount as amount,
 	"catalog"."cost" as "cost"
 from "catalog"
 where
 	"catalog".priced_at <= (
-		select 
+		select
 			CatalogSum.priced_at
 		from CatalogSum
 		where CatalogSum.product_amount >= $2
-		order by 
+		order by
 			CatalogSum.product_amount asc
 		limit 1
 	)
@@ -237,14 +237,14 @@ select
 	) as loan_balance
 from loan
 left join sale on (
-	sale.id = loan.id 
+	sale.id = loan.id
 )
 left join loan_payment on (
 	loan_payment.loan_id = loan.id
 )
 where
 	to_date(sale.sold_at::text, 'YYYY/MM/DD')
-		between 
+		between
 			to_date($1, 'YYYY-MM-DD')
 			and to_date($2, 'YYYY-MM-DD')
 	and (
@@ -267,7 +267,7 @@ from loan_payment
 left join loan on (
 	loan_payment.loan_id = loan.id
 )
-where 
+where
 	loan_id = $1
 order by loan_payment.payed_at desc;
 "#;
@@ -285,7 +285,7 @@ select
 	op.amount_product * op.user_price as charge
 from operation op
 left join sale_operation sop on (
-	sop.operation_id = op.id 
+	sop.operation_id = op.id
 )
 left join product pct on (
 	pct.id = op.product_id
@@ -309,19 +309,19 @@ as earnings;
 /// Get total sales, number and money
 pub const GET_SALE_TOTAL: &str = r#"
 with TotalPerSale as (
-	select	
-		s.id as sales, 
-		sum(op.user_price) as total_sale 
+	select
+		s.id as sales,
+		sum(op.user_price) as total_sale
 	from operation op
 	left join sale_operation so on (
-		so.operation_id = op.id 
+		so.operation_id = op.id
 	)
 	left join sale s on (
 		so.sale_id = s.id
 	)
-	where 
+	where
 		to_date(op.recorded_at::text, 'YYYY/MM/DD')
-		between 
+		between
 			to_date($1, 'YYYY-MM-DD')
 			and to_date($2, 'YYYY-MM-DD')
 		and op.condition_id = 1
@@ -337,14 +337,14 @@ from TotalPerSale;
 /// Get total loans, number and money
 pub const GET_LOAN_TOTAL: &str = r#"
 with loans as (
-	select	
+	select
 		price - COALESCE(
 			sum(loan_payment.money_amount),
 			0::money
 		) as money_loans
 	from loan
 	left join sale on (
-		sale.id = loan.id 
+		sale.id = loan.id
 	)
 	left join loan_payment on (
 		loan_payment.loan_id = loan.id
@@ -352,7 +352,7 @@ with loans as (
 	where
 		loan.status_loan != 1
 		and to_date(sale.sold_at::text, 'YYYY/MM/DD')
-			between 
+			between
 				to_date($1, 'YYYY-MM-DD')
 				and to_date($2, 'YYYY-MM-DD')
 	group by
@@ -360,7 +360,7 @@ with loans as (
 		sale.sold_at
 	order by sale.sold_at desc
 )
-select 
+select
 	count(1) as loans,
 	sum(money_loans) as money_loans
 from loans;

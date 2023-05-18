@@ -41,7 +41,7 @@ pub async fn get_product_id(connection: &PgPool, barcode: &str) -> AppResult<Uui
                 "get_product_id",
             )
         })
-        .and_then(|(uuid,)| Ok(uuid))
+        .map(|(uuid,)| uuid)
 }
 
 /// Retrieves the current amount of each product in the catalog like `product_name_like`

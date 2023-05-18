@@ -8,4 +8,4 @@ DROP PROCEDURE IF EXISTS sp_save_product_catalog
    input_unit_measurement_id SMALLINT,
    input_cost MONEY,
    input_amount_product NUMERIC(8, 3)
-); 
+);

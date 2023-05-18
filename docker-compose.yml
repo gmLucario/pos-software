@@ -23,6 +23,6 @@ services:
         - DATABASE_URL=${DATABASE_URL}
     command: 'tail -F anything'
     depends_on:
-      - db    
+      - db
     volumes:
       - ./migrations:/migrations

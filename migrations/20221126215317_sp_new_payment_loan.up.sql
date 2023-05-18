@@ -3,7 +3,7 @@ CREATE OR REPLACE PROCEDURE sp_new_payment_loan(
    input_loan_id UUID,
    input_money_amount MONEY
 )
-language plpgsql    
+language plpgsql
 AS $$
 BEGIN
 DECLARE
@@ -17,7 +17,7 @@ DECLARE
 
         SELECT
             SUM(lp.money_amount) into total_payments
-        FROM loan_payment lp 
+        FROM loan_payment lp
         WHERE lp.loan_id = input_loan_id;
 
         SELECT
@@ -26,15 +26,15 @@ DECLARE
         WHERE loan.id =  input_loan_id;
 
         SELECT
-            CASE 
+            CASE
                 WHEN total_payments >= total_loan THEN 1
                 ELSE 2
             END into new_status_loan;
 
-        UPDATE loan 
+        UPDATE loan
         SET
             status_loan = new_status_loan
-        WHERE id =  input_loan_id;        
+        WHERE id =  input_loan_id;
 
     END;
 

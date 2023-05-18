@@ -1,5 +1,5 @@
 //! [`iced::Element`]s to be used in the loan view
-//! 
+//!
 use iced::{
     widget::{button, column, row, scrollable, text, text_input, Column},
     Element, Length,

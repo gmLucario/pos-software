@@ -18,7 +18,7 @@ Help to manage a small store like:
 - [ ] catalog flow
     - [x] schemas
     - [x] save new products list to save
-    - [x] delete product record before save them 
+    - [x] delete product record before save them
     - [x] save list products
     - [ ] show message products saved/not saved
 - [ ] view edit catalog
@@ -79,7 +79,7 @@ $ cargo build --target=x86_64-pc-windows-gnu --release
 1. start docker compose
 
 ```bash
-$ docker compose up -d 
+$ docker compose up -d
 ```
 
 2. Run app

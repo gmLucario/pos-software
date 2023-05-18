@@ -52,7 +52,7 @@ async fn save_new_sale(connection: &PgPool, client_payment: &PgMoney) -> AppResu
         .fetch_one(connection)
         .await
         .map_err(|err| get_db_error(&err.to_string(), "Error al crear la venta", "save_new_sale"))
-        .and_then(|(sale_id,)| Ok(sale_id))
+        .map(|(sale_id,)| sale_id)
 }
 
 /// Return list produts of a sale
@@ -125,7 +125,7 @@ async fn create_new_operation(connection: &PgPool, product: &CatalogAmount) -> A
                 "create_new_sale_operation",
             )
         })
-        .and_then(|(operation_id,)| Ok(operation_id))
+        .map(|(operation_id,)| operation_id)
 }
 
 /// Link the sale with the operation
@@ -146,7 +146,7 @@ async fn create_new_sale_operation(
                 "create_new_sale_operation",
             )
         })
-        .and_then(|_| Ok(()))
+        .map(|_| ())
 }
 
 /// Delete the product from the catalog
@@ -162,7 +162,7 @@ async fn delete_catalog_record(connection: &PgPool, catalog_id: &Uuid) -> AppRes
                 "delete_catalog_record",
             )
         })
-        .and_then(|_| Ok(()))
+        .map(|_| ())
 }
 
 /// Update current_amount field of a catalog item
@@ -183,7 +183,7 @@ async fn update_catalog_amount(
                 "update_catalog_amount",
             )
         })
-        .and_then(|_| Ok(()))
+        .map(|_| ())
 }
 
 /// Get total earnings of a period
@@ -204,7 +204,7 @@ pub async fn get_total_earnings(
                 "get_total_earnings",
             )
         })
-        .and_then(|(earnings,)| Ok(earnings))
+        .map(|(earnings,)| earnings)
 }
 
 /// Get total stats sales

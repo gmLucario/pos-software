@@ -1,8 +1,8 @@
-use iced_native::alignment::Alignment;
-use iced_native::widget::{self, Tree};
 use iced_native::{
-    event, layout, mouse, overlay, renderer, Clipboard, Color, Element,
-    Event, Layout, Length, Point, Rectangle, Shell, Size, Widget,
+    alignment::Alignment,
+    event, layout, mouse, overlay, renderer,
+    widget::{self, Tree},
+    Clipboard, Color, Element, Event, Layout, Length, Point, Rectangle, Shell, Size, Widget,
 };
 
 /// A widget that centers a modal element over some base element
@@ -35,8 +35,7 @@ impl<'a, Message, Renderer> Modal<'a, Message, Renderer> {
     }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer>
-    for Modal<'a, Message, Renderer>
+impl<'a, Message, Renderer> Widget<Message, Renderer> for Modal<'a, Message, Renderer>
 where
     Renderer: iced_native::Renderer,
     Message: Clone,
@@ -57,11 +56,7 @@ where
         self.base.as_widget().height()
     }
 
-    fn layout(
-        &self,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
+    fn layout(&self, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         self.base.as_widget().layout(renderer, limits)
     }
 
@@ -148,12 +143,9 @@ where
         renderer: &Renderer,
         operation: &mut dyn widget::Operation<Message>,
     ) {
-        self.base.as_widget().operate(
-            &mut state.children[0],
-            layout,
-            renderer,
-            operation,
-        );
+        self.base
+            .as_widget()
+            .operate(&mut state.children[0], layout, renderer, operation);
     }
 }
 
@@ -170,12 +162,7 @@ where
     Renderer: iced_native::Renderer,
     Message: Clone,
 {
-    fn layout(
-        &self,
-        renderer: &Renderer,
-        _bounds: Size,
-        position: Point,
-    ) -> layout::Node {
+    fn layout(&self, renderer: &Renderer, _bounds: Size, position: Point) -> layout::Node {
         let limits = layout::Limits::new(Size::ZERO, self.size)
             .width(Length::Fill)
             .height(Length::Fill);
@@ -201,10 +188,7 @@ where
         let content_bounds = layout.children().next().unwrap().bounds();
 
         if let Some(message) = self.on_blur.as_ref() {
-            if let Event::Mouse(mouse::Event::ButtonPressed(
-                mouse::Button::Left,
-            )) = &event
-            {
+            if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) = &event {
                 if !content_bounds.contains(cursor_position) {
                     shell.publish(message.clone());
                     return event::Status::Captured;
@@ -286,8 +270,7 @@ where
     }
 }
 
-impl<'a, Message, Renderer> From<Modal<'a, Message, Renderer>>
-    for Element<'a, Message, Renderer>
+impl<'a, Message, Renderer> From<Modal<'a, Message, Renderer>> for Element<'a, Message, Renderer>
 where
     Renderer: 'a + iced_native::Renderer,
     Message: 'a + Clone,

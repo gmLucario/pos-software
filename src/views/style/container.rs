@@ -1,4 +1,3 @@
-
 //! Define application containers styles
 use iced::{theme, widget::container, Color, Theme};
 
