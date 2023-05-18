@@ -29,13 +29,12 @@ impl AppConfig {
     }
 
     pub fn from_env() -> AppResult<Self> {
-        match envy::from_env::<AppConfig>() {
-            Ok(config) => Ok(config),
-            Err(err) => AppError::setup_error(
+        envy::from_env::<AppConfig>().map_err(|err| {
+            AppError::setup_error(
                 "src/config.rs::AppConfig::from_env",
                 "Variables de ambiente no definidas",
                 &err.to_string(),
-            ),
-        }
+            )
+        })
     }
 }

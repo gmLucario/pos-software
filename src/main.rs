@@ -16,15 +16,13 @@ pub mod schemas;
 pub mod setup;
 pub mod views;
 
-use domain::AppProcessor;
-use iced::{Application, Settings};
-
 #[async_std::main]
 async fn main() -> result::GenericReturn<()> {
     setup::setup_app_config()?;
 
     setup::setup_db(config::AppConfig::get()).await?;
 
-    AppProcessor::run(Settings::default())?;
+    setup::setup_main_app().await?;
+
     Ok(())
 }

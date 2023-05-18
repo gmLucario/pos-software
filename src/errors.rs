@@ -40,13 +40,13 @@ impl AppError {
             err_type,
         }
     }
-    pub fn setup_error<T>(component_name: &str, msg: &str, raw_msg: &str) -> AppResult<T> {
-        Err(Self::get_error(
+    pub fn setup_error(component_name: &str, msg: &str, raw_msg: &str) -> Self {
+        Self::get_error(
             component_name,
             msg,
             raw_msg,
             ErrorType::SetUpError,
-        ))
+        )
     }
     pub fn db_error(component_name: &str, msg: &str, raw_msg: &str) -> Self {
         Self::get_error(
