@@ -10,3 +10,6 @@
 
 # Enviroment variables
 .envrc
+
+# logs app
+**/*.log

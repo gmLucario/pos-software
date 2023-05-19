@@ -4,6 +4,7 @@ use std::fmt::{self, Display};
 
 use crate::result::AppResult;
 
+/// Custom errors types
 #[derive(Debug, Default, Clone, Copy)]
 pub enum ErrorType {
     #[default]
@@ -23,6 +24,7 @@ impl Display for ErrorType {
     }
 }
 
+/// Fields to get more info about the error
 #[derive(Clone)]
 pub struct AppError {
     pub component_name: String,
@@ -32,20 +34,31 @@ pub struct AppError {
 }
 
 impl AppError {
+    /// Get a [`AppError`] populated
     fn get_error(component_name: &str, msg: &str, raw_msg: &str, err_type: ErrorType) -> Self {
-        Self {
+        let error = Self {
             component_name: component_name.to_string(),
             msg: msg.to_string(),
             raw_msg: raw_msg.to_string(),
             err_type,
-        }
+        };
+
+        error!("{error}");
+
+        error
     }
+
+    /// [`AppError`] of type setup
     pub fn setup_error(component_name: &str, msg: &str, raw_msg: &str) -> Self {
         Self::get_error(component_name, msg, raw_msg, ErrorType::SetUpError)
     }
+
+    /// [`AppError`] of type database
     pub fn db_error(component_name: &str, msg: &str, raw_msg: &str) -> Self {
         Self::get_error(component_name, msg, raw_msg, ErrorType::DbError)
     }
+
+    /// [`AppError`] of validation type
     pub fn validation_error<T>(component_name: &str, msg: &str, raw_msg: &str) -> AppResult<T> {
         Err(Self::get_error(
             component_name,
