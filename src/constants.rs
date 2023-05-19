@@ -49,9 +49,9 @@ pub const SPACE_COLUMNS: u16 = 10;
 pub const COLUMN_PADDING: u16 = 20;
 /// Forms padding
 pub const FORM_PADDING: u16 = 30;
-/// Max width size for [`custom_widget::modal::Modal`]
+/// Max width size for [`custom_crates::widgets::modal::Modal`]
 pub const MODAL_MAX_WIDTH: u32 = 500;
-/// Max height size for [`custom_widget::modal::Modal`]
+/// Max height size for [`custom_crates::widgets::modal::Modal`]
 pub const MODAL_MAX_HEIGHT: u32 = 300;
 /// Pading value for modal's content
 pub const MODAL_PADING_CONTENT: u16 = 300;

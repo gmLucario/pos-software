@@ -92,7 +92,7 @@ pub enum UnitsMeasurement {
     Pieces, // 3
 }
 
-/// Types of date picker in [`crate::kinds::Views::SalesInfo`] view type
+/// Types of date picker in the hole app
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AppDatePicker {
     /// Date search starts

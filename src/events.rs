@@ -37,7 +37,7 @@ pub enum AppEvent {
     CloseToast(usize),
     /// Set default data for current view
     SetDefaultDataView,
-    ///A [`iced::widget::text_input`] field changed
+    ///A [`iced::widget::TextInput`] field changed
     TextInputChanged(String, TextInput),
     /// A picklist value was selected
     PickListSelected(PickList),

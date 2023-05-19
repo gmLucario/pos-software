@@ -9,7 +9,7 @@ pub const FONT_ICONS: Font = Font::External {
 };
 
 #[derive(Clone, Copy, Debug)]
-/// An enumeration of all available icons in the [`ICON_FONT`](ICON_FONT).
+/// An enumeration of all available icons in the [`crate::views::icon::FONT_ICONS`].
 /// See: <https://fontello.com/>
 pub enum Icon {
     /// Trash

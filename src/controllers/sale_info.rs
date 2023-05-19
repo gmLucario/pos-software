@@ -1,5 +1,5 @@
 //! Handle logic to link [`crate::views::sales_info`]
-//! module with the [`crate::data::sale_repo::SaleRepo`]
+//! module with the [`crate::repo::sale_repo`]
 
 use iced_aw::date_picker::Date;
 

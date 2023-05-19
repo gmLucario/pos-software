@@ -1,5 +1,5 @@
 //! Handle logic to link [`crate::views::sale`]
-//! module with the [`crate::data::sale_repo::SaleRepo`]
+//! module with the [`crate::repo::sale_repo`]
 
 use std::str::FromStr;
 
@@ -25,7 +25,7 @@ use crate::{
     schemas::sale::{SaleInfo, SaleUserInput},
 };
 
-/// Controller links [`crate::views::sale`] module with the [`crate::data::sale_repo::SaleRepo`]
+/// Controller links [`crate::views::sale`] module with the [`crate::repo::sale_repo`]
 #[derive(Default)]
 pub struct Sale {
     /// Product info which will be added to the list to sale

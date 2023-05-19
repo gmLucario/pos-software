@@ -4,7 +4,7 @@ use crate::{errors::AppError, result::AppResult};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
-/// Define the default value for `are_values_valid` in [crate::config::Config]
+/// Define the default value for `are_values_valid` in [crate::config::AppConfig]
 fn default_are_values_valid() -> bool {
     false
 }

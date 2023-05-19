@@ -1,9 +1,9 @@
 //! Handle logic to link [`crate::views::to_buy`]
-//! module with the [`crate::data::product_repo::ProductRepo`]
+//! module with the [`crate::repo::product_repo`]
 
 use crate::models::catalog::ProductToBuy;
 
-/// Controller links [`crate::views::to_buy`] module with the [`crate::data::product_repo::ProductRepo`]
+/// Controller links [`crate::views::to_buy`] module with the [`crate::repo::product_repo`]
 /// and perform the logic of products to be bought to fill the stock
 #[derive(Default)]
 pub struct ToBuy {
