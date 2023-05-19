@@ -20,7 +20,10 @@ pub fn get_body_based_current_view(app: &AppProcessor) -> Element<AppEvent> {
             app.sale_controller.is_pay_later(),
             app.sale_controller.is_ok_charge(),
         ),
-        View::LoansByDeptor => views::loan::search_results(&app.loan_controller.data),
+        View::LoansByDeptor => views::loan::search_results(
+            &app.loan_controller.data.loans_by_debtor,
+            &app.loan_controller.data.debtor_name,
+        ),
         View::ToBuy => views::to_buy::show_list_products(
             &app.tobuy_controller.products,
             &app.tobuy_controller.product_name,

@@ -12,40 +12,22 @@ use crate::{
         COLUMN_PADDING, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS, SPACE_ROWS,
         TO_DECIMAL_DIGITS,
     },
-    controllers::loan::LoanData,
     events::AppEvent,
     helpers::get_btn_plus_icon,
     kinds::TextInput,
     models::{
-        loan::{LoanItem, LoanPayment},
+        loan::{LoanInfo, LoanItem, LoanPayment},
         sale::ProductSale,
     },
     views::style::btns::get_style_btn_listed_items,
 };
 
-struct LoanInfo {
-    total: PgMoney,
-    loans: Vec<LoanItem>,
-}
-
 /// View to search specific loans and list them
-pub fn search_results(loan_data: &LoanData) -> Element<'_, AppEvent> {
-    let mut debtors_total: BTreeMap<String, LoanInfo> = BTreeMap::new();
-
-    for loan in loan_data.loans.iter() {
-        debtors_total
-            .entry(loan.name_debtor.to_string())
-            .and_modify(|info| {
-                info.total += loan.loan_balance;
-                info.loans.push(loan.clone());
-            })
-            .or_insert(LoanInfo {
-                total: loan.loan_balance,
-                loans: vec![loan.clone()],
-            });
-    }
-
-    let loans: Vec<Element<AppEvent>> = debtors_total
+pub fn search_results<'a>(
+    loans_by_debtor: &'a BTreeMap<String, LoanInfo>,
+    debtor_name: &'a str,
+) -> Element<'a, AppEvent> {
+    let loans: Vec<Element<AppEvent>> = loans_by_debtor
         .iter()
         .map(|(name_debtor, loan_info)| {
             column!(
@@ -93,7 +75,7 @@ pub fn search_results(loan_data: &LoanData) -> Element<'_, AppEvent> {
         .spacing(SPACE_COLUMNS);
 
     column!(
-        row!(text_input("", &loan_data.debtor_name)
+        row!(text_input("", debtor_name)
             .on_input(|input_value| {
                 AppEvent::TextInputChanged(input_value, TextInput::LoanDebtorName)
             })

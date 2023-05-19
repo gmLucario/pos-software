@@ -1,5 +1,7 @@
 //! Events variants that can be sent in the app
 
+use std::collections::BTreeMap;
+
 use custom_crates::widgets::toast;
 use iced::Event;
 use iced_aw::date_picker::Date;
@@ -9,7 +11,7 @@ use crate::{
     kinds::{AppDatePicker, AppModule, ModalView, PickList, TextInput, View},
     models::{
         catalog::{ProductAmount, ProductInfo, ProductToBuy},
-        loan::{LoanItem, LoanPayment, TotalLoans},
+        loan::{LoanInfo, LoanPayment, TotalLoans},
         sale::{ProductSale, SaleProductInfo, TotalSales},
     },
     result::AppResult,
@@ -92,7 +94,7 @@ pub enum AppEvent {
     /// Event to start searching loans
     LoanSearchRequested,
     /// Event is sent after the loans search was performed
-    LoanSearchData(AppResult<Vec<LoanItem>>),
+    LoanSearchData(AppResult<BTreeMap<String, LoanInfo>>),
     /// Result query sale's products of a loan
     LoanSaleProductsData(AppResult<Vec<ProductSale>>),
     /// Event receive data send by the loan repo about

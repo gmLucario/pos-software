@@ -502,7 +502,7 @@ impl Application for AppProcessor {
             ),
             AppEvent::LoanSearchData(result) => match result {
                 Ok(loans) => {
-                    self.loan_controller.data.loans = loans;
+                    self.loan_controller.data.loans_by_debtor = loans;
                     Command::none()
                 }
                 Err(err) => helpers::send_toast_err(err.msg),

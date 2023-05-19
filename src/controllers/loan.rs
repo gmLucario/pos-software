@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use num_traits::FromPrimitive;
 use sqlx::{
     postgres::types::PgMoney,
@@ -7,7 +9,7 @@ use sqlx::{
 use crate::{
     constants::PGMONEY_DECIMALS,
     models::{
-        loan::{LoanItem, LoanPayment},
+        loan::{LoanInfo, LoanPayment},
         sale::ProductSale,
     },
 };
@@ -20,7 +22,7 @@ pub struct LoanData {
     /// money payed by the client
     pub loan_payment: String,
     /// List of loans
-    pub loans: Vec<LoanItem>,
+    pub loans_by_debtor: BTreeMap<String, LoanInfo>,
     /// Current loan selected
     pub loan_id: Uuid,
     /// Payments selected loan

@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use sqlx::{
     postgres::{types::PgMoney, PgPool},
     types::Uuid,
@@ -9,7 +11,7 @@ use crate::{
     },
     errors::AppError,
     models::{
-        loan::{LoanItem, LoanPayment, TotalLoans},
+        loan::{LoanInfo, LoanItem, LoanPayment, TotalLoans},
         sale::SaleLoan,
     },
     result::AppResult,
@@ -46,8 +48,8 @@ pub async fn save_new_loan(connection: &PgPool, loan: SaleLoan) -> AppResult<()>
 pub async fn get_loans_by_debtor_name(
     connection: &PgPool,
     name_debtor: String,
-) -> AppResult<Vec<LoanItem>> {
-    sqlx::query_as::<_, LoanItem>(GET_LOAN_LIST)
+) -> AppResult<BTreeMap<String, LoanInfo>> {
+    let loans = sqlx::query_as::<_, LoanItem>(GET_LOAN_LIST)
         .bind(&name_debtor)
         .fetch_all(connection)
         .await
@@ -57,7 +59,24 @@ pub async fn get_loans_by_debtor_name(
                 "No se pudieron obtener los prestamos",
                 "get_loans_by_debtor_name",
             )
-        })
+        })?;
+
+    let mut debtors_total: BTreeMap<String, LoanInfo> = BTreeMap::new();
+
+    for loan in loans.iter() {
+        debtors_total
+            .entry(loan.name_debtor.to_string())
+            .and_modify(|info| {
+                info.total += loan.loan_balance;
+                info.loans.push(loan.clone());
+            })
+            .or_insert(LoanInfo {
+                total: loan.loan_balance,
+                loans: vec![loan.clone()],
+            });
+    }
+
+    Ok(debtors_total)
 }
 
 /// Return list of payments made to a loan
