@@ -16,7 +16,7 @@ use crate::{
 /// Controller links [`crate::views::catalog`] module with the [`crate::repo::product_repo`]
 #[derive(Default)]
 pub struct Catalog {
-    /// Hashmap of products to be added in the catalog
+    /// BTreeMap (ordered Hashmap) of products to be added in the catalog
     ///
     /// key: `product barcode`
     /// value: [`crate::models::catalog::LoadProduct`]
@@ -97,6 +97,7 @@ impl Catalog {
         self.form = CatalogProductForm::default()
     }
 
+    /// To lowercase the trimed product name value
     pub fn product_name_to_lowercase(&mut self) -> String {
         self.product_name.trim().to_lowercase()
     }
