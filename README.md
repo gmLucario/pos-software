@@ -18,9 +18,9 @@ Help to manage a small store like:
 - [ ] catalog flow
     - [x] schemas
     - [x] save new products list to save
-    - [x] delete product record before save them 
+    - [x] delete product record before save them
     - [x] save list products
-    - [ ] show message products saved/not saved
+    - [x] show message products saved/not saved
 - [ ] view edit catalog
 - [ ] sale flow
     - [x] validate amount product input
@@ -32,15 +32,15 @@ Help to manage a small store like:
     - [x] store operations
     - [x] update tables based on operations
     - [x] save info if sale is a loan
-    - [ ] show message products can't be added to sale list
+    - [x] show message products can't be added to sale list
 - [ ] sale loan info
     - [ ] query get paginated loans by `name_debtor` and `range_dates`
     - [x] name client like lower case and remove spaces
-    - [ ] view search loans
+    - [x] view search loans
 - [ ] sale info statics
     - [ ] sale earnings and total list
-- [ ] logger handler
-    - [ ] save logs file
+- [x] logger handler
+    - [x] save logs file
 - [ ] add general doc comments
     - [ ] models module docs
     - [x] schemas module docs
@@ -51,6 +51,13 @@ Help to manage a small store like:
 
 
 # For devs
+
+## Env
+
+```
+DB_HOST=host.docker.internal
+DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}:@${DB_HOST}:${DB_PORT}/${DB_NAME}
+```
 
 ## Build
 
@@ -73,7 +80,7 @@ $ cargo build --target=x86_64-pc-windows-gnu --release
 1. start docker compose
 
 ```bash
-$ docker compose up -d 
+$ docker compose up -d
 ```
 
 2. Run app
@@ -83,6 +90,8 @@ $ cargo run
 ```
 
 ## Migrations
+
+### Installing sqlx
 
 Install [sqlx-cli](https://crates.io/crates/sqlx-cli) to run the migrations:
 
@@ -96,6 +105,16 @@ $ sqlx migrate run
 
 ```bash
 $ sqlx migrate revert
+```
+
+### Using docker
+
+```bash
+docker compose up -d
+```
+
+```bash
+docker compose exec sqlx bash
 ```
 
 ## Define enviroment variables

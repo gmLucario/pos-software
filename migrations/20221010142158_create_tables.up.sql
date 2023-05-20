@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS loan (
     price MONEY,
     name_debtor VARCHAR(100),
     status_loan SMALLINT,
-    
+
     CONSTRAINT fk_loan_status_loan
         FOREIGN KEY(status_loan)
             REFERENCES status_loan(id)

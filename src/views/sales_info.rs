@@ -9,12 +9,17 @@ use iced_aw::{Card, DatePicker};
 
 use crate::{
     constants::{COLUMN_PADDING, SIZE_TEXT, SIZE_TEXT_LABEL, SPACE_COLUMNS, SPACE_ROWS},
-    controllers::sale_info::SaleInfoData,
-    kinds::{AppEvents, SaleInfoDatePicker},
+    events::AppEvent,
+    kinds::AppDatePicker,
+    schemas::sale_info::{SaleInfoSearchSchema, SaleInfoStats, SaleInfoWidgetsStates},
 };
 
 /// General view items
-pub fn view(data: &SaleInfoData) -> Element<'static, AppEvents> {
+pub fn view<'a>(
+    search_info: &'a SaleInfoSearchSchema,
+    widgets_states: &'a SaleInfoWidgetsStates,
+    data_stats: &'a SaleInfoStats,
+) -> Element<'a, AppEvent> {
     let get_total_label = |msg: String| -> Text {
         text(msg)
             .size(SIZE_TEXT)
@@ -25,32 +30,29 @@ pub fn view(data: &SaleInfoData) -> Element<'static, AppEvents> {
     column!(
         row!(
             DatePicker::new(
-                data.widgets_states.show_start_date,
-                data.search_info.start_date,
-                button(text(data.search_info.start_date).size(SIZE_TEXT_LABEL)).on_press(
-                    AppEvents::SaleInfoShowDatePicker(true, SaleInfoDatePicker::StartDatePicker,)
+                widgets_states.show_start_date,
+                search_info.start_date,
+                button(text(search_info.start_date).size(SIZE_TEXT_LABEL)).on_press(
+                    AppEvent::ShowDatePicker(true, AppDatePicker::SaleStartDatePicker)
                 ),
-                AppEvents::SaleInfoShowDatePicker(false, SaleInfoDatePicker::StartDatePicker),
-                |date| AppEvents::SaleInfoSubmitDatePicker(
-                    date,
-                    SaleInfoDatePicker::StartDatePicker
-                ),
+                AppEvent::ShowDatePicker(false, AppDatePicker::SaleStartDatePicker),
+                |date| AppEvent::SubmitDatePicker(date, AppDatePicker::SaleStartDatePicker),
             ),
             DatePicker::new(
-                data.widgets_states.show_end_date,
-                data.search_info.end_date,
-                button(text(data.search_info.end_date).size(SIZE_TEXT_LABEL)).on_press(
-                    AppEvents::SaleInfoShowDatePicker(true, SaleInfoDatePicker::EndDatePicker,)
+                widgets_states.show_end_date,
+                search_info.end_date,
+                button(text(search_info.end_date).size(SIZE_TEXT_LABEL)).on_press(
+                    AppEvent::ShowDatePicker(true, AppDatePicker::SaleEndDatePicker,)
                 ),
-                AppEvents::SaleInfoShowDatePicker(false, SaleInfoDatePicker::EndDatePicker),
-                |date| AppEvents::SaleInfoSubmitDatePicker(date, SaleInfoDatePicker::EndDatePicker),
+                AppEvent::ShowDatePicker(false, AppDatePicker::SaleEndDatePicker),
+                |date| AppEvent::SubmitDatePicker(date, AppDatePicker::SaleEndDatePicker),
             ),
         )
         .spacing(SPACE_ROWS),
         row!(
             Card::new(
                 text("Ganancias Totales"),
-                get_total_label(format!("${}", data.data_stats.earnings))
+                get_total_label(format!("${}", data_stats.earnings))
             )
             .foot(text(
                 "ganancias considerando ventas, prestamos y productos en almacen"
@@ -59,8 +61,8 @@ pub fn view(data: &SaleInfoData) -> Element<'static, AppEvents> {
                 text("Ventas"),
                 get_total_label(format!(
                     "#{number}: ${money}",
-                    number = data.data_stats.sales,
-                    money = data.data_stats.total_sales
+                    number = data_stats.sales,
+                    money = data_stats.total_sales
                 ))
             )
             .foot(text("suma de todas las ventas y la ganancia de estas"))
@@ -70,8 +72,8 @@ pub fn view(data: &SaleInfoData) -> Element<'static, AppEvents> {
             text("Prestamos"),
             get_total_label(format!(
                 "#{number}: ${money}",
-                number = data.data_stats.loans,
-                money = data.data_stats.total_loans
+                number = data_stats.loans,
+                money = data_stats.total_loans
             ))
         )
         .foot(text("suma de todos los préstamos y pérdidas de estas"))

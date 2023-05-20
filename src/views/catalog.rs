@@ -1,127 +1,158 @@
-//! Create [`iced::Element`]s to be shown in sale module
+//! User interfaces shown in catalog module
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use iced::{
-    widget::{column, pick_list, row, scrollable, text, text_input},
+    widget::{column, container, pick_list, row, scrollable, text, text_input, Column},
     Alignment, Element, Length,
 };
 
 use crate::{
-    constants::{COLUMN_PADDING, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS},
-    helpers::{get_btn_cancel, get_btn_ok, get_btn_save, get_btn_trash_icon},
-    kinds::{AppEvents, CatalogInputs, UnitsMeasurement},
-    schemas::catalog::LoadProduct,
+    constants::{
+        COLUMN_PADDING, FORM_PADDING, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS,
+        SPACE_ROWS, SPACE_ROW_BTNS_FORM,
+    },
+    events::AppEvent,
+    helpers::{get_btn_cancel, get_btn_edit, get_btn_ok, get_btn_save, get_btn_trash_icon},
+    kinds::{PickList, TextInput, UnitsMeasurement, View},
+    models::catalog::{LoadProduct, ProductAmount},
+    schemas::catalog::CatalogProductForm,
 };
 
-/// Get a new product row for the catalog list
-fn catalog_list_view_formatted_row(id: String, product: &LoadProduct) -> Element<AppEvents> {
-    row!(
-        text(format!("{}: {}", product.barcode, product.product_name))
-            .size(SIZE_TEXT)
-            .width(Length::FillPortion(6)),
-        text(&product.amount)
-            .size(SIZE_TEXT)
-            .width(Length::FillPortion(2)),
-        text(&product.cost)
-            .size(SIZE_TEXT)
-            .width(Length::FillPortion(2)),
-        get_btn_trash_icon().on_press(AppEvents::CatalogRemoveRecordList(id)),
-    )
-    .spacing(10)
-    .width(iced::Length::Fill)
-    .into()
-}
+/// Show products in the catalog
+pub fn show_list_products<'a>(
+    products: &[ProductAmount],
+    text_input_value: &str,
+) -> Element<'a, AppEvent> {
+    let products: Vec<Element<AppEvent>> = products
+        .iter()
+        .map(|pr| text(pr.get_formatted_item()).size(SIZE_TEXT).into())
+        .collect();
 
-/// Defines the form which the user will define the
-/// product info to be added in the catalog
-pub fn load_product_view(product: &LoadProduct) -> Element<AppEvents> {
-    column!(
-        text(format!("Código Barras:  {}", product.barcode)).size(SIZE_TEXT),
-        text("Producto:").size(SIZE_TEXT_LABEL),
-        text_input("", &product.product_name, |input_value| {
-            AppEvents::CatalogInputChanged(input_value, CatalogInputs::ProductName)
-        })
-        .size(SIZE_TEXT_INPUT),
-        text("Cantidad:").size(SIZE_TEXT_LABEL),
-        row!(
-            text_input("", &product.amount, |input_value| {
-                AppEvents::CatalogInputChanged(input_value, CatalogInputs::AmountProduct)
-            })
-            .size(SIZE_TEXT_INPUT),
-            pick_list(
-                &UnitsMeasurement::ALL[..],
-                Some(product.unit_measurement),
-                AppEvents::CatalogPickListSelected,
-            )
-        ),
-        text("Cantidad Mínima:").size(SIZE_TEXT_LABEL),
-        text_input("", &product.min_amount, |input_value| {
-            AppEvents::CatalogInputChanged(input_value, CatalogInputs::MinAmountProduct)
-        })
-        .size(SIZE_TEXT_INPUT),
-        text("Precio Cliente:").size(SIZE_TEXT_LABEL),
-        text_input("", &product.user_price, |input_value| {
-            AppEvents::CatalogInputChanged(input_value, CatalogInputs::ClientPrice)
-        })
-        .size(SIZE_TEXT_INPUT),
-        text("Costo:").size(SIZE_TEXT_LABEL),
-        text_input("", &product.cost, |input_value| {
-            AppEvents::CatalogInputChanged(input_value, CatalogInputs::CostProduct)
-        })
-        .size(SIZE_TEXT_INPUT),
-        row!(
-            get_btn_cancel().on_press(AppEvents::CatalogNewRecordCancel),
-            get_btn_ok().on_press(AppEvents::CatalogNewRecordOk),
-        )
-        .spacing(20),
-    )
-    .height(Length::Fill)
-    .width(Length::Fill)
-    .padding(60)
-    .spacing(SPACE_COLUMNS)
-    .align_items(Alignment::Start)
-    .into()
-}
-
-/// Defines list products to be added in the catalog
-pub fn catalog_list_view(products: &HashMap<String, LoadProduct>) -> Element<AppEvents> {
-    let mut container_products = column!()
+    let col = Column::with_children(products)
         .spacing(SPACE_COLUMNS)
-        .align_items(Alignment::Start);
+        .width(Length::Fill);
 
-    let is_products_empty: bool = products.is_empty();
-
-    for (id, product) in products {
-        container_products =
-            container_products.push(catalog_list_view_formatted_row(id.to_string(), product))
-    }
-
-    let container_products = scrollable(container_products).height(Length::Fill);
-
-    let mut general_container = column!(
-        row!(
-            text("Producto:")
-                .width(Length::FillPortion(5))
-                .size(SIZE_TEXT),
-            text("Cantidad:")
-                .width(Length::FillPortion(2))
-                .size(SIZE_TEXT),
-            text("Costo:").width(Length::FillPortion(2)).size(SIZE_TEXT),
-            text("").size(SIZE_TEXT)
-        ),
-        container_products,
+    column!(
+        text_input("", text_input_value)
+            .on_input(|input_value| {
+                AppEvent::TextInputChanged(input_value, TextInput::CatalogFilterStockList)
+            })
+            .on_submit(AppEvent::ChangeView(View::CatalogProducts))
+            .size(SIZE_TEXT_INPUT),
+        container(scrollable(col).height(Length::Fill))
+            .width(Length::Fill)
+            .height(Length::Fill),
     )
     .padding(COLUMN_PADDING)
     .spacing(SPACE_COLUMNS)
-    .align_items(Alignment::Center);
+    .into()
+}
 
-    let mut btn_save = get_btn_save();
+/// Form to be used to define the product to be added in the catalog
+pub fn product_form<'a>(product: &CatalogProductForm, is_edit: bool) -> Element<'a, AppEvent> {
+    let form_product = column!(
+        text("Código Barras:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.barcode)
+            .on_input(|input_value| {
+                AppEvent::TextInputChanged(input_value, TextInput::CatalogFormBarcode)
+            })
+            .on_submit(AppEvent::CatalogRequestProductInfoForm)
+            .size(SIZE_TEXT_INPUT),
+        text("Producto:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.product_name)
+            .on_input(|input_value| {
+                AppEvent::TextInputChanged(input_value, TextInput::CatalogFormProductName)
+            })
+            .size(SIZE_TEXT_INPUT),
+        text("Cantidad:").size(SIZE_TEXT_LABEL),
+        row!(
+            text_input("", &product.amount)
+                .on_input(|input_value| {
+                    AppEvent::TextInputChanged(input_value, TextInput::CatalogFormAmountProduct)
+                })
+                .size(SIZE_TEXT_INPUT),
+            pick_list(
+                &UnitsMeasurement::ALL[..],
+                Some(product.unit_measurement),
+                |unit| {
+                    AppEvent::PickListSelected(PickList::CatalogFormPickListUnitMeasurement(unit))
+                },
+            )
+        ),
+        text("Cantidad Mínima:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.min_amount)
+            .on_input(|input_value| {
+                AppEvent::TextInputChanged(input_value, TextInput::CatalogFormMinAmountProduct)
+            })
+            .size(SIZE_TEXT_INPUT),
+        text("Precio Cliente:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.user_price)
+            .on_input(|input_value| {
+                AppEvent::TextInputChanged(input_value, TextInput::CatalogFormClientPrice)
+            })
+            .size(SIZE_TEXT_INPUT),
+        text("Costo:").size(SIZE_TEXT_LABEL),
+        text_input("", &product.cost)
+            .on_input(|input_value| {
+                AppEvent::TextInputChanged(input_value, TextInput::CatalogFormCostProduct)
+            })
+            .size(SIZE_TEXT_INPUT),
+        row!(
+            get_btn_cancel().on_press(AppEvent::CatalogNewRecordListTobeSavedCancel),
+            get_btn_ok().on_press(AppEvent::CatalogNewRecordListTobeSavedOk(is_edit)),
+        )
+        .spacing(SPACE_ROW_BTNS_FORM),
+    )
+    .height(Length::Fill)
+    .width(Length::Fill)
+    .padding(FORM_PADDING)
+    .spacing(SPACE_COLUMNS);
 
-    if !is_products_empty {
-        btn_save = btn_save.on_press(AppEvents::CatalogSaveAllRecords)
-    }
+    form_product.into()
+}
 
-    general_container = general_container.push(btn_save);
-    general_container.into()
+/// Products to be added into the catalog
+pub fn products_be_added_catalog(
+    products: &BTreeMap<std::string::String, LoadProduct>,
+) -> Element<AppEvent> {
+    column![
+        scrollable(
+            column(
+                products
+                    .iter()
+                    .map(|(_, product)| products_be_added_catalog_row(product))
+                    .collect(),
+            )
+            .spacing(SPACE_COLUMNS)
+        )
+        .height(Length::Fill),
+        get_btn_save().on_press(AppEvent::CatalogSaveAllRecords)
+    ]
+    .align_items(Alignment::Center)
+    .spacing(SPACE_COLUMNS)
+    .padding(COLUMN_PADDING)
+    .into()
+}
+
+fn products_be_added_catalog_row(product: &LoadProduct) -> Element<AppEvent> {
+    let label = format!(
+        "- {amount}[{unit_measurement}] {product_name}",
+        product_name = product.product_name,
+        amount = product.current_amount,
+        unit_measurement = UnitsMeasurement::from(product.unit_measurement_id),
+    );
+    let label = text(label).size(SIZE_TEXT).width(Length::Fill);
+
+    row!(
+        label,
+        get_btn_edit().on_press(AppEvent::CatalogEditRecordListTobeSaved(
+            product.barcode.to_string()
+        )),
+        get_btn_trash_icon().on_press(AppEvent::CatalogRemoveRecordListTobeSaved(
+            product.barcode.to_string()
+        )),
+    )
+    .spacing(SPACE_ROWS)
+    .into()
 }

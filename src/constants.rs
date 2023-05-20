@@ -5,6 +5,11 @@ use iced::Color;
 // Labels
 /// Text shows in the tittle bar of the main window app
 pub const WINDOW_TITTLE: &str = "Pos Software";
+/// Text shows when the stock is empty
+pub const STOCK_IS_EMPTY_MSG: &str = "Su catálogo esta vacío";
+/// Text shows when the catalog form is not fully filled
+pub const ASK_FILL_CATALOG_FORM: &str = "Llenar todos los campos del formulario";
+pub const NO_PRODUCT: &str = "Producto no existente";
 
 // Buttons labels
 /// Catalog button label
@@ -17,6 +22,10 @@ pub const SALES_INFO_BTN_MSG: &str = "Estadísticas";
 pub const TO_BUY_BTN_MSG: &str = "Lista Compra";
 /// Loans button label
 pub const LOAN_BTN_MSG: &str = "Prestamos";
+/// General error message to retry the action
+pub const GENERAL_RETRY_MSG: &str = "Error, favor de intentar de nuevo";
+/// General success message
+pub const GENERAL_SUCCESS_MSG: &str = "Proceso éxitoso";
 
 // Sizes
 /// Limit of characters saved to be considered as a barcode
@@ -32,10 +41,20 @@ pub const SIZE_TEXT_INPUT: u16 = 25;
 pub const SIZE_BTNS_TEXT: u16 = 30;
 /// Horizontal space between each element of a row container
 pub const SPACE_ROWS: u16 = 10;
+/// Horizontal space between each element of a row container
+pub const SPACE_ROW_BTNS_FORM: u16 = 20;
 /// Vertical space between each element of a column container
 pub const SPACE_COLUMNS: u16 = 10;
 /// Padding for column items
 pub const COLUMN_PADDING: u16 = 20;
+/// Forms padding
+pub const FORM_PADDING: u16 = 30;
+/// Max width size for [`custom_crates::widgets::modal::Modal`]
+pub const MODAL_MAX_WIDTH: u32 = 500;
+/// Max height size for [`custom_crates::widgets::modal::Modal`]
+pub const MODAL_MAX_HEIGHT: u32 = 300;
+/// Pading value for modal's content
+pub const MODAL_PADING_CONTENT: u16 = 300;
 
 // Data
 /// Number of decimals from [`sqlx::postgres::types::PgMoney`] to
@@ -82,9 +101,9 @@ pub const DEFAULT_DEACTIVATE: Color = Color {
 ///
 /// Use [color picker](https://ajalt.github.io/colormath/converter/) as references
 pub const DEFAULT_MENU: Color = Color {
-    r: 0.250,
-    g: 0.750,
-    b: 0.7,
+    r: 0.14118,
+    g: 0.12157,
+    b: 0.19216,
     a: 1.0,
 };
 

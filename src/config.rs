@@ -1,41 +1,40 @@
 //! Represent parameterizable values ​​of the application
 
-use async_std::sync::Mutex;
-use once_cell::sync::Lazy;
+use crate::{errors::AppError, result::AppResult};
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
-/// Parameterizable values ​​of the application
-#[derive(Deserialize, Debug)]
-pub struct Config {
-    /// Name of the database
-    pub db_name: String,
-    /// User name of the database
-    pub db_user: String,
-    /// User name's password of the database
-    pub db_password: String,
-    /// Port used to connection for the database
-    pub db_port: String,
-    /// Number of connections allowed in the database
-    pub max_connections: String,
+/// Define the default value for `are_values_valid` in [crate::config::AppConfig]
+fn default_are_values_valid() -> bool {
+    false
 }
 
-impl Config {
-    /// Get the database connection url
-    pub fn get_db_url(&self) -> String {
-        let db_url = format!(
-            "postgres://{db_user}:{db_password}@localhost:{db_port}/{db_name}",
-            db_user = self.db_user,
-            db_password = self.db_password,
-            db_port = self.db_port,
-            db_name = self.db_name
-        );
+/// Parameterizable values ​​of the application
+#[derive(Deserialize, Debug, Default, Clone, PartialEq)]
+pub struct AppConfig {
+    /// Database connection url
+    pub database_url: String,
+    /// Number of connections allowed in the database
+    pub max_connections: u32,
+    /// If env variables were set correctly
+    #[serde(default = "default_are_values_valid")]
+    are_values_valid: bool,
+}
 
-        db_url
+pub static INSTANCE: OnceCell<AppConfig> = OnceCell::new();
+
+impl AppConfig {
+    pub fn get() -> &'static AppConfig {
+        INSTANCE.get().expect("enviroment variables not set")
+    }
+
+    pub fn from_env() -> AppResult<Self> {
+        envy::from_env::<AppConfig>().map_err(|err| {
+            AppError::setup_error(
+                "src/config.rs::AppConfig::from_env",
+                "Variables de ambiente no definidas",
+                &err.to_string(),
+            )
+        })
     }
 }
-
-/// Singleton instance of [`crate::config::Config`]
-pub static APP_CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
-    let config = envy::from_env::<Config>().unwrap();
-    Mutex::new(config)
-});

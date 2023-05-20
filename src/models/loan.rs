@@ -29,3 +29,9 @@ pub struct TotalLoans {
     /// Total money made in loans
     pub money_loans: PgMoney,
 }
+
+#[derive(Debug, Clone)]
+pub struct LoanInfo {
+    pub total: PgMoney,
+    pub loans: Vec<LoanItem>,
+}

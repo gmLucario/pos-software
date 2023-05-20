@@ -1,6 +1,6 @@
 //! Define application button styles
 
-use iced::{widget::button::StyleSheet, Color};
+use iced::{theme, widget::button, Color};
 
 use crate::constants::{
     COLUMN_LIST_BTNS, DEFAULT_DEACTIVATE, DEFAULT_GREEN, DEFAULT_MENU, DEFAULT_RED,
@@ -20,17 +20,17 @@ enum Button {
     ListedItems,
 }
 
-impl StyleSheet for Button {
+impl button::StyleSheet for Button {
     type Style = iced::Theme;
 
     /// Produces the disabled [`iced::widget::button::Appearance`] of a button.
-    fn active(&self, _: &Self::Style) -> iced::widget::button::Appearance {
-        let basic_appearance = |color: Color| iced::widget::button::Appearance {
+    fn active(&self, _: &Self::Style) -> button::Appearance {
+        let basic_appearance = |color: Color| button::Appearance {
             text_color: color,
             border_color: color,
             border_width: 1.0,
             border_radius: 2.0,
-            ..iced::widget::button::Appearance::default()
+            ..button::Appearance::default()
         };
 
         match self {
@@ -42,10 +42,10 @@ impl StyleSheet for Button {
     }
 
     /// Produces the disabled [`iced::widget::button::Appearance`] of a button.
-    fn disabled(&self, style: &Self::Style) -> iced::widget::button::Appearance {
+    fn disabled(&self, style: &Self::Style) -> button::Appearance {
         let active = self.active(style);
 
-        iced::widget::button::Appearance {
+        button::Appearance {
             text_color: DEFAULT_DEACTIVATE,
             border_color: DEFAULT_DEACTIVATE,
             ..active
@@ -54,21 +54,21 @@ impl StyleSheet for Button {
 }
 
 /// Return the style for buttons `danger`
-pub fn get_style_btn_danger() -> iced::theme::Button {
-    iced::theme::Button::Custom(Box::from(crate::style::btns::Button::Danger))
+pub fn get_style_btn_danger() -> theme::Button {
+    theme::Button::Custom(Box::from(Button::Danger))
 }
 
 /// Return the style for buttons `ok`
-pub fn get_style_btn_ok() -> iced::theme::Button {
-    iced::theme::Button::Custom(Box::from(crate::style::btns::Button::Ok))
+pub fn get_style_btn_ok() -> theme::Button {
+    theme::Button::Custom(Box::from(Button::Ok))
 }
 
 /// Return the style for buttons `main menu`
-pub fn get_style_btn_main_menu() -> iced::theme::Button {
-    iced::theme::Button::Custom(Box::from(crate::style::btns::Button::MainMenu))
+pub fn get_style_btn_main_menu() -> theme::Button {
+    theme::Button::Custom(Box::from(Button::MainMenu))
 }
 
 /// Return the style for buttons of type `ListedItems`
-pub fn get_style_btn_listed_items() -> iced::theme::Button {
-    iced::theme::Button::Custom(Box::from(crate::style::btns::Button::ListedItems))
+pub fn get_style_btn_listed_items() -> theme::Button {
+    theme::Button::Custom(Box::from(Button::ListedItems))
 }

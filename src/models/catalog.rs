@@ -1,31 +1,16 @@
+//! Structs represent queries results about catalog
+
 use std::str::FromStr;
 
 use sqlx::types::BigDecimal;
 
-use crate::{constants::PGMONEY_DECIMALS, schemas};
+use crate::{constants::PGMONEY_DECIMALS, schemas::catalog::CatalogProductForm};
 
 #[derive(sqlx::FromRow, Debug, Clone)]
-pub struct ProductToBuy {
+pub struct ProductAmount {
     pub product_name: String,
-    pub amount_to_buy: BigDecimal,
+    pub amount: BigDecimal,
     pub unit_measurement: String,
-}
-
-impl ProductToBuy {
-    pub fn get_formatted_item(&self) -> String {
-        let amount_to_buy: String = if !self.unit_measurement.eq("Pieza") {
-            format!("{:.3}", self.amount_to_buy)
-        } else {
-            format!("{}", self.amount_to_buy)
-        };
-
-        format!(
-            "{product_name}: {amount_to_buy} [{unit_measurement}]",
-            product_name = self.product_name,
-            amount_to_buy = amount_to_buy,
-            unit_measurement = self.unit_measurement
-        )
-    }
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
@@ -49,8 +34,26 @@ pub struct LoadProduct {
     pub current_amount: BigDecimal,
 }
 
-impl From<&schemas::catalog::LoadProduct> for LoadProduct {
-    fn from(schema: &schemas::catalog::LoadProduct) -> Self {
+#[derive(sqlx::FromRow, Debug, Clone)]
+pub struct ProductToBuy {
+    pub product_name: String,
+    pub amount_to_buy: BigDecimal,
+    pub unit_measurement: String,
+}
+
+impl ProductAmount {
+    pub fn get_formatted_item(&self) -> String {
+        format!(
+            "- {product}: {amount} [{unit}]",
+            product = self.product_name,
+            amount = self.amount.round(3_i64),
+            unit = self.unit_measurement
+        )
+    }
+}
+
+impl From<&CatalogProductForm> for LoadProduct {
+    fn from(schema: &CatalogProductForm) -> Self {
         let unit_measurement_id: i16 = i16::from(schema.unit_measurement);
         let user_price = sqlx::postgres::types::PgMoney::from_bigdecimal(
             BigDecimal::from_str(&schema.user_price).unwrap(),
@@ -74,5 +77,23 @@ impl From<&schemas::catalog::LoadProduct> for LoadProduct {
             unit_measurement_id,
             current_amount,
         }
+    }
+}
+
+impl ProductToBuy {
+    /// Returns a string with the main values
+    pub fn get_formatted_item(&self) -> String {
+        let amount_to_buy: String = if !self.unit_measurement.eq("Pieza") {
+            format!("{:.3}", self.amount_to_buy)
+        } else {
+            format!("{}", self.amount_to_buy)
+        };
+
+        format!(
+            "{product_name}: {amount_to_buy} [{unit_measurement}]",
+            product_name = self.product_name,
+            amount_to_buy = amount_to_buy,
+            unit_measurement = self.unit_measurement
+        )
     }
 }

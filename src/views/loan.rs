@@ -1,203 +1,160 @@
-//! [`iced::Element`]s to be used in the loan info view
-
-use chrono::{Datelike, Month};
+//! [`iced::Element`]s to be used in the loan view
+//!
 use iced::{
-    widget::{button, column, row, scrollable, text, text_input},
-    Alignment, Element, Length,
+    widget::{button, column, row, scrollable, text, text_input, Column},
+    Element, Length,
 };
-use iced_aw::{Card, DatePicker, Modal};
-use num_traits::FromPrimitive;
 use sqlx::postgres::types::PgMoney;
+use std::collections::BTreeMap;
 
 use crate::{
     constants::{
         COLUMN_PADDING, SIZE_TEXT, SIZE_TEXT_INPUT, SIZE_TEXT_LABEL, SPACE_COLUMNS, SPACE_ROWS,
         TO_DECIMAL_DIGITS,
     },
-    controllers::loan::LoanData,
-    helpers::{get_btn_check_icon, get_btn_plus_icon, get_btn_trash_icon},
-    kinds::{AppEvents, LoanDatePicker, LoanInputs, LoanModal},
-    models::{loan::LoanPayment, sale::ProductSale},
-    style::btns::get_style_btn_listed_items,
+    events::AppEvent,
+    helpers::get_btn_plus_icon,
+    kinds::TextInput,
+    models::{
+        loan::{LoanInfo, LoanItem, LoanPayment},
+        sale::ProductSale,
+    },
+    views::style::btns::get_style_btn_listed_items,
 };
 
-/// Groups the different views, loan info has
-#[derive(Default)]
-pub struct LoanView {}
-
-impl LoanView {
-    /// View to search specific loans and list them
-    pub fn search_results<'a>(
-        loan_data: &'a LoanData,
-        modal: &'a LoanModal,
-        produts_sale: &'a [ProductSale],
-    ) -> Element<'a, AppEvents> {
-        let search_btn = get_btn_check_icon().on_press(AppEvents::LoanSearchRequested);
-
-        let mut list_loans = column!()
-            .align_items(Alignment::Start)
-            .padding(COLUMN_PADDING)
-            .spacing(20);
-
-        for loan in loan_data.loans.iter() {
-            list_loans = list_loans.push(
-                row!(
-                    button(
-                        text(format!(
-                            "{name_debtor} ({date}): ${money_amount}",
-                            name_debtor = loan.name_debtor,
-                            date = loan.sold_at.date(),
-                            money_amount = loan.loan_balance.to_bigdecimal(TO_DECIMAL_DIGITS),
-                        ))
-                        .size(SIZE_TEXT),
-                    )
-                    .on_press(AppEvents::LoanShowLoanSale(loan.id))
-                    .style(get_style_btn_listed_items())
-                    .width(Length::Fill),
-                    get_btn_plus_icon().on_press(AppEvents::LoanShowPaymentsDetails(loan.id))
-                )
-                .spacing(SPACE_ROWS),
-            );
-        }
-
-        let content = column!(
-            row!(
-                DatePicker::new(
-                    loan_data.widgets_states.show_start_date,
-                    loan_data.search_info.start_date,
-                    button(text(loan_data.search_info.start_date).size(SIZE_TEXT_LABEL)).on_press(
-                        AppEvents::LoanShowDatePicker(true, LoanDatePicker::StartDatePicker,)
-                    ),
-                    AppEvents::LoanShowDatePicker(false, LoanDatePicker::StartDatePicker),
-                    |date| AppEvents::LoanSubmitDatePicker(date, LoanDatePicker::StartDatePicker),
-                ),
-                DatePicker::new(
-                    loan_data.widgets_states.show_end_date,
-                    loan_data.search_info.end_date,
-                    button(text(loan_data.search_info.end_date).size(SIZE_TEXT_LABEL)).on_press(
-                        AppEvents::LoanShowDatePicker(true, LoanDatePicker::EndDatePicker,)
-                    ),
-                    AppEvents::LoanShowDatePicker(false, LoanDatePicker::EndDatePicker),
-                    |date| AppEvents::LoanSubmitDatePicker(date, LoanDatePicker::EndDatePicker),
-                )
-            )
-            .spacing(SPACE_ROWS),
-            row!(
-                text_input("", &loan_data.search_info.client, |input_value| {
-                    AppEvents::LoanInputChanged(input_value, LoanInputs::DebtorNameLike)
-                })
-                .on_submit(AppEvents::LoanSearchRequested)
-                .size(SIZE_TEXT_INPUT),
-                search_btn,
-                get_btn_trash_icon().on_press(AppEvents::LoanClearLoanViewData),
-            )
-            .spacing(SPACE_ROWS),
-            scrollable(list_loans).height(Length::Fill)
-        )
-        .height(Length::Fill)
-        .width(Length::Fill)
-        .padding(COLUMN_PADDING)
-        .spacing(SPACE_COLUMNS)
-        .align_items(Alignment::Center);
-
-        let card = move || {
-            Card::new(
-                "detalles",
-                match modal {
-                    LoanModal::LoanPayments => LoanView::get_modal_body_payments_loan(
-                        &loan_data.payments_loan,
-                        &loan_data.loan_payment,
-                    ),
-                    LoanModal::LoanSale => LoanView::get_modal_loan_sale(produts_sale),
-                },
-            )
-            .max_width(500)
-            .max_height(300)
-            .into()
-        };
-
-        Modal::new(loan_data.widgets_states.show_modal, content, card)
-            .backdrop(AppEvents::LoanCloseModalPaymentsLoan)
-            .on_esc(AppEvents::LoanCloseModalPaymentsLoan)
-            .into()
-    }
-
-    /// Payments made to a loan and make a new one
-    fn get_modal_body_payments_loan<'a>(
-        payments: &[LoanPayment],
-        loan_payment: &str,
-    ) -> Element<'a, AppEvents> {
-        let mut list_payments = column!().spacing(SPACE_COLUMNS);
-
-        for payment in payments {
-            let date = payment.payed_at.date();
-            let format_date = format!(
-                "{day}-{month}-{year}",
-                day = date.day(),
-                month = Month::from_u32(date.month())
-                    .unwrap_or(Month::December)
-                    .name(),
-                year = date.year()
-            );
-
-            list_payments = list_payments.push(
+/// View to search specific loans and list them
+pub fn search_results<'a>(
+    loans_by_debtor: &'a BTreeMap<String, LoanInfo>,
+    debtor_name: &'a str,
+) -> Element<'a, AppEvent> {
+    let loans: Vec<Element<AppEvent>> = loans_by_debtor
+        .iter()
+        .map(|(name_debtor, loan_info)| {
+            column!(
                 text(format!(
-                    "${money_amount}: {date}",
-                    money_amount = payment.money_amount.to_bigdecimal(TO_DECIMAL_DIGITS),
-                    date = format_date,
+                    "{} ${}",
+                    name_debtor,
+                    loan_info.total.to_bigdecimal(TO_DECIMAL_DIGITS)
                 ))
                 .size(SIZE_TEXT),
-            );
-        }
-
-        column!(
-            row!(
-                text_input("", loan_payment, |input_value| {
-                    AppEvents::LoanInputChanged(input_value, LoanInputs::PaymentLoanAmount)
-                })
-                .on_submit(AppEvents::LoanAddNewPaymentToLoan)
-                .size(SIZE_TEXT),
-                get_btn_plus_icon().on_press(AppEvents::LoanAddNewPaymentToLoan)
+                Column::with_children(
+                    loan_info
+                        .loans
+                        .iter()
+                        .map(|loan: &LoanItem| {
+                            row!(
+                                button(
+                                    text(format!(
+                                        "{name_debtor} ({date}): ${money_amount}",
+                                        name_debtor = loan.name_debtor,
+                                        date = loan.sold_at.date(),
+                                        money_amount =
+                                            loan.loan_balance.to_bigdecimal(TO_DECIMAL_DIGITS),
+                                    ))
+                                    .size(SIZE_TEXT),
+                                )
+                                .on_press(AppEvent::LoanShowLoanSale(loan.id))
+                                .style(get_style_btn_listed_items())
+                                .width(Length::Fill),
+                                get_btn_plus_icon()
+                                    .on_press(AppEvent::LoanShowPaymentsDetails(loan.id))
+                            )
+                            .spacing(SPACE_ROWS)
+                            .padding(SPACE_COLUMNS)
+                            .into()
+                        })
+                        .collect::<Vec<Element<AppEvent>>>()
+                )
             )
-            .spacing(SPACE_ROWS),
-            scrollable(list_payments.width(Length::Fill)),
-        )
-        .spacing(SPACE_COLUMNS)
-        .into()
-    }
+            .into()
+        })
+        .collect();
 
-    /// Loan's sale details
-    fn get_modal_loan_sale(produts: &[ProductSale]) -> Element<AppEvents> {
-        let mut total = PgMoney(0);
+    let list_loans = Column::with_children(loans)
+        .padding(COLUMN_PADDING)
+        .spacing(SPACE_COLUMNS);
 
-        let mut products_container = column!().padding(COLUMN_PADDING);
+    column!(
+        row!(text_input("", debtor_name)
+            .on_input(|input_value| {
+                AppEvent::TextInputChanged(input_value, TextInput::LoanDebtorName)
+            })
+            .on_submit(AppEvent::LoanSearchRequested)
+            .size(SIZE_TEXT_INPUT),)
+        .spacing(SPACE_ROWS),
+        scrollable(list_loans).height(Length::Fill)
+    )
+    .padding(COLUMN_PADDING)
+    .into()
+}
 
-        for product in produts {
-            products_container =
-                products_container.push(text(&product.product_name).size(SIZE_TEXT));
+/// Show the loan's sale details
+pub fn loan_sale_details(products: &[ProductSale]) -> Element<AppEvent> {
+    let mut total = PgMoney(0);
 
-            products_container = products_container.push(
+    let products: Vec<Element<AppEvent>> = products
+        .iter()
+        .map(|product| {
+            total += product.charge;
+
+            column!(
+                text(&product.product_name).size(SIZE_TEXT),
                 text(format!(
                     " {amount}=${charge}",
                     amount = product.amount_description,
                     charge = product.charge.to_bigdecimal(TO_DECIMAL_DIGITS),
                 ))
-                .size(SIZE_TEXT_LABEL),
-            );
+                .size(SIZE_TEXT_LABEL)
+            )
+            .into()
+        })
+        .collect();
 
-            total += product.charge;
-        }
+    column!(
+        scrollable(Column::with_children(products)),
+        text(format!(
+            "Total: ${}",
+            total.to_bigdecimal(TO_DECIMAL_DIGITS)
+        ))
+        .size(SIZE_TEXT),
+    )
+    .padding(COLUMN_PADDING)
+    .spacing(SPACE_COLUMNS)
+    .into()
+}
 
-        column!(
-            scrollable(products_container),
+/// Show all the loan's payments
+pub fn payments_loan<'a>(payments: &[LoanPayment], loan_payment: &str) -> Element<'a, AppEvent> {
+    let payments: Vec<Element<AppEvent>> = payments
+        .iter()
+        .map(|payment| {
             text(format!(
-                "Total: ${}",
-                total.to_bigdecimal(TO_DECIMAL_DIGITS)
+                "${money_amount}: {date}",
+                money_amount = payment.money_amount.to_bigdecimal(TO_DECIMAL_DIGITS),
+                date = payment.payed_at.date(),
             ))
-            .size(SIZE_TEXT),
+            .size(SIZE_TEXT)
+            .into()
+        })
+        .collect();
+
+    let payments = scrollable(Column::with_children(payments).spacing(SPACE_COLUMNS));
+
+    column!(
+        row!(
+            text_input("", loan_payment)
+                .on_input(|input_value| {
+                    AppEvent::TextInputChanged(input_value, TextInput::LoanPaymentAmountLoan)
+                })
+                .on_submit(AppEvent::LoanAddNewPaymentToLoan)
+                .width(Length::Fixed(300.0))
+                .size(SIZE_TEXT),
+            get_btn_plus_icon().on_press(AppEvent::LoanAddNewPaymentToLoan)
         )
-        .spacing(SPACE_COLUMNS)
-        .width(Length::Fill)
-        .into()
-    }
+        .spacing(SPACE_ROWS),
+        payments,
+    )
+    .padding(COLUMN_PADDING)
+    .spacing(SPACE_COLUMNS)
+    .into()
 }

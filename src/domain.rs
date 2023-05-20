@@ -1,577 +1,669 @@
-//! Handle main app logic and components
-
-use std::collections::HashMap;
-
-use iced::{
-    executor, keyboard, theme,
-    widget::{self, button, column, row, text},
-    Alignment, Application, Command, Element, Event, Subscription,
-};
+//! Handle all the app logic between the MVC modules and the iced framework
 
 use crate::{
     constants::{
-        CATALOG_BTN_MSG, LOAN_BTN_MSG, SALES_INFO_BTN_MSG, SALE_BTN_MSG, SIZE_BTNS_TEXT,
-        SPACE_COLUMNS, SPACE_ROWS, TO_BUY_BTN_MSG, TO_DECIMAL_DIGITS, WINDOW_TITTLE,
+        ASK_FILL_CATALOG_FORM, COLUMN_PADDING, GENERAL_RETRY_MSG, NO_PRODUCT, SPACE_COLUMNS,
+        STOCK_IS_EMPTY_MSG, TO_DECIMAL_DIGITS, WINDOW_TITTLE,
     },
-    controllers::{self},
-    data::{loan_repo::LoanRepo, product_repo::ProductRepo, sale_repo::SaleRepo},
-    db::Db,
-    kinds::{AppEvents, CatalogInputs, LoanInputs, LoanModal, SaleInputs, UnitsMeasurement, Views},
-    models::{
-        catalog::LoadProduct as ModelLoadProduct,
-        sale::{Sale, SaleLoan},
-    },
-    schemas::{catalog::LoadProduct, sale::ProductToAdd},
-    views::{catalog, loan, sale::SaleView, sales_info, to_buy},
+    controllers,
+    db::AppDb,
+    events::AppEvent,
+    helpers,
+    kinds::{AppDatePicker, AppModule, ModalView, PickList, TextInput, View},
+    models::sale::{Sale, SaleLoan},
+    repo::{loan_repo, product_repo, sale_repo},
+    schemas::{catalog::CatalogProductForm, sale::SaleInfo},
+    views::{self, style::container::get_black_border_style},
 };
+use custom_crates::widgets::{
+    modal::Modal,
+    toast::{self, Toast},
+};
+use num_traits::Zero;
+use std::str::FromStr;
+
+use iced::{
+    executor, keyboard, subscription,
+    widget::{self, column, container},
+    Alignment, Application, Command, Element, Event, Length, Subscription,
+};
+use sqlx::types::BigDecimal;
+use validator::Validate;
 
 #[derive(Default)]
-/// Represents app modules and components
-pub struct App {
-    /// Current view user is interacting with
-    pub current_view: Views,
-    /// Controller handles Catalog logic
-    pub catalog_controller: controllers::catalog::Catalog,
-    /// Controller handles Sale logic
-    pub sale_controller: controllers::sale::Sale,
-    /// Controller handles Products to buy logic
-    pub to_buy_controller: controllers::to_buy::ToBuy,
-    /// Controller handles Loan details/info logic
-    pub loan_info_controller: controllers::loan::Loan,
-    /// Controller handles Sale info logic
-    pub sale_info_controller: controllers::sale_info::SaleInfo,
+pub struct ModalInfo {
+    pub show_modal: bool,
+    pub modal_view: ModalView,
 }
 
-/// Implements the traits for an interactive cross-platform application.
-impl Application for App {
-    type Message = AppEvents;
-    type Executor = executor::Default;
-    type Flags = ();
-    type Theme = theme::Theme;
+#[derive(Default)]
+pub struct AppProcessor {
+    /// Current app module user is interacting with
+    pub current_appmodule: AppModule,
+    /// Current app view user is interacting with
+    pub current_view: View,
+    /// Modal info state
+    pub modal: ModalInfo,
+    /// Toasts messages
+    pub toasts: Vec<Toast>,
 
-    fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        (Self::default(), Command::none())
+    /// Controller handles Catalog module logic
+    pub catalog_controller: controllers::catalog::Catalog,
+    /// Controller handles Sale module logic
+    pub sale_controller: controllers::sale::Sale,
+    /// Controller handles Loan module logic
+    pub loan_controller: controllers::loan::Loan,
+    /// Controller handles ToBuy module logic
+    pub tobuy_controller: controllers::to_buy::ToBuy,
+    /// Controller handles Sale Info module logic
+    pub saleinfo_controller: controllers::sale_info::SaleInfo,
+}
+
+impl Application for AppProcessor {
+    type Executor = executor::Default;
+    type Message = AppEvent;
+    type Theme = iced::Theme;
+    type Flags = ();
+
+    fn new(_flags: ()) -> (Self, Command<AppEvent>) {
+        (AppProcessor::default(), Command::none())
     }
 
     fn title(&self) -> String {
-        WINDOW_TITTLE.to_string()
+        WINDOW_TITTLE.into()
     }
 
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-        let db_connection = &Db::global().unwrap().connection;
+    fn subscription(&self) -> Subscription<Self::Message> {
+        subscription::events().map(AppEvent::ExternalDeviceEventOccurred)
+    }
+
+    fn update(&mut self, message: AppEvent) -> Command<AppEvent> {
+        let db_connection = &AppDb::get().connection;
 
         match message {
-            AppEvents::ToBuyDataRequested => Command::perform(
-                ProductRepo::get_products_to_buy(db_connection),
-                AppEvents::ToBuyData,
-            ),
-            AppEvents::ToBuyData(result) => {
-                self.current_view = Views::ToBuy;
-                match result {
-                    Err(err) => eprintln!("{err}"),
-                    Ok(to_buy) => self.to_buy_controller.products = to_buy,
+            // General App events
+            AppEvent::AddToast(status, body) => {
+                self.toasts.push(Toast {
+                    title: toast::Status::get_title(status),
+                    body,
+                    status,
+                });
+                Command::none()
+            }
+            AppEvent::CloseToast(index) => {
+                if index < self.toasts.len() {
+                    self.toasts.remove(index);
                 }
                 Command::none()
             }
-            AppEvents::ShowSalesInfo => {
-                self.current_view = Views::SalesInfo;
-
-                Command::perform(async {}, |_| AppEvents::SaleInfoSearchStats)
-            }
-            AppEvents::ShowSale => {
-                self.current_view = Views::Sale;
-                self.sale_controller.update_total_pay();
+            AppEvent::ShowModal => {
+                self.modal.show_modal = true;
                 Command::none()
             }
-            AppEvents::SaleProductInfoRequested(result) => match result {
-                Err(err) => {
-                    eprintln!("{err}");
-                    Command::none()
-                }
-                Ok(record) => match record {
-                    Some(data) => {
-                        let unit = UnitsMeasurement::from(data.unit_measurement_id);
-                        self.sale_controller.product_to_add = ProductToAdd::from(data);
-
-                        match unit {
-                            UnitsMeasurement::Pieces => {
-                                self.sale_controller.add_new_product_to_sale();
-                                self.sale_controller.product_to_add.reset_values();
-
-                                self.current_view = Views::Sale;
-                                Command::perform(async {}, |_| AppEvents::ShowSale)
-                            }
-                            _ => {
-                                self.current_view = Views::SaleAddProductForm;
-                                Command::none()
-                            }
+            AppEvent::HideModal => {
+                self.modal.show_modal = false;
+                Command::none()
+            }
+            AppEvent::ExternalDeviceEventOccurred(event) => match event {
+                Event::Keyboard(keyboard_event) => match keyboard_event {
+                    keyboard::Event::KeyPressed {
+                        key_code: keyboard::KeyCode::Tab,
+                        modifiers,
+                    } => {
+                        if modifiers.shift() {
+                            widget::focus_previous()
+                        } else {
+                            widget::focus_next()
                         }
                     }
-                    None => {
-                        self.sale_controller.product_to_add.reset_values();
-                        Command::perform(async {}, |_| AppEvents::ShowSale)
+                    keyboard::Event::KeyPressed {
+                        key_code: keyboard::KeyCode::Space,
+                        modifiers,
+                    } if modifiers.shift() => {
+                        if self.current_appmodule != AppModule::Catalog {
+                            return Command::none();
+                        }
+
+                        Command::perform(async {}, |_| {
+                            AppEvent::ChangeView(View::CatalogAddProductForm(false))
+                        })
                     }
+                    keyboard::Event::KeyPressed {
+                        key_code: keyboard::KeyCode::Escape,
+                        ..
+                    } if self.modal.show_modal => {
+                        Command::perform(async {}, |_| AppEvent::HideModal)
+                    }
+                    _ => match self.current_view {
+                        View::SaleListProducts => self
+                            .sale_controller
+                            .process_barcode_input(keyboard_event, db_connection),
+                        _ => Command::none(),
+                    },
                 },
+                _ => Command::none(),
             },
-            AppEvents::SaleInputChanged(input_value, input_type) => {
-                match input_type {
-                    SaleInputs::AmountProduct if input_value.parse::<f64>().is_ok() => {
-                        self.sale_controller.product_to_add.amount = input_value;
+            AppEvent::ChangeAppModule(appmodule, defaultview) => {
+                self.current_appmodule = appmodule;
+                Command::perform(async move { defaultview }, AppEvent::ChangeView)
+            }
+            AppEvent::ChangeModalView(modal_view) => {
+                self.modal.modal_view = modal_view;
+                Command::none()
+            }
+            AppEvent::ChangeView(app_view) => {
+                self.current_view = app_view;
+                Command::perform(async {}, |_| AppEvent::SetDefaultDataView)
+            }
+            AppEvent::SetDefaultDataView => match self.current_view {
+                View::CatalogProducts => {
+                    if self.catalog_controller.products_to_add.is_empty() {
+                        Command::perform(
+                            product_repo::get_products_catalog_like(
+                                db_connection,
+                                self.catalog_controller.product_name_to_lowercase(),
+                            ),
+                            AppEvent::CatalogProductsData,
+                        )
+                    } else {
+                        Command::perform(async {}, |_| {
+                            AppEvent::ChangeView(View::CatalogProductsToBeAdded)
+                        })
                     }
-                    SaleInputs::UserPay if input_value.parse::<f64>().is_ok() => {
+                }
+                View::LoansByDeptor => {
+                    self.loan_controller = controllers::loan::Loan::default();
+                    Command::none()
+                }
+                View::ToBuy => Command::perform(
+                    product_repo::get_products_tobuy_like(
+                        db_connection,
+                        self.tobuy_controller.product_name.to_string(),
+                    ),
+                    AppEvent::ToBuySearchData,
+                ),
+                View::SaleInfo => Command::perform(async {}, |_| AppEvent::SaleInfoSearchStats),
+                _ => Command::none(),
+            },
+            AppEvent::TextInputChanged(input_value, text_input) => {
+                match text_input {
+                    TextInput::CatalogFilterStockList => {
+                        self.catalog_controller.product_name = input_value
+                    }
+                    TextInput::CatalogFormBarcode => {
+                        self.catalog_controller.form.barcode = input_value;
+                    }
+                    TextInput::CatalogFormProductName => {
+                        self.catalog_controller.form.product_name = input_value
+                    }
+                    TextInput::CatalogFormAmountProduct
+                        if helpers::is_valid_input_text_value_for_amount_data(
+                            &input_value,
+                            &self.catalog_controller.form.unit_measurement,
+                        ) =>
+                    {
+                        self.catalog_controller.form.amount = input_value
+                    }
+                    TextInput::CatalogFormClientPrice if input_value.parse::<f64>().is_ok() => {
+                        self.catalog_controller.form.user_price = input_value
+                    }
+                    TextInput::CatalogFormCostProduct if input_value.parse::<f64>().is_ok() => {
+                        self.catalog_controller.form.cost = input_value
+                    }
+                    TextInput::CatalogFormMinAmountProduct
+                        if helpers::is_valid_input_text_value_for_amount_data(
+                            &input_value,
+                            &self.catalog_controller.form.unit_measurement,
+                        ) =>
+                    {
+                        self.catalog_controller.form.min_amount = input_value
+                    }
+                    TextInput::SaleFormProductAmount(unit)
+                        if helpers::is_valid_input_text_value_for_amount_data(
+                            &input_value,
+                            &unit,
+                        ) =>
+                    {
+                        self.sale_controller.user_input.amount = input_value
+                    }
+                    TextInput::SaleUserPayment if input_value.parse::<f64>().is_ok() => {
                         self.sale_controller.sale_info.client_pay = input_value;
                         self.sale_controller.calculate_payback_money();
                     }
-                    SaleInputs::ClientName => {
-                        self.sale_controller.sale_info.client_name = input_value;
+                    TextInput::SaleClientNameLoan => {
+                        self.sale_controller.sale_info.client_name = input_value
                     }
+                    TextInput::LoanDebtorName => {
+                        self.loan_controller.data.debtor_name = input_value
+                    }
+                    TextInput::LoanPaymentAmountLoan if input_value.parse::<f64>().is_ok() => {
+                        self.loan_controller.data.loan_payment = input_value
+                    }
+                    TextInput::ToBuyProductLike => self.tobuy_controller.product_name = input_value,
                     _ => (),
                 }
-
                 Command::none()
             }
-            AppEvents::SaleNewProductCancel => {
-                self.current_view = Views::Sale;
-
-                self.sale_controller.reset_sale_form_values();
-                Command::perform(async {}, |_| AppEvents::ShowSale)
-            }
-            AppEvents::SaleNewProductOk => {
-                self.sale_controller.add_new_product_to_sale();
-
-                self.current_view = Views::Sale;
-                self.sale_controller.product_to_add.reset_values();
-
-                Command::perform(async {}, |_| AppEvents::ShowSale)
-            }
-            AppEvents::SaleProductsToBuyCancel => {
-                self.current_view = Views::Sale;
-                self.sale_controller.sale_info.products.clear();
-                Command::perform(async {}, |_| AppEvents::ShowSale)
-            }
-            AppEvents::SaleProductsToBuyOk => {
-                self.current_view = Views::SaleChargeForm;
-                Command::none()
-            }
-            AppEvents::SaleRemoveProductToBuyList(id) => {
-                self.sale_controller.sale_info.products.remove(&id);
-                Command::perform(async {}, |_| AppEvents::ShowSale)
-            }
-            AppEvents::SaleCreateNewSale => Command::perform(
-                SaleRepo::process_new_sale_flow(
-                    db_connection,
-                    Sale::from(&self.sale_controller.sale_info),
-                ),
-                AppEvents::SaleCreateNewSaleRequested,
-            ),
-            AppEvents::SaleCreateNewSaleRequested(result) => {
-                self.current_view = Views::Sale;
-
-                let next_event = match result {
-                    Ok(sale_id) => {
-                        let mut loan = SaleLoan::from(&self.sale_controller.sale_info);
-                        loan.sale_id = sale_id;
-                        Command::batch(vec![
-                            Command::perform(
-                                LoanRepo::save_new_loan(db_connection, loan),
-                                AppEvents::SaleCreateNewSaleLoan,
-                            ),
-                            Command::perform(async {}, |_| AppEvents::ShowSale),
-                        ])
-                    }
-                    Err(err) => {
-                        eprintln!("{err}");
-                        Command::perform(async {}, |_| AppEvents::ShowSale)
+            AppEvent::PickListSelected(pick_list) => {
+                match pick_list {
+                    PickList::CatalogFormPickListUnitMeasurement(unit) => {
+                        self.catalog_controller.form.unit_measurement = unit;
+                        self.catalog_controller.reset_product_amounts();
                     }
                 };
-
-                self.sale_controller.reset_sale_form_values();
-                self.sale_controller.sale_info.products.clear();
-
-                next_event
-            }
-            AppEvents::ExternalDeviceEventOccurred(event) => match event {
-                Event::Keyboard(keyboard::Event::KeyPressed {
-                    key_code: keyboard::KeyCode::Tab,
-                    modifiers,
-                }) => {
-                    if modifiers.shift() {
-                        widget::focus_previous()
-                    } else {
-                        widget::focus_next()
-                    }
-                }
-                _ => match self.current_view {
-                    Views::Sale => self
-                        .sale_controller
-                        .process_barcode_input(event, db_connection),
-                    Views::Catalog => self
-                        .catalog_controller
-                        .process_barcode_input(event, db_connection),
-                    _ => Command::none(),
-                },
-            },
-            AppEvents::ShowCatalog => {
-                self.catalog_controller.reset_values();
-                self.current_view = Views::Catalog;
                 Command::none()
             }
-            AppEvents::CatalogProductInfoRequested(result) => {
-                self.current_view = Views::CatalogAddRecord;
+            AppEvent::ShowDatePicker(to_show, date_picker) => {
+                match date_picker {
+                    AppDatePicker::SaleStartDatePicker => {
+                        self.saleinfo_controller.show_start_date(to_show)
+                    }
+                    AppDatePicker::SaleEndDatePicker => {
+                        self.saleinfo_controller.show_end_date(to_show)
+                    }
+                }
+                Command::none()
+            }
+            AppEvent::SubmitDatePicker(value, date_picker) => {
+                match date_picker {
+                    AppDatePicker::SaleStartDatePicker => {
+                        self.saleinfo_controller.set_start_date_value(value)
+                    }
+                    AppDatePicker::SaleEndDatePicker => {
+                        self.saleinfo_controller.set_end_date_value(value)
+                    }
+                }
+                Command::batch(vec![
+                    Command::perform(async {}, |_| AppEvent::ShowDatePicker(false, date_picker)),
+                    Command::perform(async {}, |_| AppEvent::SaleInfoSearchStats),
+                ])
+            }
+
+            //Catalog module events
+            AppEvent::CatalogProductsData(result) => {
+                self.catalog_controller.stock_products.clear();
+
                 match result {
-                    Err(err) => eprintln!("{err}"),
-                    Ok(record) => match record {
-                        Some(data) => {
-                            self.catalog_controller.load_product = LoadProduct::from(data)
+                    Ok(products) => {
+                        let no_products = products.is_empty();
+
+                        if no_products {
+                            helpers::send_toast_ok(STOCK_IS_EMPTY_MSG.into())
+                        } else {
+                            self.catalog_controller.stock_products = products;
+                            Command::none()
                         }
-                        None => {
-                            self.catalog_controller.load_product = LoadProduct {
-                                barcode: self.catalog_controller.load_product.barcode.to_string(),
-                                ..LoadProduct::default()
-                            };
-                        }
-                    },
+                    }
+                    Err(_) => helpers::send_toast_err(GENERAL_RETRY_MSG.into()),
                 }
-                Command::none()
             }
-            AppEvents::CatalogInputChanged(input_value, input_type) => {
-                match input_type {
-                    CatalogInputs::ProductName => {
-                        self.catalog_controller.load_product.product_name = input_value;
-                    }
-                    CatalogInputs::AmountProduct => {
-                        match self.catalog_controller.load_product.unit_measurement {
-                            UnitsMeasurement::Kilograms | UnitsMeasurement::Liters
-                                if input_value.parse::<f64>().is_ok() =>
-                            {
-                                self.catalog_controller.load_product.amount = input_value;
-                            }
-                            UnitsMeasurement::Pieces if input_value.parse::<u64>().is_ok() => {
-                                self.catalog_controller.load_product.amount = input_value;
-                            }
-                            _ => (),
-                        }
-                    }
-                    CatalogInputs::ClientPrice if input_value.parse::<f64>().is_ok() => {
-                        self.catalog_controller.load_product.user_price = input_value
-                    }
-                    CatalogInputs::MinAmountProduct if input_value.parse::<f64>().is_ok() => {
-                        match self.catalog_controller.load_product.unit_measurement {
-                            UnitsMeasurement::Kilograms | UnitsMeasurement::Liters
-                                if input_value.parse::<f64>().is_ok() =>
-                            {
-                                self.catalog_controller.load_product.min_amount = input_value
-                            }
-                            UnitsMeasurement::Pieces if input_value.parse::<u64>().is_ok() => {
-                                self.catalog_controller.load_product.min_amount = input_value
-                            }
-                            _ => (),
-                        }
-                    }
-                    CatalogInputs::CostProduct if input_value.parse::<f64>().is_ok() => {
-                        self.catalog_controller.load_product.cost = input_value
-                    }
-                    _ => (),
+            AppEvent::CatalogRequestProductInfoForm => Command::perform(
+                product_repo::get_product_info_catalog(
+                    db_connection,
+                    self.catalog_controller.form.barcode.to_string(),
+                ),
+                AppEvent::CatalogProductInfoFormRequested,
+            ),
+            AppEvent::CatalogProductInfoFormRequested(result) => self
+                .catalog_controller
+                .process_product_info_form_data(result),
+            AppEvent::CatalogNewRecordListTobeSavedCancel => {
+                self.catalog_controller.reset_values_form();
+
+                if self.catalog_controller.products_to_add.is_empty() {
+                    Command::perform(async {}, |_| AppEvent::ChangeView(View::CatalogProducts))
+                } else {
+                    Command::perform(async {}, |_| {
+                        AppEvent::ChangeView(View::CatalogProductsToBeAdded)
+                    })
                 }
-                Command::none()
             }
-            AppEvents::CatalogNewRecordCancel => {
-                self.current_view = Views::Catalog;
-                self.catalog_controller.reset_values();
-                Command::perform(async {}, |_| AppEvents::ShowCatalog)
+            AppEvent::CatalogNewRecordListTobeSavedOk(is_edit) => {
+                match self.catalog_controller.form.validate() {
+                    Ok(_) => self
+                        .catalog_controller
+                        .process_new_product_into_list_to_be_added(is_edit),
+                    Err(_) => helpers::send_toast_err(ASK_FILL_CATALOG_FORM.into()),
+                }
             }
-            AppEvents::CatalogNewRecordOk => {
-                self.current_view = Views::Catalog;
-                self.catalog_controller.products_to_add.insert(
-                    self.catalog_controller.load_product.get_id(),
-                    self.catalog_controller.load_product.clone(),
-                );
-                self.catalog_controller.reset_values();
-                Command::perform(async {}, |_| AppEvents::ShowCatalog)
+            AppEvent::CatalogEditRecordListTobeSaved(barcode) => {
+                let product_info = self.catalog_controller.products_to_add.get(&barcode);
+                self.catalog_controller.form = CatalogProductForm::from(product_info);
+
+                Command::perform(async {}, |_| {
+                    AppEvent::ChangeView(View::CatalogAddProductForm(true))
+                })
             }
-            AppEvents::CatalogSaveAllRecords => Command::perform(
-                ProductRepo::save_products_catalog(
+            AppEvent::CatalogRemoveRecordListTobeSaved(barcode) => {
+                self.catalog_controller.products_to_add.remove(&barcode);
+
+                if self.catalog_controller.products_to_add.is_empty() {
+                    Command::perform(async {}, |_| AppEvent::ChangeView(View::CatalogProducts))
+                } else {
+                    Command::none()
+                }
+            }
+            AppEvent::CatalogSaveAllRecords => Command::perform(
+                product_repo::save_products_catalog(
                     db_connection,
                     self.catalog_controller
                         .products_to_add
                         .values()
-                        .map(ModelLoadProduct::from)
-                        .collect::<Vec<ModelLoadProduct>>(),
+                        .cloned()
+                        .collect(),
                 ),
-                AppEvents::CatalogNewRecordPerformed,
+                AppEvent::CatalogSaveAllRecordsPerformed,
             ),
-            AppEvents::CatalogNewRecordPerformed(result) => {
-                match result {
-                    Ok(_) => (),
-                    Err(err) => eprintln!("{:#?}", err),
-                };
-                self.catalog_controller.products_to_add = HashMap::new();
-                Command::perform(async {}, |_| AppEvents::ShowCatalog)
-            }
-            AppEvents::CatalogPickListSelected(unit) => {
-                self.catalog_controller.load_product.unit_measurement = unit;
-                self.catalog_controller.reset_product_amounts();
-                Command::none()
-            }
-            AppEvents::CatalogRemoveRecordList(id) => {
-                self.catalog_controller.products_to_add.remove(&id);
-                Command::none()
-            }
-            AppEvents::ShowLoanInfo => {
-                self.current_view = Views::LoanInfo;
-                Command::none()
-            }
-            AppEvents::LoanShowDatePicker(state, date_picker) => {
-                self.loan_info_controller
-                    .set_state_datepicker(date_picker, state);
-                Command::none()
-            }
-            AppEvents::LoanSubmitDatePicker(date, date_picker) => {
-                self.loan_info_controller
-                    .set_datepicker_value(date_picker, date);
-                Command::none()
-            }
-            AppEvents::LoanInputChanged(input_value, input_type) => {
-                match input_type {
-                    LoanInputs::DebtorNameLike => {
-                        self.loan_info_controller.data.search_info.client = input_value;
-                    }
-                    LoanInputs::PaymentLoanAmount => {
-                        if input_value.parse::<f64>().is_ok() {
-                            self.loan_info_controller.data.loan_payment = input_value;
-                        }
-                    }
-                }
-                Command::none()
-            }
-            AppEvents::LoanSearchRequested => {
-                let data = self.loan_info_controller.get_loan_search();
-
-                Command::perform(
-                    LoanRepo::get_loans_user_by_date_range(db_connection, data),
-                    AppEvents::LoanSearchData,
-                )
-            }
-            AppEvents::LoanClearLoanViewData => {
-                self.loan_info_controller.reset_loan_data();
-                Command::none()
-            }
-            AppEvents::LoanSearchData(data) => {
-                match data {
-                    Ok(loans) => {
-                        self.loan_info_controller.data.loans = loans;
-                    }
-                    Err(err) => eprintln!("{err}"),
-                }
-                Command::perform(async {}, |_| AppEvents::ShowLoanInfo)
-            }
-            AppEvents::LoanShowPaymentsDetails(loan_id) => {
-                self.loan_info_controller.data.loan_id = loan_id;
-                self.loan_info_controller.data.loan_payment.clear();
-
-                Command::perform(
-                    LoanRepo::get_payments_loan(db_connection, loan_id),
-                    AppEvents::LoanPaymentDetailsData,
-                )
-            }
-            AppEvents::LoanPaymentDetailsData(result) => {
-                match result {
-                    Ok(payments) => {
-                        self.loan_info_controller
-                            .set_modal_show(LoanModal::LoanPayments);
-                        self.loan_info_controller.data.payments_loan = payments;
-                    }
-                    Err(err) => eprintln!("{err}"),
-                };
-                Command::perform(async {}, |_| AppEvents::ShowLoanInfo)
-            }
-            AppEvents::LoanCloseModalPaymentsLoan => {
-                self.loan_info_controller.hide_modal();
-                self.loan_info_controller.data.payments_loan = vec![];
-
-                Command::perform(async {}, |_| AppEvents::LoanSearchRequested)
-            }
-            AppEvents::LoanAddNewPaymentToLoan => {
-                let payment_amount = self.loan_info_controller.get_payment_loan();
-
-                Command::perform(
-                    LoanRepo::add_new_payment_loan(
-                        db_connection,
-                        self.loan_info_controller.data.loan_id,
-                        payment_amount,
-                    ),
-                    AppEvents::LoanAddNewPaymentToLoanRequested,
-                )
-            }
-            AppEvents::LoanAddNewPaymentToLoanRequested(result) => {
+            AppEvent::CatalogSaveAllRecordsPerformed(result) => {
                 if result.is_err() {
-                    eprintln!("{:#?}", result.err());
+                    return helpers::send_toast_err(GENERAL_RETRY_MSG.into());
                 }
 
-                let loan_id = self.loan_info_controller.data.loan_id;
-                let lambda_fn = async move { loan_id };
+                self.catalog_controller.products_to_add.clear();
 
-                Command::perform(lambda_fn, AppEvents::LoanShowPaymentsDetails)
+                Command::batch(vec![
+                    Command::perform(async {}, |_| AppEvent::ChangeView(View::CatalogProducts)),
+                    Command::perform(async {}, |_| {
+                        AppEvent::AddToast(
+                            toast::Status::Success,
+                            "Se han insertado los productos".into(),
+                        )
+                    }),
+                ])
             }
-            AppEvents::LoanShowLoanSale(sale_id) => Command::perform(
-                SaleRepo::get_products_sale(db_connection, sale_id),
-                AppEvents::LoanSaleProductsData,
-            ),
-            AppEvents::LoanSaleProductsData(result) => {
+
+            // Sale module events
+            AppEvent::SaleProductInfoRequested(result) => {
+                self.sale_controller.user_input.reset_values();
                 match result {
-                    Ok(products) => {
-                        self.loan_info_controller
-                            .set_modal_show(LoanModal::LoanSale);
-                        self.loan_info_controller.sale_products = products;
-                    }
-                    Err(err) => {
-                        eprintln!("{err}")
-                    }
+                    Err(_) => helpers::send_toast_err(GENERAL_RETRY_MSG.into()),
+                    Ok(record) => match record {
+                        Some(product_info) => {
+                            self.sale_controller.process_product_info(product_info)
+                        }
+                        None => helpers::send_toast_err(NO_PRODUCT.into()),
+                    },
+                }
+            }
+            AppEvent::SaleResetProductsToBeSold => {
+                self.sale_controller.sale_info = SaleInfo::default();
+                Command::none()
+            }
+            AppEvent::SaleEditProductToBeSold(product_info) => {
+                self.sale_controller.user_input.amount = product_info.amount.to_string();
+
+                Command::batch(vec![
+                    Command::perform(async {}, |_| {
+                        AppEvent::ChangeModalView(ModalView::SaleProductAddEditForm(
+                            product_info,
+                            true,
+                        ))
+                    }),
+                    Command::perform(async {}, |_| AppEvent::ShowModal),
+                ])
+            }
+            AppEvent::SaleRemoveProductToBeSold(barcode) => {
+                let product = self.sale_controller.sale_info.products.remove(&barcode);
+                if product.is_some() {
+                    self.sale_controller.update_total_pay();
+                    self.sale_controller.calculate_payback_money();
                 }
 
+                if self.sale_controller.sale_info.products.is_empty() {
+                    self.sale_controller.sale_info = SaleInfo::default();
+                }
                 Command::none()
             }
-            AppEvents::SaleInfoShowDatePicker(state, date_picker) => {
-                self.sale_info_controller
-                    .set_state_datepicker(date_picker, state);
-                Command::none()
-            }
-            AppEvents::SaleInfoSubmitDatePicker(date, date_picker) => {
-                self.sale_info_controller
-                    .set_datepicker_value(date_picker, date);
-                Command::perform(async {}, |_| AppEvents::SaleInfoSearchStats)
-            }
-            AppEvents::SaleInfoSearchStats => {
-                let start_date = self
-                    .sale_info_controller
-                    .data
-                    .search_info
-                    .start_date
-                    .to_string();
-                let end_date = self
-                    .sale_info_controller
-                    .data
-                    .search_info
-                    .end_date
-                    .to_string();
+            AppEvent::SaleProductAddEditFormOk(product_info, is_edit) => {
+                let mut product_info = product_info;
 
-                let events = vec![
-                    Command::perform(
-                        SaleRepo::get_total_earnings(
-                            db_connection,
-                            start_date.to_string(),
-                            end_date.to_string(),
-                        ),
-                        AppEvents::SaleInfoEarningsData,
+                product_info.amount = BigDecimal::from_str(&self.sale_controller.user_input.amount)
+                    .unwrap_or(BigDecimal::default());
+                self.sale_controller.user_input.reset_values();
+
+                let next_event = if let Err(err) = self
+                    .sale_controller
+                    .add_new_product_to_sale(&product_info, is_edit)
+                {
+                    helpers::send_toast_err(err.msg)
+                } else {
+                    self.sale_controller.update_total_pay();
+                    self.sale_controller.calculate_payback_money();
+                    Command::perform(async {}, |_| AppEvent::ChangeView(View::SaleListProducts))
+                };
+
+                Command::batch(vec![
+                    Command::perform(async {}, |_| AppEvent::HideModal),
+                    next_event,
+                ])
+            }
+            AppEvent::SaleCreateNewSale => {
+                if self.sale_controller.sale_info.products.is_empty() {
+                    return Command::none();
+                }
+                Command::perform(
+                    sale_repo::process_new_sale_flow(
+                        db_connection,
+                        Sale::from(&self.sale_controller.sale_info),
                     ),
-                    Command::perform(
-                        SaleRepo::get_total_sales(
-                            db_connection,
-                            start_date.to_string(),
-                            end_date.to_string(),
-                        ),
-                        AppEvents::SaleInfoTotalSales,
-                    ),
-                    Command::perform(
-                        LoanRepo::get_total_loans(db_connection, start_date, end_date),
-                        AppEvents::SaleInfoTotalLoans,
-                    ),
+                    AppEvent::SaleCreateNewSaleRequested,
+                )
+            }
+            AppEvent::SaleCreateNewSaleRequested(result) => {
+                self.sale_controller.user_input.reset_values();
+                let commands = vec![
+                    Command::perform(async {}, |_| AppEvent::SaleResetProductsToBeSold),
+                    // Command::perform(async {}, |_| AppEvent::ChangeView(View::SaleListProducts)),
+                    match result {
+                        Ok(sale_id) => {
+                            let mut loan = SaleLoan::from(&self.sale_controller.sale_info);
+                            loan.sale_id = sale_id;
+                            Command::batch(vec![
+                                if loan.is_valid {
+                                    // if its not a loan do not save it
+                                    Command::perform(
+                                        loan_repo::save_new_loan(db_connection, loan),
+                                        AppEvent::SaleCreateNewSaleLoan,
+                                    )
+                                } else {
+                                    Command::none()
+                                },
+                                Command::perform(async {}, |_| {
+                                    AppEvent::AddToast(
+                                        toast::Status::Success,
+                                        "venta exitosa".into(),
+                                    )
+                                }),
+                            ])
+                        }
+                        Err(err) => helpers::send_toast_err(err.msg),
+                    },
                 ];
 
-                Command::batch(events)
+                Command::batch(commands)
             }
-            AppEvents::SaleInfoEarningsData(result) => {
-                match result {
-                    Ok(total_earnings) => {
-                        self.sale_info_controller.data.data_stats.earnings =
-                            total_earnings.to_bigdecimal(TO_DECIMAL_DIGITS)
-                    }
-                    Err(err) => eprintln!("{err}"),
-                };
+            AppEvent::SaleCreateNewSaleLoan(result) => match result {
+                Ok(_) => Command::perform(async {}, move |_| {
+                    AppEvent::AddToast(
+                        toast::Status::Success,
+                        "prestamo registrado exitosamente".into(),
+                    )
+                }),
+                Err(err) => helpers::send_toast_err(err.msg),
+            },
 
-                Command::none()
-            }
-            AppEvents::SaleInfoTotalSales(result) => {
-                match result {
-                    Ok(totals) => {
-                        self.sale_info_controller.data.data_stats.sales = totals.sales;
-                        self.sale_info_controller.data.data_stats.total_sales =
-                            totals.total_sales.to_bigdecimal(TO_DECIMAL_DIGITS);
-                    }
-                    Err(err) => eprintln!("{err}"),
+            //Loan module events
+            AppEvent::LoanSearchRequested => Command::perform(
+                loan_repo::get_loans_by_debtor_name(
+                    db_connection,
+                    self.loan_controller.debtor_name_to_lowercase(),
+                ),
+                AppEvent::LoanSearchData,
+            ),
+            AppEvent::LoanSearchData(result) => match result {
+                Ok(loans) => {
+                    self.loan_controller.data.loans_by_debtor = loans;
+                    Command::none()
                 }
+                Err(err) => helpers::send_toast_err(err.msg),
+            },
+            AppEvent::LoanShowLoanSale(sale_id) => Command::perform(
+                sale_repo::get_products_sale(db_connection, sale_id),
+                AppEvent::LoanSaleProductsData,
+            ),
+            AppEvent::LoanSaleProductsData(result) => match result {
+                Ok(products) => Command::batch(vec![
+                    Command::perform(async {}, |_| {
+                        AppEvent::ChangeModalView(ModalView::LoanSaleDetails(products))
+                    }),
+                    Command::perform(async {}, |_| AppEvent::ShowModal),
+                ]),
+                Err(err) => helpers::send_toast_err(err.msg),
+            },
+            AppEvent::LoanShowPaymentsDetails(loan_id) => {
+                self.loan_controller.data.loan_id = loan_id;
+                self.loan_controller.data.loan_payment.clear();
 
-                Command::none()
+                Command::perform(
+                    loan_repo::get_payments_loan(db_connection, loan_id),
+                    AppEvent::LoanPaymentDetailsData,
+                )
             }
-            AppEvents::SaleInfoTotalLoans(result) => {
-                match result {
-                    Ok(totals) => {
-                        self.sale_info_controller.data.data_stats.loans = totals.loans;
-                        self.sale_info_controller.data.data_stats.total_loans =
-                            totals.money_loans.to_bigdecimal(TO_DECIMAL_DIGITS);
+            AppEvent::LoanPaymentDetailsData(result) => match result {
+                Ok(payments) => Command::batch(vec![
+                    Command::perform(async {}, |_| {
+                        AppEvent::ChangeModalView(ModalView::LoanPayments(payments))
+                    }),
+                    Command::perform(async {}, |_| AppEvent::ShowModal),
+                ]),
+                Err(err) => helpers::send_toast_err(err.msg),
+            },
+            AppEvent::LoanAddNewPaymentToLoan => {
+                let payment_amount = self.loan_controller.get_payment_loan();
+
+                if payment_amount.to_bigdecimal(TO_DECIMAL_DIGITS) > BigDecimal::zero() {
+                    Command::perform(
+                        loan_repo::add_new_payment_loan(
+                            db_connection,
+                            self.loan_controller.data.loan_id,
+                            payment_amount,
+                        ),
+                        AppEvent::LoanAddNewPaymentToLoanRequested,
+                    )
+                } else {
+                    helpers::send_toast_err("monto debe ser mayor a cero".into())
+                }
+            }
+            AppEvent::LoanAddNewPaymentToLoanRequested(result) => match result {
+                Err(err) => helpers::send_toast_err(err.to_string()),
+                Ok(_) => {
+                    let loan_id = self.loan_controller.data.loan_id;
+                    Command::batch(vec![
+                        helpers::send_toast_ok("Pago registrado exitosamente".to_string()),
+                        Command::perform(async {}, move |_| {
+                            AppEvent::LoanShowPaymentsDetails(loan_id)
+                        }),
+                        Command::perform(async {}, |_| AppEvent::LoanSearchRequested),
+                    ])
+                }
+            },
+
+            //ToBuy module events
+            AppEvent::ToBuySearchData(result) => match result {
+                Ok(products) => {
+                    let is_empty = products.is_empty();
+                    self.tobuy_controller.products = products;
+                    if is_empty {
+                        return helpers::send_toast_ok("no se encontraron productos".into());
                     }
-                    Err(err) => eprintln!("{err}"),
-                };
-                Command::none()
+                    Command::none()
+                }
+                Err(err) => helpers::send_toast_err(err.msg),
+            },
+
+            // Stats module events
+            AppEvent::SaleInfoSearchStats => {
+                let start_date = self.saleinfo_controller.search_info.start_date.to_string();
+                let end_date = self.saleinfo_controller.search_info.end_date.to_string();
+
+                Command::batch(vec![
+                    Command::perform(
+                        sale_repo::get_total_earnings(
+                            db_connection,
+                            start_date.to_string(),
+                            end_date.to_string(),
+                        ),
+                        AppEvent::SaleInfoEarningsData,
+                    ),
+                    Command::perform(
+                        sale_repo::get_total_sales(
+                            db_connection,
+                            start_date.to_string(),
+                            end_date.to_string(),
+                        ),
+                        AppEvent::SaleInfoTotalSales,
+                    ),
+                    Command::perform(
+                        loan_repo::get_total_loans(db_connection, start_date, end_date),
+                        AppEvent::SaleInfoTotalLoans,
+                    ),
+                ])
             }
-            _ => Command::none(),
+            AppEvent::SaleInfoEarningsData(result) => match result {
+                Ok(total_earnings) => {
+                    self.saleinfo_controller.data_stats.earnings =
+                        total_earnings.to_bigdecimal(TO_DECIMAL_DIGITS);
+                    Command::none()
+                }
+                Err(err) => helpers::send_toast_err(err.msg),
+            },
+            AppEvent::SaleInfoTotalSales(result) => match result {
+                Ok(totals) => {
+                    self.saleinfo_controller.data_stats.sales = totals.sales;
+                    self.saleinfo_controller.data_stats.total_sales =
+                        totals.total_sales.to_bigdecimal(TO_DECIMAL_DIGITS);
+                    Command::none()
+                }
+                Err(err) => helpers::send_toast_err(err.msg),
+            },
+            AppEvent::SaleInfoTotalLoans(result) => match result {
+                Ok(totals) => {
+                    self.saleinfo_controller.data_stats.loans = totals.loans;
+                    self.saleinfo_controller.data_stats.total_loans =
+                        totals.money_loans.to_bigdecimal(TO_DECIMAL_DIGITS);
+                    Command::none()
+                }
+                Err(err) => helpers::send_toast_err(err.msg),
+            },
         }
     }
 
-    fn subscription(&self) -> Subscription<Self::Message> {
-        iced_native::subscription::events().map(AppEvents::ExternalDeviceEventOccurred)
-    }
+    fn view<'a>(&'a self) -> Element<'a, AppEvent> {
+        let menu = views::menu::get_menu_btns(&self.current_appmodule);
 
-    fn view(&self) -> Element<'_, Self::Message, iced::Renderer<Self::Theme>> {
-        let content = match self.current_view {
-            Views::Sale => SaleView::scan_barcodes_view(&self.sale_controller.sale_info),
-            Views::SaleAddProductForm => {
-                SaleView::product_to_add_view(&self.sale_controller.product_to_add)
-            }
-            Views::SaleChargeForm => SaleView::charge_sale_view(
-                &self.sale_controller.sale_info,
-                self.sale_controller.is_pay_later(),
-                self.sale_controller.is_ok_charge(),
-            ),
-            Views::ToBuy => to_buy::show_list_products(&self.to_buy_controller.products),
-            Views::Catalog => catalog::catalog_list_view(&self.catalog_controller.products_to_add),
-            Views::CatalogAddRecord => {
-                catalog::load_product_view(&self.catalog_controller.load_product)
-            }
-            Views::SalesInfo => sales_info::view(&self.sale_info_controller.data),
-            Views::LoanInfo => loan::LoanView::search_results(
-                &self.loan_info_controller.data,
-                &self.loan_info_controller.modal_show,
-                &self.loan_info_controller.sale_products,
-            ),
+        let content = column![
+            menu, //TODO: center menu
+            container(views::body::get_body_based_current_view(self))  // .width(Length::Fill)
+                  // .height(Length::Fill)
+        ]
+        .align_items(Alignment::Center)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .spacing(SPACE_COLUMNS)
+        .padding(COLUMN_PADDING);
+
+        let content: Element<'a, AppEvent> = if self.modal.show_modal {
+            Modal::new(
+                content,
+                container(views::modal::get_modal_based_modalview(self))
+                    .style(get_black_border_style()),
+            )
+            .on_blur(AppEvent::HideModal)
+            .into()
+        } else {
+            content.into()
         };
 
-        column!(
-            row!(
-                button(text(CATALOG_BTN_MSG).size(SIZE_BTNS_TEXT))
-                    .on_press(AppEvents::ShowCatalog)
-                    .style(crate::style::btns::get_style_btn_main_menu()),
-                button(text(SALE_BTN_MSG).size(SIZE_BTNS_TEXT))
-                    .on_press(AppEvents::ShowSale)
-                    .style(crate::style::btns::get_style_btn_main_menu()),
-                button(text(LOAN_BTN_MSG).size(SIZE_BTNS_TEXT))
-                    .on_press(AppEvents::ShowLoanInfo)
-                    .style(crate::style::btns::get_style_btn_main_menu()),
-                button(text(TO_BUY_BTN_MSG).size(SIZE_BTNS_TEXT))
-                    .on_press(AppEvents::ToBuyDataRequested)
-                    .style(crate::style::btns::get_style_btn_main_menu()),
-                button(text(SALES_INFO_BTN_MSG).size(SIZE_BTNS_TEXT))
-                    .on_press(AppEvents::ShowSalesInfo)
-                    .style(crate::style::btns::get_style_btn_main_menu()),
-            )
-            .spacing(SPACE_ROWS),
-            content
-        )
-        .spacing(SPACE_COLUMNS)
-        .padding(10)
-        .align_items(Alignment::Center)
-        .width(iced::Length::Fill)
-        .height(iced::Length::Fill)
-        .into()
+        toast::Manager::new(content, &self.toasts, AppEvent::CloseToast).into()
     }
 }

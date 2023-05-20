@@ -10,7 +10,7 @@ use crate::{
     schemas::sale::SaleInfo,
 };
 
-#[derive(sqlx::FromRow, Debug, Clone)]
+#[derive(PartialEq, sqlx::FromRow, Debug, Clone)]
 pub struct SaleProductInfo {
     pub barcode: String,
     pub product_name: String,
@@ -18,6 +18,19 @@ pub struct SaleProductInfo {
     pub amount: BigDecimal,
     pub total_amount: BigDecimal,
     pub unit_measurement_id: i16,
+}
+
+impl Default for SaleProductInfo {
+    fn default() -> Self {
+        Self {
+            barcode: "".into(),
+            product_name: "".into(),
+            price: PgMoney::from(0),
+            amount: BigDecimal::default(),
+            total_amount: BigDecimal::default(),
+            unit_measurement_id: 3,
+        }
+    }
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
