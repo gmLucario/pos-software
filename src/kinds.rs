@@ -83,6 +83,13 @@ pub enum TextInput {
     ToBuyProductLike,
 }
 
+/// A scroll widget was used
+#[derive(Debug, Clone, Copy)]
+pub enum OnScroll {
+    /// Catalog Products queried
+    CatalogListProducts,
+}
+
 /// Types of valid units measurement
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum UnitsMeasurement {
