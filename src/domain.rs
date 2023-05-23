@@ -9,7 +9,7 @@ use crate::{
     db::AppDb,
     events::AppEvent,
     helpers,
-    kinds::{AppDatePicker, AppModule, ModalView, PickList, TextInput, View},
+    kinds::{AppDatePicker, AppModule, ModalView, OnScroll, PickList, TextInput, View},
     models::sale::{Sale, SaleLoan},
     repo::{loan_repo, product_repo, sale_repo},
     schemas::{catalog::CatalogProductForm, sale::SaleInfo},
@@ -24,7 +24,7 @@ use std::str::FromStr;
 
 use iced::{
     executor, keyboard, subscription,
-    widget::{self, column, container},
+    widget::{self, column, container, scrollable::RelativeOffset},
     Alignment, Application, Command, Element, Event, Length, Subscription,
 };
 use sqlx::types::BigDecimal;
@@ -158,10 +158,14 @@ impl Application for AppProcessor {
             AppEvent::SetDefaultDataView => match self.current_view {
                 View::CatalogProducts => {
                     if self.catalog_controller.products_to_add.is_empty() {
+                        self.catalog_controller.stock_products.clear();
+                        self.catalog_controller.products_catalog_page = 0;
+
                         Command::perform(
                             product_repo::get_products_catalog_like(
                                 db_connection,
                                 self.catalog_controller.product_name_to_lowercase(),
+                                self.catalog_controller.products_catalog_page,
                             ),
                             AppEvent::CatalogProductsData,
                         )
@@ -278,25 +282,36 @@ impl Application for AppProcessor {
                     Command::perform(async {}, |_| AppEvent::SaleInfoSearchStats),
                 ])
             }
+            AppEvent::ScrollScrolled(on_scroll, RelativeOffset { x: _, y }) => match on_scroll {
+                OnScroll::CatalogListProducts if y == 1.0 => {
+                    self.catalog_controller.products_catalog_page += 1;
+
+                    Command::perform(
+                        product_repo::get_products_catalog_like(
+                            db_connection,
+                            self.catalog_controller.product_name_to_lowercase(),
+                            self.catalog_controller.products_catalog_page,
+                        ),
+                        AppEvent::CatalogProductsData,
+                    )
+                }
+                _ => Command::none(),
+            },
 
             //Catalog module events
-            AppEvent::CatalogProductsData(result) => {
-                self.catalog_controller.stock_products.clear();
+            AppEvent::CatalogProductsData(result) => match result {
+                Ok(products) => {
+                    let no_products = products.is_empty();
 
-                match result {
-                    Ok(products) => {
-                        let no_products = products.is_empty();
-
-                        if no_products {
-                            helpers::send_toast_ok(STOCK_IS_EMPTY_MSG.into())
-                        } else {
-                            self.catalog_controller.stock_products = products;
-                            Command::none()
-                        }
+                    if no_products {
+                        helpers::send_toast_ok(STOCK_IS_EMPTY_MSG.into())
+                    } else {
+                        self.catalog_controller.stock_products.extend(products);
+                        Command::none()
                     }
-                    Err(_) => helpers::send_toast_err(GENERAL_RETRY_MSG.into()),
                 }
-            }
+                Err(_) => helpers::send_toast_err(GENERAL_RETRY_MSG.into()),
+            },
             AppEvent::CatalogRequestProductInfoForm => Command::perform(
                 product_repo::get_product_info_catalog(
                     db_connection,

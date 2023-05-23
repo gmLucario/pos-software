@@ -27,6 +27,8 @@ pub struct Catalog {
     pub stock_products: Vec<ProductAmount>,
     /// Product name to filter the `stock_products` list
     pub product_name: String,
+    /// Query results page
+    pub products_catalog_page: i64,
 }
 
 impl Catalog {

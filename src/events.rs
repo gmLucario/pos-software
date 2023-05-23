@@ -3,12 +3,12 @@
 use std::collections::BTreeMap;
 
 use custom_crates::widgets::toast;
-use iced::Event;
+use iced::{widget::scrollable::RelativeOffset, Event};
 use iced_aw::date_picker::Date;
 use sqlx::{postgres::types::PgMoney, types::Uuid};
 
 use crate::{
-    kinds::{AppDatePicker, AppModule, ModalView, PickList, TextInput, View},
+    kinds::{AppDatePicker, AppModule, ModalView, OnScroll, PickList, TextInput, View},
     models::{
         catalog::{ProductAmount, ProductInfo, ProductToBuy},
         loan::{LoanInfo, LoanPayment, TotalLoans},
@@ -47,6 +47,8 @@ pub enum AppEvent {
     ShowDatePicker(bool, AppDatePicker),
     /// Event to submit the value selected in the date picker
     SubmitDatePicker(Date, AppDatePicker),
+    /// scroll widget was used
+    ScrollScrolled(OnScroll, RelativeOffset),
 
     // Catalog module view
     // Result obtained in the query to retrieve products in the catalog

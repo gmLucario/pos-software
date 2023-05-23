@@ -14,7 +14,7 @@ use crate::{
     },
     events::AppEvent,
     helpers::{get_btn_cancel, get_btn_edit, get_btn_ok, get_btn_save, get_btn_trash_icon},
-    kinds::{PickList, TextInput, UnitsMeasurement, View},
+    kinds::{OnScroll, PickList, TextInput, UnitsMeasurement, View},
     models::catalog::{LoadProduct, ProductAmount},
     schemas::catalog::CatalogProductForm,
 };
@@ -40,9 +40,15 @@ pub fn show_list_products<'a>(
             })
             .on_submit(AppEvent::ChangeView(View::CatalogProducts))
             .size(SIZE_TEXT_INPUT),
-        container(scrollable(col).height(Length::Fill))
-            .width(Length::Fill)
-            .height(Length::Fill),
+        container(
+            scrollable(col)
+                .on_scroll(|offset| {
+                    AppEvent::ScrollScrolled(OnScroll::CatalogListProducts, offset)
+                })
+                .height(Length::Fill)
+        )
+        .width(Length::Fill)
+        .height(Length::Fill),
     )
     .padding(COLUMN_PADDING)
     .spacing(SPACE_COLUMNS)
