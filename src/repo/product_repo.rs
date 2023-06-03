@@ -48,9 +48,11 @@ pub async fn get_product_id(connection: &PgPool, barcode: &str) -> AppResult<Uui
 pub async fn get_products_catalog_like(
     connection: &PgPool,
     product_name_like: String,
+    page: i64,
 ) -> AppResult<Vec<ProductAmount>> {
     sqlx::query_as::<_, ProductAmount>(GET_CATALOG_PRODUCTS)
         .bind(product_name_like)
+        .bind(page)
         .fetch_all(connection)
         .await
         .map_err(|err| {

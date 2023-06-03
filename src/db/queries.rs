@@ -26,7 +26,9 @@ group by
     product.min_amount,
     unit_measurement.description
 having coalesce(sum("catalog".current_amount), 0) > 0
-order by product_name;
+order by product_name
+limit 100
+offset $2;
 "#;
 
 /// Retrieve products with its quantity are less than the minimum required
