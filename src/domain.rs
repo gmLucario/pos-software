@@ -453,9 +453,10 @@ impl Application for AppProcessor {
                 ])
             }
             AppEvent::SaleCreateNewSale => {
-                if self.sale_controller.sale_info.products.is_empty() {
-                    return Command::none();
+                if self.sale_controller.sale_info.client_name.is_empty() {
+                    return helpers::send_toast_err("ingresar nombre cliente".into());
                 }
+
                 Command::perform(
                     sale_repo::process_new_sale_flow(
                         db_connection,

@@ -139,13 +139,19 @@ fn charge_sale_view(sale_info: &SaleInfo, is_pay_later: bool) -> Element<AppEven
         sale_info.payback_money
     };
 
-    let mut container = column!(
-        text_input("Pago:", &sale_info.client_pay)
+    let are_products = !sale_info.products.is_empty();
+    let user_payment = text_input("Pago:", &sale_info.client_pay).size(SIZE_TEXT);
+    let user_payment = match are_products {
+        true => user_payment
             .on_input(|input_value| {
                 AppEvent::TextInputChanged(input_value, TextInput::SaleUserPayment)
             })
-            .on_submit(AppEvent::SaleCreateNewSale)
-            .size(SIZE_TEXT),
+            .on_submit(AppEvent::SaleCreateNewSale),
+        false => user_payment,
+    };
+
+    let mut container = column!(
+        user_payment,
         text(format!(
             "Cambio: ${}",
             pay_back_money.to_bigdecimal(TO_DECIMAL_DIGITS)
