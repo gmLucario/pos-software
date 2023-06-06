@@ -208,10 +208,14 @@ impl Application for AppProcessor {
                     {
                         self.catalog_controller.form.amount = input_value
                     }
-                    TextInput::CatalogFormClientPrice if input_value.parse::<f64>().is_ok() => {
+                    TextInput::CatalogFormClientPrice
+                        if helpers::is_amount_money_valid(&input_value) =>
+                    {
                         self.catalog_controller.form.user_price = input_value
                     }
-                    TextInput::CatalogFormCostProduct if input_value.parse::<f64>().is_ok() => {
+                    TextInput::CatalogFormCostProduct
+                        if helpers::is_amount_money_valid(&input_value) =>
+                    {
                         self.catalog_controller.form.cost = input_value
                     }
                     TextInput::CatalogFormMinAmountProduct
@@ -230,7 +234,7 @@ impl Application for AppProcessor {
                     {
                         self.sale_controller.user_input.amount = input_value
                     }
-                    TextInput::SaleUserPayment if input_value.parse::<f64>().is_ok() => {
+                    TextInput::SaleUserPayment if helpers::is_amount_money_valid(&input_value) => {
                         self.sale_controller.sale_info.client_pay = input_value;
                         self.sale_controller.calculate_payback_money();
                     }
@@ -240,7 +244,9 @@ impl Application for AppProcessor {
                     TextInput::LoanDebtorName => {
                         self.loan_controller.data.debtor_name = input_value
                     }
-                    TextInput::LoanPaymentAmountLoan if input_value.parse::<f64>().is_ok() => {
+                    TextInput::LoanPaymentAmountLoan
+                        if helpers::is_amount_money_valid(&input_value) =>
+                    {
                         self.loan_controller.data.loan_payment = input_value
                     }
                     TextInput::ToBuyProductLike => self.tobuy_controller.product_name = input_value,
@@ -453,7 +459,13 @@ impl Application for AppProcessor {
                 ])
             }
             AppEvent::SaleCreateNewSale => {
-                if self.sale_controller.sale_info.client_name.is_empty() {
+                if self.sale_controller.sale_info.client_pay.is_empty() {
+                    return Command::none();
+                }
+
+                let should_fill_name_debtor = self.sale_controller.is_pay_later()
+                    && self.sale_controller.sale_info.client_name.is_empty();
+                if should_fill_name_debtor {
                     return helpers::send_toast_err("ingresar nombre cliente".into());
                 }
 

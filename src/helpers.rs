@@ -69,20 +69,24 @@ pub fn is_valid_input_text_value_for_amount_data(
     unit_measurement: &UnitsMeasurement,
 ) -> bool {
     match unit_measurement {
-        UnitsMeasurement::Kilograms | UnitsMeasurement::Liters
-            if input_value.parse::<f64>().is_ok() =>
-        {
-            true
+        UnitsMeasurement::Kilograms | UnitsMeasurement::Liters => {
+            input_value.parse::<f64>().unwrap_or(-1.0) >= 0.0
         }
         UnitsMeasurement::Pieces if input_value.parse::<u64>().is_ok() => true,
         _ => false,
     }
 }
 
+/// Validate if a str is a valid money amount
+pub fn is_amount_money_valid(amount: &str) -> bool {
+    amount.parse::<f64>().unwrap_or(-1.0) >= 0.0
+}
+
 /// Send an err toast type to the app
 pub fn send_toast_err(msg: String) -> Command<AppEvent> {
     Command::perform(async {}, |_| AppEvent::AddToast(toast::Status::Danger, msg))
 }
+
 /// Send an ok toast type to the app
 pub fn send_toast_ok(msg: String) -> Command<AppEvent> {
     Command::perform(async {}, |_| {

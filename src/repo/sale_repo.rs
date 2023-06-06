@@ -111,6 +111,7 @@ async fn update_related_sale_records(
 
     Ok(())
 }
+
 /// Create a new sale operation record
 async fn create_new_operation(connection: &PgPool, product: &CatalogAmount) -> AppResult<Uuid> {
     sqlx::query_as::<_, (Uuid,)>(CREATE_OPERATION_FROM_CATALOG)
