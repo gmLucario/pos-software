@@ -13,7 +13,7 @@ use crate::{
         TO_DECIMAL_DIGITS,
     },
     events::AppEvent,
-    helpers::get_btn_plus_icon,
+    helpers::{get_btn_plus_icon, get_btn_right_arrow},
     kinds::TextInput,
     models::{
         loan::{LoanInfo, LoanItem, LoanPayment},
@@ -45,8 +45,7 @@ pub fn search_results<'a>(
                             row!(
                                 button(
                                     text(format!(
-                                        "{name_debtor} ({date}): ${money_amount}",
-                                        name_debtor = loan.name_debtor,
+                                        "{date}: ${money_amount}",
                                         date = loan.sold_at.date(),
                                         money_amount =
                                             loan.loan_balance.to_bigdecimal(TO_DECIMAL_DIGITS),
@@ -56,7 +55,7 @@ pub fn search_results<'a>(
                                 .on_press(AppEvent::LoanShowLoanSale(loan.id))
                                 .style(get_style_btn_listed_items())
                                 .width(Length::Fill),
-                                get_btn_plus_icon()
+                                get_btn_right_arrow()
                                     .on_press(AppEvent::LoanShowPaymentsDetails(loan.id))
                             )
                             .spacing(SPACE_ROWS)

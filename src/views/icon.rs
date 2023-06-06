@@ -22,6 +22,7 @@ pub enum Icon {
     Pencil,
     /// Plus
     Plus,
+    /// Right arrow item
     ArrowItem,
 }
 

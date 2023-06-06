@@ -51,6 +51,16 @@ pub fn get_btn_plus_icon<'a>() -> Button<'a, AppEvent> {
     .style(get_style_btn_ok())
 }
 
+/// Button styled with `menu` icon
+pub fn get_btn_right_arrow<'a>() -> Button<'a, AppEvent> {
+    button(
+        text(icon::Icon::ArrowItem)
+            .font(icon::FONT_ICONS)
+            .size(SIZE_TEXT),
+    )
+    .style(get_style_btn_ok())
+}
+
 /// Validate `input_value` based on `unit_measurement`
 /// `UnitsMeasurement::Kilograms | UnitsMeasurement::Liters`: float
 /// `UnitsMeasurement::Pieces`: integer
