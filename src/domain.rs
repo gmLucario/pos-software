@@ -24,8 +24,8 @@ use std::str::FromStr;
 
 use iced::{
     executor, keyboard, subscription,
-    widget::{self, column, container, scrollable::RelativeOffset},
-    Alignment, Application, Command, Element, Event, Length, Subscription,
+    widget::{self, column, container, scrollable::RelativeOffset, toggler},
+    Alignment, Application, Command, Element, Event, Length, Subscription, Theme,
 };
 use sqlx::types::BigDecimal;
 use validator::Validate;
@@ -46,6 +46,8 @@ pub struct AppProcessor {
     pub modal: ModalInfo,
     /// Toasts messages
     pub toasts: Vec<Toast>,
+    /// Set or unset the darkmode
+    pub is_dark_mode: bool,
 
     /// Controller handles Catalog module logic
     pub catalog_controller: controllers::catalog::Catalog,
@@ -65,7 +67,17 @@ impl Application for AppProcessor {
     type Theme = iced::Theme;
     type Flags = ();
 
+    fn theme(&self) -> Self::Theme {
+        if self.is_dark_mode {
+            return Theme::Dark;
+        }
+
+        Theme::Light
+    }
+
     fn new(_flags: ()) -> (Self, Command<AppEvent>) {
+        // let _ = font::load(include_bytes!("../assets/fonts/icons.ttf").as_slice());
+
         (AppProcessor::default(), Command::none())
     }
 
@@ -102,6 +114,10 @@ impl Application for AppProcessor {
             }
             AppEvent::HideModal => {
                 self.modal.show_modal = false;
+                Command::none()
+            }
+            AppEvent::DarkMode(is_on) => {
+                self.is_dark_mode = is_on;
                 Command::none()
             }
             AppEvent::ExternalDeviceEventOccurred(event) => match event {
@@ -670,6 +686,7 @@ impl Application for AppProcessor {
         let menu = views::menu::get_menu_btns(&self.current_appmodule);
 
         let content = column![
+            toggler(Some("".into()), self.is_dark_mode, AppEvent::DarkMode,),
             menu, //TODO: center menu
             container(views::body::get_body_based_current_view(self))  // .width(Length::Fill)
                   // .height(Length::Fill)

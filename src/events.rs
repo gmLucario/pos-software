@@ -49,6 +49,8 @@ pub enum AppEvent {
     SubmitDatePicker(Date, AppDatePicker),
     /// scroll widget was used
     ScrollScrolled(OnScroll, RelativeOffset),
+    /// DarkMode
+    DarkMode(bool),
 
     // Catalog module view
     // Result obtained in the query to retrieve products in the catalog
