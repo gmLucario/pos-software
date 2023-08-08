@@ -1,5 +1,5 @@
 //! Define application containers styles
-use iced::{theme, widget::container, Color, Theme};
+use iced::{theme, widget::container, BorderRadius, Color, Theme};
 
 /// Represents types containers of the application
 #[derive(Default)]
@@ -15,7 +15,7 @@ impl container::StyleSheet for Container {
     fn appearance(&self, _style: &Self::Style) -> container::Appearance {
         match self {
             Container::BorderBlack => container::Appearance {
-                border_radius: 1.0,
+                border_radius: BorderRadius::from(1.0),
                 border_width: 0.5,
                 border_color: Color::BLACK,
                 ..container::Appearance::default()

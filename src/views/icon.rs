@@ -1,12 +1,9 @@
 //! Icons to be used in the app
 
-use iced::Font;
+use iced::font;
 
 /// Icon's font to be used in the app
-pub const FONT_ICONS: Font = Font::External {
-    name: "BasicIcons",
-    bytes: include_bytes!("../../assets/fonts/icons.ttf"),
-};
+pub const FONT_ICONS: font::Font = font::Font::with_name("icons");
 
 #[derive(Clone, Copy, Debug)]
 /// An enumeration of all available icons in the [`crate::views::icon::FONT_ICONS`].

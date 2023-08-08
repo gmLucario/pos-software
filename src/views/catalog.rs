@@ -42,8 +42,11 @@ pub fn show_list_products<'a>(
             .size(SIZE_TEXT_INPUT),
         container(
             scrollable(col)
-                .on_scroll(|offset| {
-                    AppEvent::ScrollScrolled(OnScroll::CatalogListProducts, offset)
+                .on_scroll(|viewport| {
+                    AppEvent::ScrollScrolled(
+                        OnScroll::CatalogListProducts,
+                        viewport.relative_offset(),
+                    )
                 })
                 .height(Length::Fill)
         )

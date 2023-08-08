@@ -1,10 +1,8 @@
 //! Define application button styles
 
-use iced::{theme, widget::button, Color};
+use iced::{theme, widget::button, BorderRadius, Color};
 
-use crate::constants::{
-    COLUMN_LIST_BTNS, DEFAULT_DEACTIVATE, DEFAULT_GREEN, DEFAULT_MENU, DEFAULT_RED,
-};
+use crate::constants::{COLUMN_LIST_BTNS, DEFAULT_DEACTIVATE, DEFAULT_GREEN};
 
 /// Represents types buttons of the application
 #[derive(Default)]
@@ -12,10 +10,6 @@ enum Button {
     /// Button user agree
     #[default]
     Ok,
-    /// Button user is not agree or delete
-    Danger,
-    /// Main menu nav bar items
-    MainMenu,
     /// Listed Items
     ListedItems,
 }
@@ -29,14 +23,12 @@ impl button::StyleSheet for Button {
             text_color: color,
             border_color: color,
             border_width: 1.0,
-            border_radius: 2.0,
+            border_radius: BorderRadius::from(2.0),
             ..button::Appearance::default()
         };
 
         match self {
             Button::Ok => basic_appearance(DEFAULT_GREEN),
-            Button::Danger => basic_appearance(DEFAULT_RED),
-            Button::MainMenu => basic_appearance(DEFAULT_MENU),
             Button::ListedItems => basic_appearance(COLUMN_LIST_BTNS),
         }
     }
@@ -55,17 +47,17 @@ impl button::StyleSheet for Button {
 
 /// Return the style for buttons `danger`
 pub fn get_style_btn_danger() -> theme::Button {
-    theme::Button::Custom(Box::from(Button::Danger))
+    theme::Button::Destructive
 }
 
 /// Return the style for buttons `ok`
 pub fn get_style_btn_ok() -> theme::Button {
-    theme::Button::Custom(Box::from(Button::Ok))
+    theme::Button::Positive
 }
 
 /// Return the style for buttons `main menu`
 pub fn get_style_btn_main_menu() -> theme::Button {
-    theme::Button::Custom(Box::from(Button::MainMenu))
+    theme::Button::Primary
 }
 
 /// Return the style for buttons of type `ListedItems`
