@@ -1,12 +1,21 @@
-use std::fmt;
-use std::time::{Duration, Instant};
+use std::{
+    fmt,
+    time::{Duration, Instant},
+};
 
-use iced::theme;
-use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, text};
-use iced::{Alignment, Element, Length, Point, Rectangle, Renderer, Size, Theme, Vector};
-use iced_native::widget::{tree, Operation, Tree};
-use iced_native::{event, layout, mouse, overlay, renderer, window};
-use iced_native::{Clipboard, Event, Layout, Shell, Widget};
+use iced::{
+    advanced::{
+        self,
+        layout::{self, Layout},
+        overlay, renderer,
+        widget::{self, Operation, Tree},
+        {Clipboard, Shell, Widget},
+    },
+    event::{self, Event},
+    mouse, theme,
+    widget::{button, column, container, horizontal_rule, horizontal_space, row, text},
+    window, Alignment, Element, Length, Point, Rectangle, Renderer, Size, Theme, Vector,
+};
 
 pub const DEFAULT_TIMEOUT: u64 = 5;
 
@@ -46,7 +55,7 @@ impl container::StyleSheet for Status {
         };
 
         container::Appearance {
-            background: pair.color.into(),
+            background: Some(pair.color.into()),
             text_color: pair.text.into(),
             ..Default::default()
         }
@@ -93,16 +102,23 @@ where
             .enumerate()
             .map(|(index, toast)| {
                 container(column![
-                    row![
-                        text(toast.title.as_str()),
-                        horizontal_space(Length::Fill),
-                        button("X").on_press((on_close)(index)).padding(3),
-                    ]
-                    .align_items(Alignment::Center),
+                    container(
+                        row![
+                            text(toast.title.as_str()),
+                            horizontal_space(Length::Fill),
+                            button("X").on_press((on_close)(index)).padding(3),
+                        ]
+                        .align_items(Alignment::Center)
+                    )
+                    .width(Length::Fill)
+                    .padding(5)
+                    .style(theme::Container::Custom(Box::new(toast.status))),
                     horizontal_rule(1),
-                    text(toast.body.as_str())
+                    container(text(toast.body.as_str()))
+                        .width(Length::Fill)
+                        .padding(5)
+                        .style(theme::Container::Box),
                 ])
-                .style(theme::Container::Custom(Box::new(toast.status)))
                 .max_width(200)
                 .into()
             })
@@ -137,13 +153,13 @@ impl<'a, Message> Widget<Message, Renderer> for Manager<'a, Message> {
         self.content.as_widget().layout(renderer, limits)
     }
 
-    fn tag(&self) -> tree::Tag {
+    fn tag(&self) -> widget::tree::Tag {
         struct Marker(Vec<Instant>);
-        iced_native::widget::tree::Tag::of::<Marker>()
+        widget::tree::Tag::of::<Marker>()
     }
 
-    fn state(&self) -> tree::State {
-        iced_native::widget::tree::State::new(Vec::<Option<Instant>>::new())
+    fn state(&self) -> widget::tree::State {
+        widget::tree::State::new(Vec::<Option<Instant>>::new())
     }
 
     fn children(&self) -> Vec<Tree> {
@@ -184,7 +200,7 @@ impl<'a, Message> Widget<Message, Renderer> for Manager<'a, Message> {
         renderer: &Renderer,
         operation: &mut dyn Operation<Message>,
     ) {
-        operation.container(None, &mut |operation| {
+        operation.container(None, layout.bounds(), &mut |operation| {
             self.content
                 .as_widget()
                 .operate(&mut state.children[0], layout, renderer, operation);
@@ -196,19 +212,21 @@ impl<'a, Message> Widget<Message, Renderer> for Manager<'a, Message> {
         state: &mut Tree,
         event: Event,
         layout: Layout<'_>,
-        cursor_position: Point,
+        cursor: mouse::Cursor,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
+        viewport: &Rectangle,
     ) -> event::Status {
         self.content.as_widget_mut().on_event(
             &mut state.children[0],
             event,
             layout,
-            cursor_position,
+            cursor,
             renderer,
             clipboard,
             shell,
+            viewport,
         )
     }
 
@@ -219,7 +237,7 @@ impl<'a, Message> Widget<Message, Renderer> for Manager<'a, Message> {
         theme: &Theme,
         style: &renderer::Style,
         layout: Layout<'_>,
-        cursor_position: Point,
+        cursor: mouse::Cursor,
         viewport: &Rectangle,
     ) {
         self.content.as_widget().draw(
@@ -228,7 +246,7 @@ impl<'a, Message> Widget<Message, Renderer> for Manager<'a, Message> {
             theme,
             style,
             layout,
-            cursor_position,
+            cursor,
             viewport,
         );
     }
@@ -237,14 +255,14 @@ impl<'a, Message> Widget<Message, Renderer> for Manager<'a, Message> {
         &self,
         state: &Tree,
         layout: Layout<'_>,
-        cursor_position: Point,
+        cursor: mouse::Cursor,
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
         self.content.as_widget().mouse_interaction(
             &state.children[0],
             layout,
-            cursor_position,
+            cursor,
             viewport,
             renderer,
         )
@@ -313,7 +331,7 @@ impl<'a, 'b, Message> overlay::Overlay<Message, Renderer> for Overlay<'a, 'b, Me
         &mut self,
         event: Event,
         layout: Layout<'_>,
-        cursor_position: Point,
+        cursor: mouse::Cursor,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
@@ -347,6 +365,8 @@ impl<'a, 'b, Message> overlay::Overlay<Message, Renderer> for Overlay<'a, 'b, Me
             }
         }
 
+        let viewport = layout.bounds();
+
         self.toasts
             .iter_mut()
             .zip(self.state.iter_mut())
@@ -360,10 +380,11 @@ impl<'a, 'b, Message> overlay::Overlay<Message, Renderer> for Overlay<'a, 'b, Me
                     state,
                     event.clone(),
                     layout,
-                    cursor_position,
+                    cursor,
                     renderer,
                     clipboard,
                     &mut local_shell,
+                    &viewport,
                 );
 
                 if !local_shell.is_empty() {
@@ -380,10 +401,10 @@ impl<'a, 'b, Message> overlay::Overlay<Message, Renderer> for Overlay<'a, 'b, Me
     fn draw(
         &self,
         renderer: &mut Renderer,
-        theme: &<Renderer as iced_native::Renderer>::Theme,
+        theme: &<Renderer as advanced::Renderer>::Theme,
         style: &renderer::Style,
         layout: Layout<'_>,
-        cursor_position: Point,
+        cursor: mouse::Cursor,
     ) {
         let viewport = layout.bounds();
 
@@ -393,15 +414,9 @@ impl<'a, 'b, Message> overlay::Overlay<Message, Renderer> for Overlay<'a, 'b, Me
             .zip(self.state.iter())
             .zip(layout.children())
         {
-            child.as_widget().draw(
-                state,
-                renderer,
-                theme,
-                style,
-                layout,
-                cursor_position,
-                &viewport,
-            );
+            child
+                .as_widget()
+                .draw(state, renderer, theme, style, layout, cursor, &viewport);
         }
     }
 
@@ -409,9 +424,9 @@ impl<'a, 'b, Message> overlay::Overlay<Message, Renderer> for Overlay<'a, 'b, Me
         &mut self,
         layout: Layout<'_>,
         renderer: &Renderer,
-        operation: &mut dyn iced_native::widget::Operation<Message>,
+        operation: &mut dyn widget::Operation<Message>,
     ) {
-        operation.container(None, &mut |operation| {
+        operation.container(None, layout.bounds(), &mut |operation| {
             self.toasts
                 .iter()
                 .zip(self.state.iter_mut())
@@ -427,7 +442,7 @@ impl<'a, 'b, Message> overlay::Overlay<Message, Renderer> for Overlay<'a, 'b, Me
     fn mouse_interaction(
         &self,
         layout: Layout<'_>,
-        cursor_position: Point,
+        cursor: mouse::Cursor,
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
@@ -436,19 +451,15 @@ impl<'a, 'b, Message> overlay::Overlay<Message, Renderer> for Overlay<'a, 'b, Me
             .zip(self.state.iter())
             .zip(layout.children())
             .map(|((child, state), layout)| {
-                child.as_widget().mouse_interaction(
-                    state,
-                    layout,
-                    cursor_position,
-                    viewport,
-                    renderer,
-                )
+                child
+                    .as_widget()
+                    .mouse_interaction(state, layout, cursor, viewport, renderer)
             })
             .max()
             .unwrap_or_default()
     }
 
-    fn is_over(&self, layout: Layout<'_>, cursor_position: Point) -> bool {
+    fn is_over(&self, layout: Layout<'_>, _renderer: &Renderer, cursor_position: Point) -> bool {
         layout
             .children()
             .any(|layout| layout.bounds().contains(cursor_position))
