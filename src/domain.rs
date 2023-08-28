@@ -15,18 +15,16 @@ use crate::{
     schemas::{catalog::CatalogProductForm, sale::SaleInfo},
     views::{self, style::container::get_black_border_style},
 };
-use custom_crates::widgets::{
-    modal::Modal,
-    toast::{self, Toast},
-};
+use custom_crates::widgets::toast::{self, Toast};
 use num_traits::Zero;
 use std::str::FromStr;
 
 use iced::{
-    executor, keyboard, subscription,
+    executor, font, keyboard, subscription,
     widget::{self, column, container, scrollable::RelativeOffset, toggler},
     Alignment, Application, Command, Element, Event, Length, Subscription, Theme,
 };
+use iced_aw::modal;
 use sqlx::types::BigDecimal;
 use validator::Validate;
 
@@ -76,8 +74,7 @@ impl Application for AppProcessor {
     }
 
     fn new(_flags: ()) -> (Self, Command<AppEvent>) {
-        // let _ = font::load(include_bytes!("../assets/fonts/icons.ttf").as_slice());
-
+        let _ = font::load(iced_aw::graphics::icons::ICON_FONT_BYTES);
         (AppProcessor::default(), Command::none())
     }
 
@@ -682,7 +679,7 @@ impl Application for AppProcessor {
         }
     }
 
-    fn view<'a>(&'a self) -> Element<'a, AppEvent> {
+    fn view(&self) -> Element<AppEvent> {
         let menu = views::menu::get_menu_btns(&self.current_appmodule);
 
         let content = column![
@@ -697,17 +694,14 @@ impl Application for AppProcessor {
         .spacing(SPACE_COLUMNS)
         .padding(COLUMN_PADDING);
 
-        let content: Element<'a, AppEvent> = if self.modal.show_modal {
-            Modal::new(
-                content,
-                container(views::modal::get_modal_based_modalview(self))
-                    .style(get_black_border_style()),
-            )
-            .on_blur(AppEvent::HideModal)
-            .into()
-        } else {
-            content.into()
-        };
+        let content = modal(
+            self.modal.show_modal,
+            content,
+            container(views::modal::get_modal_based_modalview(self))
+                .style(get_black_border_style()),
+        )
+        .backdrop(AppEvent::HideModal)
+        .on_esc(AppEvent::HideModal);
 
         toast::Manager::new(content, &self.toasts, AppEvent::CloseToast).into()
     }

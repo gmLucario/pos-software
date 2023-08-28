@@ -18,22 +18,22 @@ use crate::{
 
 /// Button styled with a trash icon
 pub fn get_btn_trash_icon<'a>() -> Button<'a, AppEvent> {
-    button(text(icon::Icon::Trash).font(icon::FONT_ICONS)).style(get_style_btn_danger())
+    button(icon::trash_icon()).style(get_style_btn_danger())
 }
 
 /// Button styled with `Ok` label
 pub fn get_btn_ok<'a>() -> Button<'a, AppEvent> {
-    button(text(icon::Icon::Check).font(icon::FONT_ICONS)).style(get_style_btn_ok())
+    button(icon::check_icon()).style(get_style_btn_ok())
 }
 
 /// Button styled with `..` label to edit row
 pub fn get_btn_edit<'a>() -> Button<'a, AppEvent> {
-    button(text(icon::Icon::Pencil).font(icon::FONT_ICONS))
+    button(icon::pencil_icon())
 }
 
 /// Button styled with `Cancelar` label
 pub fn get_btn_cancel<'a>() -> Button<'a, AppEvent> {
-    button(text(icon::Icon::Cancel).font(icon::FONT_ICONS)).style(get_style_btn_danger())
+    button(icon::cancel_icon()).style(get_style_btn_danger())
 }
 
 /// Button styled with `Guardar` label
@@ -43,22 +43,12 @@ pub fn get_btn_save<'a>() -> Button<'a, AppEvent> {
 
 /// Button styled with `+` icon
 pub fn get_btn_plus_icon<'a>() -> Button<'a, AppEvent> {
-    button(
-        text(icon::Icon::Plus)
-            .font(icon::FONT_ICONS)
-            .size(SIZE_TEXT),
-    )
-    .style(get_style_btn_ok())
+    button(icon::plus_icon().size(SIZE_TEXT)).style(get_style_btn_ok())
 }
 
 /// Button styled with `menu` icon
 pub fn get_btn_right_arrow<'a>() -> Button<'a, AppEvent> {
-    button(
-        text(icon::Icon::ArrowItem)
-            .font(icon::FONT_ICONS)
-            .size(SIZE_TEXT),
-    )
-    .style(get_style_btn_ok())
+    button(icon::arrow_left_icon().size(SIZE_TEXT)).style(get_style_btn_ok())
 }
 
 /// Validate `input_value` based on `unit_measurement`
