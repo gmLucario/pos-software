@@ -37,7 +37,7 @@ pub struct ModalInfo {
 #[derive(Default)]
 pub struct AppProcessor {
     /// Current app module user is interacting with
-    pub current_appmodule: AppModule,
+    pub app_module: AppModule,
     /// Current app view user is interacting with
     pub current_view: View,
     /// Modal info state
@@ -133,7 +133,7 @@ impl Application for AppProcessor {
                         key_code: keyboard::KeyCode::Space,
                         modifiers,
                     } if modifiers.shift() => {
-                        if self.current_appmodule != AppModule::Catalog {
+                        if self.app_module != AppModule::Catalog {
                             return Command::none();
                         }
 
@@ -157,7 +157,7 @@ impl Application for AppProcessor {
                 _ => Command::none(),
             },
             AppEvent::ChangeAppModule(appmodule, defaultview) => {
-                self.current_appmodule = appmodule;
+                self.app_module = appmodule;
                 Command::perform(async move { defaultview }, AppEvent::ChangeView)
             }
             AppEvent::ChangeModalView(modal_view) => {
@@ -680,7 +680,7 @@ impl Application for AppProcessor {
     }
 
     fn view(&self) -> Element<AppEvent> {
-        let menu = views::menu::get_menu_btns(&self.current_appmodule);
+        let menu = views::menu::get_menu_btns(&self.app_module);
 
         let content = column![
             toggler(Some("".into()), self.is_dark_mode, AppEvent::DarkMode,),
@@ -694,14 +694,17 @@ impl Application for AppProcessor {
         .spacing(SPACE_COLUMNS)
         .padding(COLUMN_PADDING);
 
-        let content = modal(
-            self.modal.show_modal,
-            content,
-            container(views::modal::get_modal_based_modalview(self))
-                .style(get_black_border_style()),
-        )
-        .backdrop(AppEvent::HideModal)
-        .on_esc(AppEvent::HideModal);
+        let modal_content = match self.modal.show_modal {
+            true => Some(
+                container(views::modal::get_modal_based_modalview(self))
+                    .style(get_black_border_style()),
+            ),
+            false => None,
+        };
+
+        let content = modal(content, modal_content)
+            .backdrop(AppEvent::HideModal)
+            .on_esc(AppEvent::HideModal);
 
         toast::Manager::new(content, &self.toasts, AppEvent::CloseToast).into()
     }
