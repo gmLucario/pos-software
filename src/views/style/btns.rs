@@ -57,7 +57,7 @@ pub fn get_style_btn_ok() -> theme::Button {
 
 /// Return the style for buttons `main menu`
 pub fn get_style_btn_main_menu() -> theme::Button {
-    theme::Button::Primary
+    theme::Button::Text
 }
 
 /// Return the style for buttons of type `ListedItems`

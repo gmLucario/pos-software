@@ -23,7 +23,7 @@ pub fn get_btn_trash_icon<'a>() -> Button<'a, AppEvent> {
 
 /// Button styled with `Ok` label
 pub fn get_btn_ok<'a>() -> Button<'a, AppEvent> {
-    button(icon::check_icon()).style(get_style_btn_ok())
+    button(icon::sale_car_icon()).style(get_style_btn_ok())
 }
 
 /// Button styled with `..` label to edit row
@@ -48,7 +48,7 @@ pub fn get_btn_plus_icon<'a>() -> Button<'a, AppEvent> {
 
 /// Button styled with `menu` icon
 pub fn get_btn_right_arrow<'a>() -> Button<'a, AppEvent> {
-    button(icon::arrow_left_icon().size(SIZE_TEXT)).style(get_style_btn_ok())
+    button(icon::child_icon().size(SIZE_TEXT)).style(get_style_btn_ok())
 }
 
 /// Validate `input_value` based on `unit_measurement`

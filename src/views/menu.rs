@@ -2,7 +2,7 @@
 
 use iced::{
     theme,
-    widget::{button, row, text, Button},
+    widget::{button, column, row, text, Button},
     Element,
 };
 
@@ -13,53 +13,67 @@ use crate::{
     },
     events::AppEvent,
     kinds::{AppModule, View},
-    views::style::btns,
+    views::{
+        icon::{catalog_icon, loan_icon, sale_icon, sale_info_icon, tobuy_icon},
+        style::btns,
+    },
 };
 
 fn get_button_styled<'a>(
-    label: &str,
+    label: Element<'a, AppEvent>,
     appmodule: &AppModule,
     current_appmodule: &AppModule,
     default_view: &View,
 ) -> Button<'a, AppEvent> {
-    let button =
-        button(text(label).size(SIZE_BTNS_TEXT)).style(if appmodule == current_appmodule {
-            theme::Button::Primary
-        } else {
-            btns::get_style_btn_main_menu()
-        });
+    let button = button(label).style(if appmodule == current_appmodule {
+        theme::Button::Primary
+    } else {
+        btns::get_style_btn_main_menu()
+    });
 
     button.on_press(AppEvent::ChangeAppModule(*appmodule, default_view.clone()))
 }
 
 pub fn get_menu_btns<'a>(selected_appmodule: &AppModule) -> Element<'a, AppEvent> {
+    let btn_container = |module: AppModule| {
+        let (label, icon) = match module {
+            AppModule::Catalog => (CATALOG_BTN_MSG, catalog_icon()),
+            AppModule::Sale => (SALE_BTN_MSG, sale_icon()),
+            AppModule::Loans => (LOAN_BTN_MSG, loan_icon()),
+            AppModule::ToBuyList => (TO_BUY_BTN_MSG, tobuy_icon()),
+            AppModule::Stats => (SALES_INFO_BTN_MSG, sale_info_icon()),
+        };
+        column![text(label).size(SIZE_BTNS_TEXT), icon.size(SIZE_BTNS_TEXT)]
+            .align_items(iced::Alignment::Center)
+    };
+
     row!(
         get_button_styled(
-            CATALOG_BTN_MSG,
+            btn_container(AppModule::Catalog).into(),
             &AppModule::Catalog,
             selected_appmodule,
             &View::CatalogProducts
         ),
         get_button_styled(
-            SALE_BTN_MSG,
+            btn_container(AppModule::Sale).into(),
             &AppModule::Sale,
             selected_appmodule,
             &View::SaleListProducts
         ),
         get_button_styled(
-            LOAN_BTN_MSG,
+            btn_container(AppModule::Loans).into(),
             &AppModule::Loans,
             selected_appmodule,
             &View::LoansByDeptor
         ),
         get_button_styled(
-            TO_BUY_BTN_MSG,
+            btn_container(AppModule::ToBuyList).into(),
             &AppModule::ToBuyList,
             selected_appmodule,
             &View::ToBuy
         ),
         get_button_styled(
-            SALES_INFO_BTN_MSG,
+            btn_container(AppModule::Stats).into(),
             &AppModule::Stats,
             selected_appmodule,
             &View::SaleInfo

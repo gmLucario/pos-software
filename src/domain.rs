@@ -73,8 +73,8 @@ impl Application for AppProcessor {
         Theme::Light
     }
 
-    fn new(_flags: ()) -> (Self, Command<AppEvent>) {
-        let _ = font::load(iced_aw::graphics::icons::ICON_FONT_BYTES);
+    fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+        let _ = font::load(views::icon::ICON_FONT_BYTES);
         (AppProcessor::default(), Command::none())
     }
 
@@ -86,7 +86,7 @@ impl Application for AppProcessor {
         subscription::events().map(AppEvent::ExternalDeviceEventOccurred)
     }
 
-    fn update(&mut self, message: AppEvent) -> Command<AppEvent> {
+    fn update(&mut self, message: AppEvent) -> Command<Self::Message> {
         let db_connection = &AppDb::get().connection;
 
         match message {
@@ -679,13 +679,13 @@ impl Application for AppProcessor {
         }
     }
 
-    fn view(&self) -> Element<AppEvent> {
+    fn view(&self) -> Element<Self::Message> {
         let menu = views::menu::get_menu_btns(&self.app_module);
 
         let content = column![
             toggler(Some("".into()), self.is_dark_mode, AppEvent::DarkMode,),
             menu, //TODO: center menu
-            container(views::body::get_body_based_current_view(self))  // .width(Length::Fill)
+            views::body::get_body_based_current_view(self)  // .width(Length::Fill)
                   // .height(Length::Fill)
         ]
         .align_items(Alignment::Center)
