@@ -5,11 +5,11 @@ edition = "2021"
 
 [dependencies]
 async-std = { version = "1.12.0", features = ["attributes"] }
-chrono = "0.4.28"
+chrono = "0.4.29"
 custom_crates = { version = "0.1.0", path = "crates" }
 envy = "0.4.2"
 iced = { version = "0.10.0", features = [ "tokio" ] }
-iced_aw = { version = "0.7.0", default-features = false, features = [ "card", "date_picker", "modal", "icons", "tabs" ] }
+iced_aw = { version = "0.7.0", default-features = false, features = [ "card", "date_picker", "modal", "icons" ] }
 log = "0.4.20"
 num-traits = "0.2.16"
 once_cell = "1.18.0"
