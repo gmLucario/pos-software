@@ -24,7 +24,7 @@ use iced::{
     widget::{self, column, container, scrollable::RelativeOffset, toggler},
     Alignment, Application, Command, Element, Event, Length, Subscription, Theme,
 };
-use iced_aw::modal;
+use iced_aw::{graphics::icons::ICON_FONT_BYTES, modal};
 use sqlx::types::BigDecimal;
 use validator::Validate;
 
@@ -74,7 +74,7 @@ impl Application for AppProcessor {
     }
 
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let _ = font::load(views::icon::ICON_FONT_BYTES);
+        let _ = font::load(ICON_FONT_BYTES);
         (AppProcessor::default(), Command::none())
     }
 
