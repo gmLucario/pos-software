@@ -5,7 +5,7 @@ use iced::{
     widget::{button, column, row, text, Text},
     Alignment, Element, Length,
 };
-use iced_aw::{Card, DatePicker};
+use iced_aw::{helpers::date_picker, Card};
 
 use crate::{
     constants::{COLUMN_PADDING, SIZE_TEXT, SIZE_TEXT_LABEL, SPACE_COLUMNS, SPACE_ROWS},
@@ -29,7 +29,7 @@ pub fn view<'a>(
 
     column!(
         row!(
-            DatePicker::new(
+            date_picker(
                 widgets_states.show_start_date,
                 search_info.start_date,
                 button(text(search_info.start_date).size(SIZE_TEXT_LABEL)).on_press(
@@ -38,7 +38,7 @@ pub fn view<'a>(
                 AppEvent::ShowDatePicker(false, AppDatePicker::SaleStartDatePicker),
                 |date| AppEvent::SubmitDatePicker(date, AppDatePicker::SaleStartDatePicker),
             ),
-            DatePicker::new(
+            date_picker(
                 widgets_states.show_end_date,
                 search_info.end_date,
                 button(text(search_info.end_date).size(SIZE_TEXT_LABEL)).on_press(

@@ -15,18 +15,16 @@ use crate::{
     schemas::{catalog::CatalogProductForm, sale::SaleInfo},
     views::{self, style::container::get_black_border_style},
 };
-use custom_crates::widgets::{
-    modal::Modal,
-    toast::{self, Toast},
-};
+use custom_crates::widgets::toast::{self, Toast};
 use num_traits::Zero;
 use std::str::FromStr;
 
 use iced::{
-    executor, keyboard, subscription,
-    widget::{self, column, container, scrollable::RelativeOffset},
-    Alignment, Application, Command, Element, Event, Length, Subscription,
+    executor, font, keyboard, subscription,
+    widget::{self, column, container, scrollable::RelativeOffset, toggler},
+    Alignment, Application, Command, Element, Event, Length, Subscription, Theme,
 };
+use iced_aw::{graphics::icons::ICON_FONT_BYTES, modal};
 use sqlx::types::BigDecimal;
 use validator::Validate;
 
@@ -39,13 +37,15 @@ pub struct ModalInfo {
 #[derive(Default)]
 pub struct AppProcessor {
     /// Current app module user is interacting with
-    pub current_appmodule: AppModule,
+    pub app_module: AppModule,
     /// Current app view user is interacting with
     pub current_view: View,
     /// Modal info state
     pub modal: ModalInfo,
     /// Toasts messages
     pub toasts: Vec<Toast>,
+    /// Set or unset the darkmode
+    pub is_dark_mode: bool,
 
     /// Controller handles Catalog module logic
     pub catalog_controller: controllers::catalog::Catalog,
@@ -65,7 +65,16 @@ impl Application for AppProcessor {
     type Theme = iced::Theme;
     type Flags = ();
 
-    fn new(_flags: ()) -> (Self, Command<AppEvent>) {
+    fn theme(&self) -> Self::Theme {
+        if self.is_dark_mode {
+            return Theme::Dark;
+        }
+
+        Theme::Light
+    }
+
+    fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+        let _ = font::load(ICON_FONT_BYTES);
         (AppProcessor::default(), Command::none())
     }
 
@@ -77,7 +86,7 @@ impl Application for AppProcessor {
         subscription::events().map(AppEvent::ExternalDeviceEventOccurred)
     }
 
-    fn update(&mut self, message: AppEvent) -> Command<AppEvent> {
+    fn update(&mut self, message: AppEvent) -> Command<Self::Message> {
         let db_connection = &AppDb::get().connection;
 
         match message {
@@ -104,6 +113,10 @@ impl Application for AppProcessor {
                 self.modal.show_modal = false;
                 Command::none()
             }
+            AppEvent::DarkMode(is_on) => {
+                self.is_dark_mode = is_on;
+                Command::none()
+            }
             AppEvent::ExternalDeviceEventOccurred(event) => match event {
                 Event::Keyboard(keyboard_event) => match keyboard_event {
                     keyboard::Event::KeyPressed {
@@ -120,7 +133,7 @@ impl Application for AppProcessor {
                         key_code: keyboard::KeyCode::Space,
                         modifiers,
                     } if modifiers.shift() => {
-                        if self.current_appmodule != AppModule::Catalog {
+                        if self.app_module != AppModule::Catalog {
                             return Command::none();
                         }
 
@@ -144,7 +157,7 @@ impl Application for AppProcessor {
                 _ => Command::none(),
             },
             AppEvent::ChangeAppModule(appmodule, defaultview) => {
-                self.current_appmodule = appmodule;
+                self.app_module = appmodule;
                 Command::perform(async move { defaultview }, AppEvent::ChangeView)
             }
             AppEvent::ChangeModalView(modal_view) => {
@@ -666,12 +679,13 @@ impl Application for AppProcessor {
         }
     }
 
-    fn view<'a>(&'a self) -> Element<'a, AppEvent> {
-        let menu = views::menu::get_menu_btns(&self.current_appmodule);
+    fn view(&self) -> Element<Self::Message> {
+        let menu = views::menu::get_menu_btns(&self.app_module);
 
         let content = column![
+            toggler(Some("".into()), self.is_dark_mode, AppEvent::DarkMode,),
             menu, //TODO: center menu
-            container(views::body::get_body_based_current_view(self))  // .width(Length::Fill)
+            views::body::get_body_based_current_view(self)  // .width(Length::Fill)
                   // .height(Length::Fill)
         ]
         .align_items(Alignment::Center)
@@ -680,17 +694,17 @@ impl Application for AppProcessor {
         .spacing(SPACE_COLUMNS)
         .padding(COLUMN_PADDING);
 
-        let content: Element<'a, AppEvent> = if self.modal.show_modal {
-            Modal::new(
-                content,
+        let modal_content = match self.modal.show_modal {
+            true => Some(
                 container(views::modal::get_modal_based_modalview(self))
                     .style(get_black_border_style()),
-            )
-            .on_blur(AppEvent::HideModal)
-            .into()
-        } else {
-            content.into()
+            ),
+            false => None,
         };
+
+        let content = modal(content, modal_content)
+            .backdrop(AppEvent::HideModal)
+            .on_esc(AppEvent::HideModal);
 
         toast::Manager::new(content, &self.toasts, AppEvent::CloseToast).into()
     }
