@@ -792,6 +792,89 @@ Define application errors:
 
 ---
 
+## Development Workflow
+
+### Running the App in Development Mode
+
+```bash
+# Run with hot-reload (recommended for development)
+cargo run
+
+# Run with Dioxus devtools enabled (debugging UI)
+# The devtools feature is already enabled in Cargo.toml
+cargo run --features devtools
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+cargo test
+
+# Run tests with output
+cargo test -- --nocapture
+
+# Run specific test
+cargo test test_name
+
+# Run tests for a specific module
+cargo test --package pos-app --lib models::product
+
+# Run integration tests
+cargo test --test '*'
+```
+
+### Building for Production
+
+```bash
+# Build optimized release for macOS (native)
+cargo build --release
+
+# The binary will be at: target/release/pos-app
+```
+
+### Cross-Compiling for Windows (from macOS)
+
+```bash
+# One-time setup: Install Windows target
+rustup target add x86_64-pc-windows-gnu
+brew install mingw-w64  # Install Windows cross-compiler
+
+# Build for Windows
+cargo build --release --target x86_64-pc-windows-gnu
+
+# The binary will be at: target/x86_64-pc-windows-gnu/release/pos-app.exe
+```
+
+### Database Migrations
+
+```bash
+# Create database (run once or when schema changes)
+sqlite3 pos.db < migrations/sqlite_schema.sql
+
+# Or programmatically in code (preferred)
+# Database will be created automatically on first run
+```
+
+### Useful Development Commands
+
+```bash
+# Format code
+cargo fmt
+
+# Check for errors without building
+cargo check
+
+# Lint code
+cargo clippy
+
+# Watch mode (requires cargo-watch)
+cargo install cargo-watch
+cargo watch -x run
+```
+
+---
+
 ## Next Steps
 
 1. **Review and approve this plan**
