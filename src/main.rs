@@ -1,33 +1,27 @@
-//! Entry point of the application
-#[macro_use]
-extern crate log;
-extern crate simplelog;
+//! POS Application - Point of Sale System
+//!
+//! A desktop application for managing inventory, sales, and loans.
+//! Built with Dioxus for cross-platform support (macOS, Windows).
 
-pub mod config;
-pub mod constants;
-pub mod controllers;
-pub mod db;
-pub mod domain;
-pub mod errors;
-pub mod events;
-pub mod helpers;
-pub mod kinds;
-pub mod models;
-pub mod repo;
-pub mod result;
-pub mod schemas;
-pub mod setup;
-pub mod views;
+#![allow(non_snake_case)]
 
-#[async_std::main]
-async fn main() -> result::GenericReturn<()> {
-    setup::setup_app_config()?;
+mod mock_data;
+mod views;
 
-    setup::logger_wrapper()?;
+use dioxus::prelude::*;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
-    setup::setup_db(config::AppConfig::get()).await?;
+fn main() {
+    // Initialize logging
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Failed to set tracing subscriber");
 
-    setup::setup_main_app().await?;
+    tracing::info!("Starting POS Application");
 
-    Ok(())
+    // Launch the Dioxus desktop app
+    dioxus_desktop::launch(views::App);
 }

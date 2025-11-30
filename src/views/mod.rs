@@ -1,10 +1,10 @@
-pub mod body;
-pub mod catalog;
-pub mod icon;
-pub mod loan;
-pub mod menu;
-pub mod modal;
-pub mod sale;
-pub mod sales_info;
-pub mod style;
-pub mod to_buy;
+//! UI Views Module
+//!
+//! This module contains all Dioxus components for the POS application.
+
+mod app;
+pub mod inventory;
+pub mod loans;
+pub mod sales;
+
+pub use app::App;
