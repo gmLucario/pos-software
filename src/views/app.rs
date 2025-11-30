@@ -20,17 +20,17 @@ pub fn App() -> Element {
     let mut active_tab = use_signal(|| ActiveTab::Sales);
 
     // Global state: Mock data
-    let mut products = use_signal(|| {
+    let products = use_signal(|| {
         let (products, _, _) = mock_data::generate_sample_data();
         products
     });
 
-    let mut sales = use_signal(|| {
+    let _sales = use_signal(|| {
         let (_, sales, _) = mock_data::generate_sample_data();
         sales
     });
 
-    let mut loans = use_signal(|| {
+    let loans = use_signal(|| {
         let (_, _, loans) = mock_data::generate_sample_data();
         loans
     });
