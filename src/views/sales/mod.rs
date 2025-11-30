@@ -40,7 +40,7 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
         .collect::<Vec<_>>();
 
     // Add product to cart
-    let add_to_cart = move |product: MockProduct| {
+    let mut add_to_cart = move |product: MockProduct| {
         let mut cart_items = cart.write();
 
         // Check if product already in cart
@@ -55,7 +55,7 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
     };
 
     // Remove from cart
-    let remove_from_cart = move |product_id: String| {
+    let mut remove_from_cart = move |product_id: String| {
         cart.write().retain(|item| item.product.id != product_id);
     };
 

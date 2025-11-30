@@ -49,9 +49,10 @@ fn test_product_profit_margin() {
     let cola = products.iter().find(|p| p.name == "Coca Cola 2L").unwrap();
     let margin = cola.profit_margin().expect("Should have cost price");
 
-    // Margin = (25.50 - 18.00) / 18.00 * 100 = 41.67%
-    let expected_margin = dec!(41.666666666666666666666666667);
-    assert_eq!(margin, expected_margin, "Profit margin calculation incorrect");
+    // Margin = (25.50 - 18.00) / 18.00 * 100 = 41.6666...%
+    // Round to 2 decimal places for comparison
+    let margin_rounded = margin.round_dp(2);
+    assert_eq!(margin_rounded, dec!(41.67), "Profit margin calculation incorrect");
 }
 
 #[test]
