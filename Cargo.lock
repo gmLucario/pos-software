@@ -3188,6 +3188,7 @@ checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
 name = "pos-app"
 version = "0.2.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "dioxus",
  "rust_decimal",

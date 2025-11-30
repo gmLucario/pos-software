@@ -8,6 +8,7 @@
 
 pub mod mock_data;
 pub mod models;
+pub mod repo;
 pub mod utils;
 
 #[cfg(feature = "desktop")]
