@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 # UI Framework
-dioxus = { version = "0.5", features = ["desktop"] }
+dioxus = { version = "0.7", features = ["desktop"] }
 
 # Database (will be added in Phase 2)
 # sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "sqlite", "uuid", "chrono", "decimal"] }
