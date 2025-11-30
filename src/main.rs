@@ -32,6 +32,6 @@ fn main() {
         tracing::info!("Starting POS Application");
 
         // Launch the Dioxus desktop app
-        dioxus_desktop::launch(App);
+        launch(App);
     }
 }
