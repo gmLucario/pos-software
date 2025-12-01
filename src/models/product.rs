@@ -10,16 +10,16 @@ use std::str::FromStr;
 /// Product entity
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Product {
-    pub id: String,  // UUID as TEXT
+    pub id: String, // UUID as TEXT
     pub barcode: Option<String>,
     pub full_name: String,
 
-    pub user_price: Decimal,  // Stored as TEXT in DB
+    pub user_price: Decimal, // Stored as TEXT in DB
 
-    pub cost_price: Option<Decimal>,  // Stored as TEXT in DB
+    pub cost_price: Option<Decimal>, // Stored as TEXT in DB
 
-    pub min_amount: f64,  // Minimum stock threshold
-    pub current_amount: f64,  // Current inventory
+    pub min_amount: f64,     // Minimum stock threshold
+    pub current_amount: f64, // Current inventory
     pub unit_measurement_id: i32,
 
     pub created_at: DateTime<Utc>,
@@ -45,12 +45,12 @@ impl<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> for Product {
             },
             cost_price: {
                 let s: Option<String> = row.try_get("cost_price")?;
-                s.map(|s| Decimal::from_str(&s))
-                    .transpose()
-                    .map_err(|e| sqlx::Error::ColumnDecode {
+                s.map(|s| Decimal::from_str(&s)).transpose().map_err(|e| {
+                    sqlx::Error::ColumnDecode {
                         index: "cost_price".to_string(),
                         source: Box::new(e),
-                    })?
+                    }
+                })?
             },
             min_amount: row.try_get("min_amount")?,
             current_amount: row.try_get("current_amount")?,

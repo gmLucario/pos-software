@@ -1,9 +1,9 @@
 //! SQLite Sale Repository Implementation
 
+use crate::models::{Operation, Sale, SaleInput};
+use crate::repo::SaleRepository;
 use async_trait::async_trait;
 use sqlx::SqlitePool;
-use crate::models::{Sale, Operation, SaleInput};
-use crate::repo::SaleRepository;
 
 pub struct SqliteSaleRepository {
     pool: SqlitePool,
@@ -22,7 +22,9 @@ impl SaleRepository for SqliteSaleRepository {
         let operations = input.to_operations(&sale.id);
 
         // Start transaction
-        let mut tx = self.pool.begin()
+        let mut tx = self
+            .pool
+            .begin()
             .await
             .map_err(|e| format!("Failed to start transaction: {}", e))?;
 
@@ -95,31 +97,27 @@ impl SaleRepository for SqliteSaleRepository {
     }
 
     async fn get_by_id(&self, id: &str) -> Result<Option<Sale>, String> {
-        let sale = sqlx::query_as::<_, Sale>(
-            "SELECT * FROM sale WHERE id = ?"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to get sale by id: {}", e))?;
+        let sale = sqlx::query_as::<_, Sale>("SELECT * FROM sale WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to get sale by id: {}", e))?;
 
         Ok(sale)
     }
 
     async fn list_all(&self) -> Result<Vec<Sale>, String> {
-        let sales = sqlx::query_as::<_, Sale>(
-            "SELECT * FROM sale ORDER BY created_at DESC"
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to list sales: {}", e))?;
+        let sales = sqlx::query_as::<_, Sale>("SELECT * FROM sale ORDER BY created_at DESC")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to list sales: {}", e))?;
 
         Ok(sales)
     }
 
     async fn get_operations(&self, sale_id: &str) -> Result<Vec<Operation>, String> {
         let operations = sqlx::query_as::<_, Operation>(
-            "SELECT * FROM operation WHERE sale_id = ? ORDER BY created_at"
+            "SELECT * FROM operation WHERE sale_id = ? ORDER BY created_at",
         )
         .bind(sale_id)
         .fetch_all(&self.pool)
@@ -135,7 +133,7 @@ impl SaleRepository for SqliteSaleRepository {
             SELECT * FROM sale
             WHERE created_at BETWEEN ? AND ?
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(start)
         .bind(end)
@@ -155,7 +153,7 @@ impl SaleRepository for SqliteSaleRepository {
             JOIN loan l ON s.id = l.id
             WHERE l.debtor_name LIKE ?
             ORDER BY s.created_at DESC
-            "#
+            "#,
         )
         .bind(&search_term)
         .fetch_all(&self.pool)

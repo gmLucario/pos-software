@@ -40,8 +40,13 @@ pub fn validate_barcode(barcode: &str) -> Result<(), String> {
     }
 
     // Check if alphanumeric with allowed special chars (-, _)
-    if !trimmed.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
-        return Err("Barcode can only contain letters, numbers, hyphens, and underscores".to_string());
+    if !trimmed
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(
+            "Barcode can only contain letters, numbers, hyphens, and underscores".to_string(),
+        );
     }
 
     Ok(())
@@ -145,14 +150,16 @@ pub fn validate_payment_amount(amount: Decimal) -> Result<(), String> {
 
 /// Parse decimal from string with validation
 pub fn parse_decimal(input: &str) -> Result<Decimal, String> {
-    input.trim()
+    input
+        .trim()
         .parse::<Decimal>()
         .map_err(|_| format!("Invalid number: {}", input))
 }
 
 /// Parse float from string with validation
 pub fn parse_float(input: &str) -> Result<f64, String> {
-    input.trim()
+    input
+        .trim()
         .parse::<f64>()
         .map_err(|_| format!("Invalid number: {}", input))
 }

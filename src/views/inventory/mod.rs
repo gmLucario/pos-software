@@ -2,10 +2,12 @@
 //!
 //! UI components for managing product inventory.
 
-use dioxus::prelude::*;
 use crate::handlers::AppState;
-use crate::models::Product;
+use crate::models::{Product, ProductInput};
 use crate::utils::formatting::format_currency;
+use dioxus::prelude::*;
+use rust_decimal::Decimal;
+use std::str::FromStr;
 
 #[component]
 pub fn InventoryView() -> Element {
@@ -17,12 +19,13 @@ pub fn InventoryView() -> Element {
     let mut refresh_trigger = use_signal(|| 0);
 
     // Load products from database
+    let products_handler = app_state.inventory_handler.clone();
     let mut products_resource = use_resource(move || {
-        let handler = app_state.inventory_handler.clone();
-        async move {
-            handler.load_products().await
-        }
+        let handler = products_handler.clone();
+        async move { handler.load_products().await }
     });
+
+    let create_handler = app_state.inventory_handler.clone();
 
     // Refresh products when trigger changes
     use_effect(move || {
@@ -170,6 +173,23 @@ pub fn InventoryView() -> Element {
                     }
                 }
             }
+
+
+            if show_add_form() {
+
+                AddProductForm {
+                    on_close: move |_| show_add_form.set(false),
+                    on_save: move |input| {
+                        let handler = create_handler.clone();
+                        spawn(async move {
+                            if handler.create_product(input).await.is_ok() {
+                                show_add_form.set(false);
+                                refresh_trigger.set(refresh_trigger() + 1);
+                            }
+                        });
+                    }
+                }
+            }
         }
     }
 }
@@ -236,6 +256,198 @@ fn StatCard(label: String, value: String, color: String) -> Element {
             div {
                 style: "font-size: 1.5rem; font-weight: 700; color: {color};",
                 "{value}"
+            }
+        }
+    }
+}
+
+#[component]
+fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput>) -> Element {
+    let mut full_name = use_signal(String::new);
+    let mut barcode = use_signal(String::new);
+    let mut price = use_signal(String::new);
+    let mut cost = use_signal(String::new);
+    let mut stock = use_signal(String::new);
+    let mut min_stock = use_signal(String::new);
+    let mut unit_id = use_signal(|| 3); // Default to Unit (3)
+    let mut error_msg = use_signal(String::new);
+
+    let units_resource = use_resource(move || {
+        async move {
+            // We need access to inventory handler here.
+            // Since we can't easily pass it through props without changing signature significantly,
+            // let's use the context again.
+            let app_state = use_context::<AppState>();
+            app_state.inventory_handler.get_units().await
+        }
+    });
+
+    let handle_submit = move |_| {
+        let name = full_name();
+        if name.trim().is_empty() {
+            error_msg.set("Product name is required".to_string());
+            return;
+        }
+
+        let user_price = match Decimal::from_str(&price()) {
+            Ok(p) => p,
+            Err(_) => {
+                error_msg.set("Invalid price".to_string());
+                return;
+            }
+        };
+
+        let cost_price = if cost().is_empty() {
+            None
+        } else {
+            match Decimal::from_str(&cost()) {
+                Ok(c) => Some(c),
+                Err(_) => {
+                    error_msg.set("Invalid cost price".to_string());
+                    return;
+                }
+            }
+        };
+
+        let current_amount = stock().parse::<f64>().unwrap_or(0.0);
+        let min_amount = min_stock().parse::<f64>().unwrap_or(0.0);
+
+        on_save.call(ProductInput {
+            full_name: name,
+            barcode: if barcode().is_empty() {
+                None
+            } else {
+                Some(barcode())
+            },
+            user_price,
+            cost_price,
+            current_amount,
+            min_amount,
+            unit_measurement_id: unit_id(),
+        });
+    };
+
+    rsx! {
+        div {
+            style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;",
+            onclick: move |_| on_close.call(()),
+
+            div {
+                style: "background: white; padding: 2rem; border-radius: 0.5rem; width: 500px; max-width: 90%; max-height: 90vh; overflow-y: auto;",
+                onclick: move |evt| evt.stop_propagation(),
+
+                h3 { style: "margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;", "Add New Product" }
+
+                if !error_msg().is_empty() {
+                    div {
+                        style: "background: #fff5f5; color: #c53030; padding: 0.75rem; border-radius: 0.25rem; margin-bottom: 1rem;",
+                        "{error_msg}"
+                    }
+                }
+
+                div {
+                    style: "margin-bottom: 1rem;",
+                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Product Name *" }
+                    input {
+                        r#type: "text",
+                        style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                        value: "{full_name}",
+                        oninput: move |e| full_name.set(e.value())
+                    }
+                }
+
+                div {
+                    style: "margin-bottom: 1rem;",
+                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Barcode" }
+                    input {
+                        r#type: "text",
+                        style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                        value: "{barcode}",
+                        oninput: move |e| barcode.set(e.value())
+                    }
+                }
+
+                div {
+                    style: "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;",
+                    div {
+                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Price *" }
+                        input {
+                            r#type: "number",
+                            step: "0.01",
+                            style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                            value: "{price}",
+                            oninput: move |e| price.set(e.value())
+                        }
+                    }
+                    div {
+                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Cost" }
+                        input {
+                            r#type: "number",
+                            step: "0.01",
+                            style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                            value: "{cost}",
+                            oninput: move |e| cost.set(e.value())
+                        }
+                    }
+                }
+
+                div {
+                    style: "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;",
+                    div {
+                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Stock Amount" }
+                        input {
+                            r#type: "number",
+                            style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                            value: "{stock}",
+                            oninput: move |e| stock.set(e.value())
+                        }
+                    }
+                    div {
+                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Min Stock" }
+                        input {
+                            r#type: "number",
+                            style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                            value: "{min_stock}",
+                            oninput: move |e| min_stock.set(e.value())
+                        }
+                    }
+                }
+
+                div {
+                    style: "margin-bottom: 1.5rem;",
+                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Unit of Measurement" }
+                    select {
+                        style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; background: white;",
+                        onchange: move |evt| {
+                            if let Ok(id) = evt.value().parse::<i32>() {
+                                unit_id.set(id);
+                            }
+                        },
+                        if let Some(Ok(units)) = units_resource.read().as_ref() {
+                            for unit in units {
+                                option {
+                                    value: "{unit.id}",
+                                    selected: unit.id == unit_id(),
+                                    "{unit.description} ({unit.abbreviation})"
+                                }
+                            }
+                        }
+                    }
+                }
+
+                div {
+                    style: "display: flex; justify-content: flex-end; gap: 0.5rem;",
+                    button {
+                        style: "padding: 0.5rem 1rem; border: 1px solid #e2e8f0; background: white; border-radius: 0.25rem; cursor: pointer;",
+                        onclick: move |_| on_close.call(()),
+                        "Cancel"
+                    }
+                    button {
+                        style: "padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                        onclick: handle_submit,
+                        "Save Product"
+                    }
+                }
             }
         }
     }

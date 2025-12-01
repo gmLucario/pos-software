@@ -2,8 +2,8 @@
 //!
 //! Defines the interfaces for data access operations.
 
-use async_trait::async_trait;
 use crate::models::*;
+use async_trait::async_trait;
 
 /// Product repository trait
 #[async_trait]
@@ -62,7 +62,12 @@ pub trait SaleRepository: Send + Sync {
 #[async_trait]
 pub trait LoanRepository: Send + Sync {
     /// Create a new loan
-    async fn create(&self, input: LoanInput, total_debt: rust_decimal::Decimal, paid_amount: rust_decimal::Decimal) -> Result<Loan, String>;
+    async fn create(
+        &self,
+        input: LoanInput,
+        total_debt: rust_decimal::Decimal,
+        paid_amount: rust_decimal::Decimal,
+    ) -> Result<Loan, String>;
 
     /// Get loan by ID
     async fn get_by_id(&self, id: &str) -> Result<Option<Loan>, String>;

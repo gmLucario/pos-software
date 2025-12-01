@@ -153,32 +153,30 @@ pub fn generate_sample_data() -> (Vec<MockProduct>, Vec<MockSale>, Vec<MockLoan>
     ];
 
     // Sample sales
-    let sales = vec![
-        MockSale {
-            id: "s1".to_string(),
-            items: vec![
-                MockSaleItem {
-                    product_id: "p1".to_string(),
-                    product_name: "Coca Cola 2L".to_string(),
-                    quantity: 2.0,
-                    unit_price: dec!(25.50),
-                    subtotal: dec!(51.00),
-                },
-                MockSaleItem {
-                    product_id: "p4".to_string(),
-                    product_name: "Bread".to_string(),
-                    quantity: 3.0,
-                    unit_price: dec!(15.00),
-                    subtotal: dec!(45.00),
-                },
-            ],
-            total: dec!(96.00),
-            paid: dec!(100.00),
-            change: dec!(4.00),
-            is_loan: false,
-            date: Utc::now(),
-        },
-    ];
+    let sales = vec![MockSale {
+        id: "s1".to_string(),
+        items: vec![
+            MockSaleItem {
+                product_id: "p1".to_string(),
+                product_name: "Coca Cola 2L".to_string(),
+                quantity: 2.0,
+                unit_price: dec!(25.50),
+                subtotal: dec!(51.00),
+            },
+            MockSaleItem {
+                product_id: "p4".to_string(),
+                product_name: "Bread".to_string(),
+                quantity: 3.0,
+                unit_price: dec!(15.00),
+                subtotal: dec!(45.00),
+            },
+        ],
+        total: dec!(96.00),
+        paid: dec!(100.00),
+        change: dec!(4.00),
+        is_loan: false,
+        date: Utc::now(),
+    }];
 
     // Sample loans
     let loans = vec![

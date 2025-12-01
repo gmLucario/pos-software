@@ -10,7 +10,7 @@ use std::str::FromStr;
 /// Loan entity
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Loan {
-    pub id: String,  // References sale.id
+    pub id: String, // References sale.id
 
     pub total_debt: Decimal,
 
@@ -98,7 +98,7 @@ impl Loan {
 /// Loan payment entity
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoanPayment {
-    pub id: String,  // UUID as TEXT
+    pub id: String, // UUID as TEXT
     pub loan_id: String,
 
     pub amount: Decimal,
@@ -148,18 +148,18 @@ impl LoanInput {
     /// Create a Loan from Sale info
     pub fn to_loan(&self, total_debt: Decimal, paid_amount: Decimal) -> Loan {
         Loan {
-            id: self.sale_id.clone(),  // Loan ID = Sale ID
+            id: self.sale_id.clone(), // Loan ID = Sale ID
             total_debt,
             paid_amount,
             remaining_amount: total_debt - paid_amount,
             debtor_name: self.debtor_name.clone(),
             debtor_phone: self.debtor_phone.clone(),
             status_id: if paid_amount >= total_debt {
-                3  // Fully Paid
+                3 // Fully Paid
             } else if paid_amount > Decimal::ZERO {
-                2  // Partially Paid
+                2 // Partially Paid
             } else {
-                1  // Active
+                1 // Active
             },
             created_at: Utc::now(),
         }

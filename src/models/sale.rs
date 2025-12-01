@@ -10,7 +10,7 @@ use std::str::FromStr;
 /// Sale entity
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sale {
-    pub id: String,  // UUID as TEXT
+    pub id: String, // UUID as TEXT
 
     pub total_amount: Decimal,
 
@@ -18,7 +18,7 @@ pub struct Sale {
 
     pub change_amount: Decimal,
 
-    pub is_loan: bool,  // Stored as INTEGER (0/1) in DB
+    pub is_loan: bool, // Stored as INTEGER (0/1) in DB
 
     pub sold_at: DateTime<Utc>,
 }
@@ -83,10 +83,10 @@ impl Sale {
 /// Operation (sale line item) entity
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Operation {
-    pub id: String,  // UUID as TEXT
+    pub id: String, // UUID as TEXT
     pub sale_id: String,
     pub product_id: String,
-    pub product_name: String,  // Denormalized for receipts
+    pub product_name: String, // Denormalized for receipts
     pub quantity: f64,
 
     pub unit_price: Decimal,

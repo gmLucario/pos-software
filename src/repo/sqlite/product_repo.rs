@@ -1,9 +1,9 @@
 //! SQLite Product Repository Implementation
 
-use async_trait::async_trait;
-use sqlx::SqlitePool;
 use crate::models::{Product, ProductInput};
 use crate::repo::ProductRepository;
+use async_trait::async_trait;
+use sqlx::SqlitePool;
 
 pub struct SqliteProductRepository {
     pool: SqlitePool,
@@ -48,36 +48,30 @@ impl ProductRepository for SqliteProductRepository {
     }
 
     async fn get_by_id(&self, id: &str) -> Result<Option<Product>, String> {
-        let product = sqlx::query_as::<_, Product>(
-            "SELECT * FROM product WHERE id = ?"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to get product by id: {}", e))?;
+        let product = sqlx::query_as::<_, Product>("SELECT * FROM product WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to get product by id: {}", e))?;
 
         Ok(product)
     }
 
     async fn get_by_barcode(&self, barcode: &str) -> Result<Option<Product>, String> {
-        let product = sqlx::query_as::<_, Product>(
-            "SELECT * FROM product WHERE barcode = ?"
-        )
-        .bind(barcode)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to get product by barcode: {}", e))?;
+        let product = sqlx::query_as::<_, Product>("SELECT * FROM product WHERE barcode = ?")
+            .bind(barcode)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to get product by barcode: {}", e))?;
 
         Ok(product)
     }
 
     async fn list_all(&self) -> Result<Vec<Product>, String> {
-        let products = sqlx::query_as::<_, Product>(
-            "SELECT * FROM product ORDER BY full_name"
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to list products: {}", e))?;
+        let products = sqlx::query_as::<_, Product>("SELECT * FROM product ORDER BY full_name")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to list products: {}", e))?;
 
         Ok(products)
     }
@@ -108,7 +102,8 @@ impl ProductRepository for SqliteProductRepository {
         .map_err(|e| format!("Failed to update product: {}", e))?;
 
         // Fetch and return updated product
-        self.get_by_id(id).await?
+        self.get_by_id(id)
+            .await?
             .ok_or_else(|| format!("Product not found after update: {}", id))
     }
 
@@ -125,15 +120,13 @@ impl ProductRepository for SqliteProductRepository {
     async fn update_stock(&self, id: &str, new_amount: f64) -> Result<(), String> {
         let updated_at = chrono::Utc::now();
 
-        sqlx::query(
-            "UPDATE product SET current_amount = ?, updated_at = ? WHERE id = ?"
-        )
-        .bind(new_amount)
-        .bind(updated_at.to_rfc3339())
-        .bind(id)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to update stock: {}", e))?;
+        sqlx::query("UPDATE product SET current_amount = ?, updated_at = ? WHERE id = ?")
+            .bind(new_amount)
+            .bind(updated_at.to_rfc3339())
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to update stock: {}", e))?;
 
         Ok(())
     }
@@ -146,7 +139,7 @@ impl ProductRepository for SqliteProductRepository {
             SELECT * FROM product
             WHERE full_name LIKE ? OR barcode LIKE ?
             ORDER BY full_name
-            "#
+            "#,
         )
         .bind(&search_term)
         .bind(&search_term)
@@ -159,7 +152,7 @@ impl ProductRepository for SqliteProductRepository {
 
     async fn get_low_stock(&self) -> Result<Vec<Product>, String> {
         let products = sqlx::query_as::<_, Product>(
-            "SELECT * FROM product WHERE current_amount <= min_amount ORDER BY full_name"
+            "SELECT * FROM product WHERE current_amount <= min_amount ORDER BY full_name",
         )
         .fetch_all(&self.pool)
         .await

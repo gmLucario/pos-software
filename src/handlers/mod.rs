@@ -4,12 +4,12 @@
 //! Handlers manage async operations and state updates for Dioxus components.
 
 pub mod inventory_handler;
-pub mod sales_handler;
 pub mod loans_handler;
+pub mod sales_handler;
 
 pub use inventory_handler::InventoryHandler;
-pub use sales_handler::SalesHandler;
 pub use loans_handler::LoansHandler;
+pub use sales_handler::SalesHandler;
 
 /// Application state container
 #[derive(Clone, Debug, PartialEq)]
@@ -22,17 +22,21 @@ pub struct AppState {
 impl AppState {
     /// Create new application state with database pool
     pub fn new(pool: sqlx::SqlitePool) -> Self {
-        use crate::repo::sqlite::*;
         use crate::api::*;
+        use crate::repo::sqlite::*;
         use std::sync::Arc;
 
         // Create repositories
         let product_repo = Arc::new(SqliteProductRepository::new(pool.clone()));
         let sale_repo = Arc::new(SqliteSaleRepository::new(pool.clone()));
         let loan_repo = Arc::new(SqliteLoanRepository::new(pool.clone()));
+        let catalog_repo = Arc::new(SqliteCatalogRepository::new(pool.clone()));
 
         // Create APIs
-        let inventory_api = Arc::new(InventoryApi::new(product_repo.clone()));
+        let inventory_api = Arc::new(InventoryApi::new(
+            product_repo.clone(),
+            catalog_repo.clone(),
+        ));
         let sales_api = Arc::new(SalesApi::new(sale_repo.clone(), product_repo.clone()));
         let loans_api = Arc::new(LoansApi::new(loan_repo.clone(), sale_repo.clone()));
 

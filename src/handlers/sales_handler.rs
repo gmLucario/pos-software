@@ -2,7 +2,7 @@
 //!
 //! UI event handlers for sales processing.
 
-use crate::api::{SalesApi, SaleWithOperations, SalesStats};
+use crate::api::{SaleWithOperations, SalesApi, SalesStats};
 use crate::models::{Sale, SaleInput};
 use std::sync::Arc;
 
@@ -37,7 +37,11 @@ impl SalesHandler {
     }
 
     /// Get sales within a date range
-    pub async fn get_sales_by_date_range(&self, start: String, end: String) -> Result<Vec<Sale>, String> {
+    pub async fn get_sales_by_date_range(
+        &self,
+        start: String,
+        end: String,
+    ) -> Result<Vec<Sale>, String> {
         self.api.get_sales_by_date(&start, &end).await
     }
 

@@ -37,8 +37,7 @@ fn main() {
         tracing::info!("Starting POS Application");
 
         // Initialize database
-        let runtime = tokio::runtime::Runtime::new()
-            .expect("Failed to create Tokio runtime");
+        let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
         let pool = runtime.block_on(async {
             let db_url = pos_app::utils::db::get_database_url();
@@ -52,7 +51,8 @@ fn main() {
         tracing::info!("Database initialized successfully");
 
         // Create app state and store it globally
-        APP_STATE.set(pos_app::handlers::AppState::new(pool))
+        APP_STATE
+            .set(pos_app::handlers::AppState::new(pool))
             .expect("Failed to set app state");
         tracing::info!("Application state created");
 

@@ -105,9 +105,15 @@ fn TabButton(label: String, is_active: bool, onclick: EventHandler<MouseEvent>) 
     let base_style = "padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s;";
 
     let style = if is_active {
-        format!("{} background: white; color: #667eea; box-shadow: 0 2px 4px rgba(0,0,0,0.1);", base_style)
+        format!(
+            "{} background: white; color: #667eea; box-shadow: 0 2px 4px rgba(0,0,0,0.1);",
+            base_style
+        )
     } else {
-        format!("{} background: rgba(255,255,255,0.2); color: white;", base_style)
+        format!(
+            "{} background: rgba(255,255,255,0.2); color: white;",
+            base_style
+        )
     };
 
     rsx! {

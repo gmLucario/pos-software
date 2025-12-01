@@ -110,7 +110,11 @@ fn test_product_profit_margin_calculation() {
     // Margin = (25.50 - 18.00) / 18.00 * 100 = 41.6666...%
     // Round to 2 decimal places for comparison
     let margin_rounded = margin.round_dp(2);
-    assert_eq!(margin_rounded, dec!(41.67), "Profit margin calculation incorrect");
+    assert_eq!(
+        margin_rounded,
+        dec!(41.67),
+        "Profit margin calculation incorrect"
+    );
 }
 
 #[test]
@@ -184,7 +188,11 @@ fn test_profit_margin_with_zero_cost() {
     };
 
     let margin = product.profit_margin().unwrap();
-    assert_eq!(margin, Decimal::ZERO, "Margin should be zero when cost is zero");
+    assert_eq!(
+        margin,
+        Decimal::ZERO,
+        "Margin should be zero when cost is zero"
+    );
 }
 
 #[test]
@@ -200,5 +208,8 @@ fn test_product_without_cost() {
         unit: "unit".to_string(),
     };
 
-    assert!(product.profit_margin().is_none(), "Should return None when no cost");
+    assert!(
+        product.profit_margin().is_none(),
+        "Should return None when no cost"
+    );
 }

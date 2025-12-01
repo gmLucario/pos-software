@@ -2,7 +2,7 @@
 //!
 //! Business logic for loan management and payment processing.
 
-use crate::models::{Loan, LoanPayment, LoanInput, LoanPaymentInput, StatusLoan};
+use crate::models::{Loan, LoanInput, LoanPayment, LoanPaymentInput, StatusLoan};
 use crate::repo::{LoanRepository, SaleRepository};
 use rust_decimal::Decimal;
 use std::sync::Arc;
@@ -27,17 +27,20 @@ impl PartialEq for LoansApi {
 }
 
 impl LoansApi {
-    pub fn new(
-        loan_repo: Arc<dyn LoanRepository>,
-        sale_repo: Arc<dyn SaleRepository>,
-    ) -> Self {
-        Self { loan_repo, sale_repo }
+    pub fn new(loan_repo: Arc<dyn LoanRepository>, sale_repo: Arc<dyn SaleRepository>) -> Self {
+        Self {
+            loan_repo,
+            sale_repo,
+        }
     }
 
     /// Create a new loan from a sale
     pub async fn create_loan(&self, sale_id: String, input: LoanInput) -> Result<Loan, String> {
         // Validate the sale exists
-        let sale = self.sale_repo.get_by_id(&sale_id).await?
+        let sale = self
+            .sale_repo
+            .get_by_id(&sale_id)
+            .await?
             .ok_or_else(|| format!("Sale not found: {}", sale_id))?;
 
         // Validate debtor information
@@ -57,12 +60,16 @@ impl LoansApi {
         let mut loan_input = input;
         loan_input.sale_id = sale_id;
 
-        self.loan_repo.create(loan_input, total_debt, paid_amount).await
+        self.loan_repo
+            .create(loan_input, total_debt, paid_amount)
+            .await
     }
 
     /// Get loan by ID
     pub async fn get_loan(&self, id: &str) -> Result<Loan, String> {
-        self.loan_repo.get_by_id(id).await?
+        self.loan_repo
+            .get_by_id(id)
+            .await?
             .ok_or_else(|| format!("Loan not found: {}", id))
     }
 
@@ -71,10 +78,7 @@ impl LoansApi {
         let loan = self.get_loan(id).await?;
         let payments = self.loan_repo.get_payments(id).await?;
 
-        Ok(LoanWithPayments {
-            loan,
-            payments,
-        })
+        Ok(LoanWithPayments { loan, payments })
     }
 
     /// List all loans
@@ -111,8 +115,7 @@ impl LoansApi {
         if input.amount > loan.remaining_amount {
             return Err(format!(
                 "Payment amount ${} exceeds remaining debt ${}",
-                input.amount,
-                loan.remaining_amount
+                input.amount, loan.remaining_amount
             ));
         }
 
@@ -137,19 +140,14 @@ impl LoansApi {
         let total_loans = loans.len();
         let active_loan_count = active_loans.len();
 
-        let total_debt = loans.iter()
-            .map(|l| l.total_debt)
-            .sum();
+        let total_debt = loans.iter().map(|l| l.total_debt).sum();
 
-        let total_paid = loans.iter()
-            .map(|l| l.paid_amount)
-            .sum();
+        let total_paid = loans.iter().map(|l| l.paid_amount).sum();
 
-        let total_remaining = loans.iter()
-            .map(|l| l.remaining_amount)
-            .sum();
+        let total_remaining = loans.iter().map(|l| l.remaining_amount).sum();
 
-        let fully_paid_count = loans.iter()
+        let fully_paid_count = loans
+            .iter()
             .filter(|l| l.status_id == StatusLoan::FULLY_PAID)
             .count();
 
@@ -171,7 +169,9 @@ impl LoansApi {
             return Err("Cannot cancel a fully paid loan".to_string());
         }
 
-        self.loan_repo.update_status(id, StatusLoan::CANCELLED).await
+        self.loan_repo
+            .update_status(id, StatusLoan::CANCELLED)
+            .await
     }
 
     /// Get overdue loans (placeholder - requires due date implementation)

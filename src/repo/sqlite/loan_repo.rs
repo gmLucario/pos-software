@@ -1,10 +1,10 @@
 //! SQLite Loan Repository Implementation
 
-use async_trait::async_trait;
-use sqlx::SqlitePool;
-use rust_decimal::Decimal;
-use crate::models::{Loan, LoanPayment, LoanInput, LoanPaymentInput};
+use crate::models::{Loan, LoanInput, LoanPayment, LoanPaymentInput};
 use crate::repo::LoanRepository;
+use async_trait::async_trait;
+use rust_decimal::Decimal;
+use sqlx::SqlitePool;
 
 pub struct SqliteLoanRepository {
     pool: SqlitePool,
@@ -18,7 +18,12 @@ impl SqliteLoanRepository {
 
 #[async_trait]
 impl LoanRepository for SqliteLoanRepository {
-    async fn create(&self, input: LoanInput, total_debt: Decimal, paid_amount: Decimal) -> Result<Loan, String> {
+    async fn create(
+        &self,
+        input: LoanInput,
+        total_debt: Decimal,
+        paid_amount: Decimal,
+    ) -> Result<Loan, String> {
         let loan = input.to_loan(total_debt, paid_amount);
 
         sqlx::query(
@@ -46,37 +51,31 @@ impl LoanRepository for SqliteLoanRepository {
     }
 
     async fn get_by_id(&self, id: &str) -> Result<Option<Loan>, String> {
-        let loan = sqlx::query_as::<_, Loan>(
-            "SELECT * FROM loan WHERE id = ?"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to get loan by id: {}", e))?;
+        let loan = sqlx::query_as::<_, Loan>("SELECT * FROM loan WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to get loan by id: {}", e))?;
 
         Ok(loan)
     }
 
     async fn list_all(&self) -> Result<Vec<Loan>, String> {
-        let loans = sqlx::query_as::<_, Loan>(
-            "SELECT * FROM loan ORDER BY created_at DESC"
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to list loans: {}", e))?;
+        let loans = sqlx::query_as::<_, Loan>("SELECT * FROM loan ORDER BY created_at DESC")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to list loans: {}", e))?;
 
         Ok(loans)
     }
 
     async fn update_status(&self, id: &str, status_id: i32) -> Result<(), String> {
-        sqlx::query(
-            "UPDATE loan SET status_id = ? WHERE id = ?"
-        )
-        .bind(status_id)
-        .bind(id)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to update loan status: {}", e))?;
+        sqlx::query("UPDATE loan SET status_id = ? WHERE id = ?")
+            .bind(status_id)
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to update loan status: {}", e))?;
 
         Ok(())
     }
@@ -85,7 +84,9 @@ impl LoanRepository for SqliteLoanRepository {
         let payment = input.to_payment();
 
         // Start transaction
-        let mut tx = self.pool.begin()
+        let mut tx = self
+            .pool
+            .begin()
             .await
             .map_err(|e| format!("Failed to start transaction: {}", e))?;
 
@@ -144,7 +145,7 @@ impl LoanRepository for SqliteLoanRepository {
 
     async fn get_payments(&self, loan_id: &str) -> Result<Vec<LoanPayment>, String> {
         let payments = sqlx::query_as::<_, LoanPayment>(
-            "SELECT * FROM loan_payment WHERE loan_id = ? ORDER BY payment_date DESC"
+            "SELECT * FROM loan_payment WHERE loan_id = ? ORDER BY payment_date DESC",
         )
         .bind(loan_id)
         .fetch_all(&self.pool)
@@ -156,7 +157,7 @@ impl LoanRepository for SqliteLoanRepository {
 
     async fn get_active(&self) -> Result<Vec<Loan>, String> {
         let loans = sqlx::query_as::<_, Loan>(
-            "SELECT * FROM loan WHERE status_id IN (1, 2) ORDER BY created_at DESC"
+            "SELECT * FROM loan WHERE status_id IN (1, 2) ORDER BY created_at DESC",
         )
         .fetch_all(&self.pool)
         .await
@@ -167,7 +168,7 @@ impl LoanRepository for SqliteLoanRepository {
 
     async fn get_by_status(&self, status_id: i32) -> Result<Vec<Loan>, String> {
         let loans = sqlx::query_as::<_, Loan>(
-            "SELECT * FROM loan WHERE status_id = ? ORDER BY created_at DESC"
+            "SELECT * FROM loan WHERE status_id = ? ORDER BY created_at DESC",
         )
         .bind(status_id)
         .fetch_all(&self.pool)
@@ -185,7 +186,7 @@ impl LoanRepository for SqliteLoanRepository {
             SELECT * FROM loan
             WHERE debtor_name LIKE ? OR debtor_phone LIKE ?
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(&search_term)
         .bind(&search_term)

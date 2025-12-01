@@ -2,8 +2,8 @@
 //!
 //! Business logic for processing sales transactions.
 
-use crate::models::{Sale, Operation, SaleInput};
-use crate::repo::{SaleRepository, ProductRepository};
+use crate::models::{Operation, Sale, SaleInput};
+use crate::repo::{ProductRepository, SaleRepository};
 use rust_decimal::Decimal;
 use std::sync::Arc;
 
@@ -31,7 +31,10 @@ impl SalesApi {
         sale_repo: Arc<dyn SaleRepository>,
         product_repo: Arc<dyn ProductRepository>,
     ) -> Self {
-        Self { sale_repo, product_repo }
+        Self {
+            sale_repo,
+            product_repo,
+        }
     }
 
     /// Process a new sale with validation
@@ -43,19 +46,23 @@ impl SalesApi {
 
         // Validate all products exist and have sufficient stock
         for item in &input.items {
-            let product = self.product_repo.get_by_id(&item.product_id).await?
+            let product = self
+                .product_repo
+                .get_by_id(&item.product_id)
+                .await?
                 .ok_or_else(|| format!("Product not found: {}", item.product_id))?;
 
             if item.quantity <= 0.0 {
-                return Err(format!("Invalid quantity for product '{}': must be positive", product.full_name));
+                return Err(format!(
+                    "Invalid quantity for product '{}': must be positive",
+                    product.full_name
+                ));
             }
 
             if product.current_amount < item.quantity {
                 return Err(format!(
                     "Insufficient stock for '{}': available {}, requested {}",
-                    product.full_name,
-                    product.current_amount,
-                    item.quantity
+                    product.full_name, product.current_amount, item.quantity
                 ));
             }
 
@@ -63,9 +70,7 @@ impl SalesApi {
             if item.unit_price != product.user_price {
                 return Err(format!(
                     "Price mismatch for '{}': expected ${}, got ${}",
-                    product.full_name,
-                    product.user_price,
-                    item.unit_price
+                    product.full_name, product.user_price, item.unit_price
                 ));
             }
         }
@@ -92,15 +97,15 @@ impl SalesApi {
 
     /// Get sale by ID with operations
     pub async fn get_sale(&self, id: &str) -> Result<SaleWithOperations, String> {
-        let sale = self.sale_repo.get_by_id(id).await?
+        let sale = self
+            .sale_repo
+            .get_by_id(id)
+            .await?
             .ok_or_else(|| format!("Sale not found: {}", id))?;
 
         let operations = self.sale_repo.get_operations(id).await?;
 
-        Ok(SaleWithOperations {
-            sale,
-            operations,
-        })
+        Ok(SaleWithOperations { sale, operations })
     }
 
     /// List all sales
@@ -123,21 +128,13 @@ impl SalesApi {
         let sales = self.sale_repo.list_all().await?;
 
         let total_sales = sales.len();
-        let total_revenue = sales.iter()
-            .map(|s| s.total_amount)
-            .sum();
+        let total_revenue = sales.iter().map(|s| s.total_amount).sum();
 
-        let cash_sales = sales.iter()
-            .filter(|s| !s.is_loan)
-            .count();
+        let cash_sales = sales.iter().filter(|s| !s.is_loan).count();
 
-        let loan_sales = sales.iter()
-            .filter(|s| s.is_loan)
-            .count();
+        let loan_sales = sales.iter().filter(|s| s.is_loan).count();
 
-        let total_cash_received = sales.iter()
-            .map(|s| s.paid_amount)
-            .sum();
+        let total_cash_received = sales.iter().map(|s| s.paid_amount).sum();
 
         Ok(SalesStats {
             total_sales,
@@ -162,21 +159,13 @@ impl SalesApi {
         let sales = self.get_today_sales().await?;
 
         let total_sales = sales.len();
-        let total_revenue = sales.iter()
-            .map(|s| s.total_amount)
-            .sum();
+        let total_revenue = sales.iter().map(|s| s.total_amount).sum();
 
-        let cash_sales = sales.iter()
-            .filter(|s| !s.is_loan)
-            .count();
+        let cash_sales = sales.iter().filter(|s| !s.is_loan).count();
 
-        let loan_sales = sales.iter()
-            .filter(|s| s.is_loan)
-            .count();
+        let loan_sales = sales.iter().filter(|s| s.is_loan).count();
 
-        let total_cash_received = sales.iter()
-            .map(|s| s.paid_amount)
-            .sum();
+        let total_cash_received = sales.iter().map(|s| s.paid_amount).sum();
 
         Ok(SalesStats {
             total_sales,

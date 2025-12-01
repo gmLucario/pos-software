@@ -2,8 +2,8 @@
 //!
 //! Functions for formatting data for display in the UI.
 
-use rust_decimal::Decimal;
 use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 
 /// Format a Decimal as currency with dollar sign
 ///
@@ -44,7 +44,7 @@ fn add_thousands_separator(s: &str) -> String {
     for (i, ch) in chars.iter().enumerate() {
         result.push(*ch);
         let pos_from_end = len - i - 1;
-        if pos_from_end > 0 && pos_from_end % 3 == 0 {
+        if pos_from_end > 0 && pos_from_end.is_multiple_of(3) {
             result.push(',');
         }
     }
@@ -156,12 +156,7 @@ pub fn format_phone(phone: &str) -> String {
 
     // Format based on length
     match digits.len() {
-        10 => format!(
-            "({}) {}-{}",
-            &digits[0..3],
-            &digits[3..6],
-            &digits[6..10]
-        ),
+        10 => format!("({}) {}-{}", &digits[0..3], &digits[3..6], &digits[6..10]),
         11 if digits.starts_with('1') => format!(
             "+{} ({}) {}-{}",
             &digits[0..1],

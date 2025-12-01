@@ -2,11 +2,11 @@
 //!
 //! UI components for processing sales and managing the shopping cart.
 
-use dioxus::prelude::*;
-use rust_decimal::Decimal;
 use crate::handlers::AppState;
 use crate::models::{Product, SaleInput, SaleItemInput};
 use crate::utils::formatting::format_currency;
+use dioxus::prelude::*;
+use rust_decimal::Decimal;
 
 #[derive(Clone, Debug, PartialEq)]
 struct CartItem {
@@ -31,9 +31,7 @@ pub fn SalesView() -> Element {
         let inventory_handler = app_state.inventory_handler.clone();
         move || {
             let handler = inventory_handler.clone();
-            async move {
-                handler.load_products().await
-            }
+            async move { handler.load_products().await }
         }
     });
 
@@ -44,8 +42,12 @@ pub fn SalesView() -> Element {
     });
 
     // Calculate cart total
-    let cart_total: Decimal = cart.read().iter()
-        .map(|item| item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default())
+    let cart_total: Decimal = cart
+        .read()
+        .iter()
+        .map(|item| {
+            item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default()
+        })
         .sum();
 
     // Add product to cart
@@ -94,18 +96,25 @@ pub fn SalesView() -> Element {
             };
 
             // Determine if this is a cash sale or loan
-            let _cart_total: Decimal = cart_items.iter()
-                .map(|item| item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default())
+            let _cart_total: Decimal = cart_items
+                .iter()
+                .map(|item| {
+                    item.product.user_price
+                        * Decimal::from_f64_retain(item.quantity).unwrap_or_default()
+                })
                 .sum();
 
             // Create sale input
             let sale_input = SaleInput {
-                items: cart_items.iter().map(|item| SaleItemInput {
-                    product_id: item.product.id.clone(),
-                    product_name: item.product.full_name.clone(),
-                    quantity: item.quantity,
-                    unit_price: item.product.user_price,
-                }).collect(),
+                items: cart_items
+                    .iter()
+                    .map(|item| SaleItemInput {
+                        product_id: item.product.id.clone(),
+                        product_name: item.product.full_name.clone(),
+                        quantity: item.quantity,
+                        unit_price: item.product.user_price,
+                    })
+                    .collect(),
                 paid_amount,
             };
 
@@ -117,7 +126,7 @@ pub fn SalesView() -> Element {
                     cart.write().clear();
                     payment_amount.set(String::new());
                     refresh_trigger.set(refresh_trigger() + 1); // Refresh product stock
-                },
+                }
                 Err(err) => {
                     sale_message.set(Some((false, format!("Sale failed: {}", err))));
                 }
@@ -350,7 +359,8 @@ fn ProductCard(product: Product, on_add: EventHandler<Product>) -> Element {
 
 #[component]
 fn CartItemRow(item: CartItem, on_remove: EventHandler<String>) -> Element {
-    let subtotal = item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default();
+    let subtotal =
+        item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default();
 
     rsx! {
         div {

@@ -3,7 +3,7 @@
 //! UI event handlers for inventory management.
 
 use crate::api::{InventoryApi, InventoryStats};
-use crate::models::{Product, ProductInput};
+use crate::models::{Product, ProductInput, UnitMeasurement};
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -69,5 +69,10 @@ impl InventoryHandler {
     /// Get product by barcode (for quick lookup)
     pub async fn scan_barcode(&self, barcode: String) -> Result<Product, String> {
         self.api.get_product_by_barcode(&barcode).await
+    }
+
+    /// Get all unit measurements
+    pub async fn get_units(&self) -> Result<Vec<UnitMeasurement>, String> {
+        self.api.get_units().await
     }
 }

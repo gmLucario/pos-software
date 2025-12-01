@@ -35,11 +35,17 @@ fn test_product_low_stock_detection() {
 
     // Find apples (should be low on stock)
     let apples = products.iter().find(|p| p.name == "Apples").unwrap();
-    assert!(apples.is_low_stock(), "Apples should be low on stock (5.5 <= 10.0)");
+    assert!(
+        apples.is_low_stock(),
+        "Apples should be low on stock (5.5 <= 10.0)"
+    );
 
     // Find cola (should NOT be low on stock)
     let cola = products.iter().find(|p| p.name == "Coca Cola 2L").unwrap();
-    assert!(!cola.is_low_stock(), "Cola should not be low on stock (50.0 > 10.0)");
+    assert!(
+        !cola.is_low_stock(),
+        "Cola should not be low on stock (50.0 > 10.0)"
+    );
 }
 
 #[test]
@@ -52,7 +58,11 @@ fn test_product_profit_margin() {
     // Margin = (25.50 - 18.00) / 18.00 * 100 = 41.6666...%
     // Round to 2 decimal places for comparison
     let margin_rounded = margin.round_dp(2);
-    assert_eq!(margin_rounded, dec!(41.67), "Profit margin calculation incorrect");
+    assert_eq!(
+        margin_rounded,
+        dec!(41.67),
+        "Profit margin calculation incorrect"
+    );
 }
 
 #[test]

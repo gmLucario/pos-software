@@ -2,11 +2,11 @@
 //!
 //! UI components for tracking and managing customer loans.
 
-use dioxus::prelude::*;
-use rust_decimal::Decimal;
 use crate::handlers::AppState;
 use crate::models::{Loan, LoanPaymentInput};
 use crate::utils::formatting::format_currency;
+use dioxus::prelude::*;
+use rust_decimal::Decimal;
 
 #[component]
 pub fn LoansView() -> Element {
@@ -24,9 +24,7 @@ pub fn LoansView() -> Element {
         let loans_handler = app_state.loans_handler.clone();
         move || {
             let handler = loans_handler.clone();
-            async move {
-                handler.load_loans().await
-            }
+            async move { handler.load_loans().await }
         }
     });
 
@@ -51,7 +49,10 @@ pub fn LoansView() -> Element {
             let amount = match payment.parse::<Decimal>() {
                 Ok(amount) if amount > Decimal::ZERO => amount,
                 Ok(_) => {
-                    payment_message.set(Some((false, "Payment amount must be greater than zero".to_string())));
+                    payment_message.set(Some((
+                        false,
+                        "Payment amount must be greater than zero".to_string(),
+                    )));
                     return;
                 }
                 Err(_) => {
@@ -74,7 +75,7 @@ pub fn LoansView() -> Element {
                     selected_loan.set(None);
                     payment_amount.set(String::new());
                     refresh_trigger.set(refresh_trigger() + 1);
-                },
+                }
                 Err(err) => {
                     payment_message.set(Some((false, format!("Payment failed: {}", err))));
                 }

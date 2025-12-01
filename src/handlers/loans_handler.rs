@@ -2,7 +2,7 @@
 //!
 //! UI event handlers for loan management and payment processing.
 
-use crate::api::{LoansApi, LoanWithPayments, LoanStats};
+use crate::api::{LoanStats, LoanWithPayments, LoansApi};
 use crate::models::{Loan, LoanInput, LoanPaymentInput};
 use std::sync::Arc;
 

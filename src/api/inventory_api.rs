@@ -2,13 +2,14 @@
 //!
 //! Business logic for product and inventory management.
 
-use crate::models::{Product, ProductInput};
-use crate::repo::ProductRepository;
+use crate::models::{Product, ProductInput, UnitMeasurement};
+use crate::repo::{CatalogRepository, ProductRepository};
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct InventoryApi {
     product_repo: Arc<dyn ProductRepository>,
+    catalog_repo: Arc<dyn CatalogRepository>,
 }
 
 impl std::fmt::Debug for InventoryApi {
@@ -20,12 +21,19 @@ impl std::fmt::Debug for InventoryApi {
 impl PartialEq for InventoryApi {
     fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.product_repo, &other.product_repo)
+            && Arc::ptr_eq(&self.catalog_repo, &other.catalog_repo)
     }
 }
 
 impl InventoryApi {
-    pub fn new(product_repo: Arc<dyn ProductRepository>) -> Self {
-        Self { product_repo }
+    pub fn new(
+        product_repo: Arc<dyn ProductRepository>,
+        catalog_repo: Arc<dyn CatalogRepository>,
+    ) -> Self {
+        Self {
+            product_repo,
+            catalog_repo,
+        }
     }
 
     /// Create a new product with validation
@@ -49,10 +57,8 @@ impl InventoryApi {
 
         // Check for duplicate barcode if provided
         if let Some(ref barcode) = input.barcode {
-            if !barcode.is_empty() {
-                if let Some(_) = self.product_repo.get_by_barcode(barcode).await? {
-                    return Err(format!("Product with barcode '{}' already exists", barcode));
-                }
+            if !barcode.is_empty() && (self.product_repo.get_by_barcode(barcode).await?).is_some() {
+                return Err(format!("Product with barcode '{}' already exists", barcode));
             }
         }
 
@@ -62,13 +68,17 @@ impl InventoryApi {
 
     /// Get product by ID
     pub async fn get_product(&self, id: &str) -> Result<Product, String> {
-        self.product_repo.get_by_id(id).await?
+        self.product_repo
+            .get_by_id(id)
+            .await?
             .ok_or_else(|| format!("Product not found: {}", id))
     }
 
     /// Get product by barcode
     pub async fn get_product_by_barcode(&self, barcode: &str) -> Result<Product, String> {
-        self.product_repo.get_by_barcode(barcode).await?
+        self.product_repo
+            .get_by_barcode(barcode)
+            .await?
             .ok_or_else(|| format!("Product not found with barcode: {}", barcode))
     }
 
@@ -96,7 +106,10 @@ impl InventoryApi {
             if !barcode.is_empty() {
                 if let Some(existing) = self.product_repo.get_by_barcode(barcode).await? {
                     if existing.id != id {
-                        return Err(format!("Another product with barcode '{}' already exists", barcode));
+                        return Err(format!(
+                            "Another product with barcode '{}' already exists",
+                            barcode
+                        ));
                     }
                 }
             }
@@ -177,14 +190,21 @@ impl InventoryApi {
         let total_products = products.len();
         let low_stock_count = low_stock.len();
 
-        let total_value = products.iter()
-            .map(|p| p.user_price * rust_decimal::Decimal::from_f64_retain(p.current_amount).unwrap_or_default())
+        let total_value = products
+            .iter()
+            .map(|p| {
+                p.user_price
+                    * rust_decimal::Decimal::from_f64_retain(p.current_amount).unwrap_or_default()
+            })
             .sum();
 
-        let total_cost = products.iter()
+        let total_cost = products
+            .iter()
             .filter_map(|p| p.cost_price)
             .zip(products.iter().map(|p| p.current_amount))
-            .map(|(cost, amount)| cost * rust_decimal::Decimal::from_f64_retain(amount).unwrap_or_default())
+            .map(|(cost, amount)| {
+                cost * rust_decimal::Decimal::from_f64_retain(amount).unwrap_or_default()
+            })
             .sum();
 
         Ok(InventoryStats {
@@ -193,6 +213,10 @@ impl InventoryApi {
             total_value,
             total_cost,
         })
+    }
+    /// Get all unit measurements
+    pub async fn get_units(&self) -> Result<Vec<UnitMeasurement>, String> {
+        self.catalog_repo.get_units().await
     }
 }
 
