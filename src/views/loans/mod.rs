@@ -9,9 +9,9 @@ use crate::mock_data::MockLoan;
 
 #[component]
 pub fn LoansView(loans: Signal<Vec<MockLoan>>) -> Element {
-    let mut search_query = use_signal(|| String::new());
+    let mut search_query = use_signal(String::new);
     let mut selected_loan = use_signal(|| Option::<MockLoan>::None);
-    let mut payment_amount = use_signal(|| String::new());
+    let mut payment_amount = use_signal(String::new);
 
     // Filter loans based on search
     let filtered_loans = loans.read().iter()
@@ -91,7 +91,7 @@ pub fn LoansView(loans: Signal<Vec<MockLoan>>) -> Element {
                         placeholder: "🔍 Search by name or phone...",
                         value: "{search_query}",
                         oninput: move |evt| search_query.set(evt.value().clone()),
-                        style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem;",
+                        style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;",
                     }
                 }
 
@@ -188,7 +188,7 @@ pub fn LoansView(loans: Signal<Vec<MockLoan>>) -> Element {
                                 placeholder: "0.00",
                                 value: "{payment_amount}",
                                 oninput: move |evt| payment_amount.set(evt.value().clone()),
-                                style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem;",
+                                style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box;",
                             }
                         }
 

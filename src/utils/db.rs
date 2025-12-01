@@ -24,7 +24,7 @@ pub async fn initialize_database(database_url: &str) -> Result<DbPool, sqlx::Err
         .busy_timeout(Duration::from_secs(30));
 
     // Disable logging for individual queries (can be noisy)
-    options.disable_statement_logging();
+    options = options.disable_statement_logging();
 
     // Create connection pool
     let pool = SqlitePoolOptions::new()

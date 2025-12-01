@@ -4,9 +4,7 @@
 
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-
-use crate::mock_data::{MockProduct, MockSaleItem};
+use crate::mock_data::MockProduct;
 
 #[derive(Clone, Debug, PartialEq)]
 struct CartItem {
@@ -16,9 +14,9 @@ struct CartItem {
 
 #[component]
 pub fn SalesView(products: Vec<MockProduct>) -> Element {
-    let mut cart = use_signal(|| Vec::<CartItem>::new());
-    let mut search_query = use_signal(|| String::new());
-    let mut payment_amount = use_signal(|| String::new());
+    let mut cart = use_signal(Vec::<CartItem>::new);
+    let mut search_query = use_signal(String::new);
+    let mut payment_amount = use_signal(String::new);
     let mut show_receipt = use_signal(|| false);
 
     // Calculate cart total
@@ -34,7 +32,7 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
                 return true;
             }
             p.name.to_lowercase().contains(&query) ||
-            p.barcode.as_ref().map_or(false, |b| b.contains(&query))
+            p.barcode.as_ref().is_some_and(|b| b.contains(&query))
         })
         .cloned()
         .collect::<Vec<_>>();
@@ -90,7 +88,7 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
                     placeholder: "🔍 Search products or scan barcode...",
                     value: "{search_query}",
                     oninput: move |evt| search_query.set(evt.value().clone()),
-                    style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; margin-bottom: 1.5rem;",
+                    style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; margin-bottom: 1.5rem; box-sizing: border-box;",
                 }
 
                 // Products grid
@@ -164,7 +162,7 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
                             placeholder: "0.00",
                             value: "{payment_amount}",
                             oninput: move |evt| payment_amount.set(evt.value().clone()),
-                            style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem;",
+                            style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box;",
                         }
                     }
 

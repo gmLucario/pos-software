@@ -8,9 +8,9 @@ use crate::mock_data::MockProduct;
 
 #[component]
 pub fn InventoryView(products: Signal<Vec<MockProduct>>) -> Element {
-    let mut search_query = use_signal(|| String::new());
+    let mut search_query = use_signal(String::new);
     let mut show_add_form = use_signal(|| false);
-    let mut selected_product = use_signal(|| Option::<MockProduct>::None);
+    let _selected_product = use_signal(|| Option::<MockProduct>::None);
 
     // Filter products based on search
     let filtered_products = products.read().iter()
@@ -20,7 +20,7 @@ pub fn InventoryView(products: Signal<Vec<MockProduct>>) -> Element {
                 return true;
             }
             p.name.to_lowercase().contains(&query) ||
-            p.barcode.as_ref().map_or(false, |b| b.contains(&query))
+            p.barcode.as_ref().is_some_and(|b| b.contains(&query))
         })
         .cloned()
         .collect::<Vec<_>>();
@@ -55,7 +55,7 @@ pub fn InventoryView(products: Signal<Vec<MockProduct>>) -> Element {
                     placeholder: "🔍 Search by name or barcode...",
                     value: "{search_query}",
                     oninput: move |evt| search_query.set(evt.value().clone()),
-                    style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem;",
+                    style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;",
                 }
             }
 
@@ -72,10 +72,10 @@ pub fn InventoryView(products: Signal<Vec<MockProduct>>) -> Element {
 
                             th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;", "Product Name" }
                             th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;", "Barcode" }
-                            th { style: "padding: 0.75rem; text-align: right; font-weight: 600; color: #4a5568;", "Price" }
-                            th { style: "padding: 0.75rem; text-align: right; font-weight: 600; color: #4a5568;", "Stock" }
-                            th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;", "Unit" }
-                            th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;", "Status" }
+                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Price" }
+                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Stock" }
+                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Unit" }
+                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Status" }
                         }
                     }
 
@@ -137,19 +137,19 @@ fn ProductRow(product: MockProduct) -> Element {
                 "{product.barcode.as_deref().unwrap_or(\"-\")}"
             }
             td {
-                style: "padding: 0.75rem; text-align: right; font-weight: 500;",
+                style: "padding: 0.75rem; text-align: center; font-weight: 500;",
                 "${product.price}"
             }
             td {
-                style: "padding: 0.75rem; text-align: right; {stock_style}",
+                style: "padding: 0.75rem; text-align: center; {stock_style}",
                 "{product.stock}"
             }
             td {
-                style: "padding: 0.75rem;",
+                style: "padding: 0.75rem; text-align: center;",
                 "{product.unit}"
             }
             td {
-                style: "padding: 0.75rem;",
+                style: "padding: 0.75rem; text-align: center;",
                 if is_low_stock {
                     span {
                         style: "background: #fff5f5; color: #c53030; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500;",
