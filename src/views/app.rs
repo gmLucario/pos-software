@@ -5,7 +5,7 @@
 use dioxus::prelude::*;
 
 use super::{inventory, loans, sales};
-use crate::mock_data;
+use crate::handlers::AppState;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum ActiveTab {
@@ -15,25 +15,12 @@ pub enum ActiveTab {
 }
 
 #[component]
-pub fn App() -> Element {
+pub fn App(app_state: AppState) -> Element {
+    // Provide app state to all child components via context
+    use_context_provider(|| app_state);
+
     // Global state: Current active tab
     let mut active_tab = use_signal(|| ActiveTab::Sales);
-
-    // Global state: Mock data
-    let products = use_signal(|| {
-        let (products, _, _) = mock_data::generate_sample_data();
-        products
-    });
-
-    let _sales = use_signal(|| {
-        let (_, sales, _) = mock_data::generate_sample_data();
-        sales
-    });
-
-    let loans = use_signal(|| {
-        let (_, _, loans) = mock_data::generate_sample_data();
-        loans
-    });
 
     rsx! {
         div {
@@ -90,13 +77,13 @@ pub fn App() -> Element {
                     // Render active module
                     match *active_tab.read() {
                         ActiveTab::Inventory => rsx! {
-                            inventory::InventoryView { products: products }
+                            inventory::InventoryView {}
                         },
                         ActiveTab::Sales => rsx! {
-                            sales::SalesView { products: products.read().clone() }
+                            sales::SalesView {}
                         },
                         ActiveTab::Loans => rsx! {
-                            loans::LoansView { loans: loans }
+                            loans::LoansView {}
                         },
                     }
                 }

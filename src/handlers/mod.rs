@@ -12,6 +12,7 @@ pub use sales_handler::SalesHandler;
 pub use loans_handler::LoansHandler;
 
 /// Application state container
+#[derive(Clone)]
 pub struct AppState {
     pub inventory_handler: InventoryHandler,
     pub sales_handler: SalesHandler,
