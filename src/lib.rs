@@ -6,6 +6,7 @@
 
 #![allow(non_snake_case)]
 
+pub mod api;
 pub mod mock_data;
 pub mod models;
 pub mod repo;
