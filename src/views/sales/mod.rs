@@ -4,41 +4,49 @@
 
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
-use crate::mock_data::MockProduct;
+use crate::handlers::AppState;
+use crate::models::{Product, SaleInput, SaleItem, ItemCondition};
+use crate::utils::formatting::format_currency;
 
 #[derive(Clone, Debug, PartialEq)]
 struct CartItem {
-    product: MockProduct,
+    product: Product,
     quantity: f64,
 }
 
 #[component]
-pub fn SalesView(products: Vec<MockProduct>) -> Element {
+pub fn SalesView() -> Element {
+    // Get app state from context
+    let app_state = use_context::<AppState>();
+
     let mut cart = use_signal(Vec::<CartItem>::new);
     let mut search_query = use_signal(String::new);
     let mut payment_amount = use_signal(String::new);
     let mut show_receipt = use_signal(|| false);
+    let mut sale_message = use_signal(|| Option::<(bool, String)>::None); // (is_success, message)
+    let mut refresh_trigger = use_signal(|| 0);
+
+    // Load products from database
+    let products_resource = use_resource(move || {
+        let handler = app_state.inventory_handler.clone();
+        async move {
+            handler.load_products().await
+        }
+    });
+
+    // Refresh products when trigger changes
+    use_effect(move || {
+        let _ = refresh_trigger();
+        products_resource.restart();
+    });
 
     // Calculate cart total
     let cart_total: Decimal = cart.read().iter()
-        .map(|item| item.product.price * Decimal::from_f64_retain(item.quantity).unwrap_or_default())
+        .map(|item| item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default())
         .sum();
 
-    // Filter products based on search
-    let filtered_products = products.iter()
-        .filter(|p| {
-            let query = search_query.read().to_lowercase();
-            if query.is_empty() {
-                return true;
-            }
-            p.name.to_lowercase().contains(&query) ||
-            p.barcode.as_ref().is_some_and(|b| b.contains(&query))
-        })
-        .cloned()
-        .collect::<Vec<_>>();
-
     // Add product to cart
-    let mut add_to_cart = move |product: MockProduct| {
+    let mut add_to_cart = move |product: Product| {
         let mut cart_items = cart.write();
 
         // Check if product already in cart
@@ -59,13 +67,65 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
 
     // Complete sale
     let complete_sale = move |_| {
-        if cart.read().is_empty() {
-            return;
-        }
-        show_receipt.set(true);
-        // In real app, this would save to database
-        cart.write().clear();
-        payment_amount.set(String::new());
+        let app_state = app_state.clone();
+        let cart_items = cart.read().clone();
+        let payment = payment_amount.read().clone();
+
+        spawn(async move {
+            if cart_items.is_empty() {
+                sale_message.set(Some((false, "Cart is empty".to_string())));
+                return;
+            }
+
+            // Parse payment amount
+            let paid_amount = if payment.is_empty() {
+                Decimal::ZERO
+            } else {
+                match payment.parse::<Decimal>() {
+                    Ok(amount) => amount,
+                    Err(_) => {
+                        sale_message.set(Some((false, "Invalid payment amount".to_string())));
+                        return;
+                    }
+                }
+            };
+
+            // Determine if this is a cash sale or loan
+            let cart_total: Decimal = cart_items.iter()
+                .map(|item| item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default())
+                .sum();
+
+            let item_condition_id = if paid_amount >= cart_total {
+                ItemCondition::CASH
+            } else {
+                ItemCondition::LOAN
+            };
+
+            // Create sale input
+            let sale_input = SaleInput {
+                items: cart_items.iter().map(|item| SaleItem {
+                    product_id: item.product.id.clone(),
+                    quantity: item.quantity,
+                    unit_price: item.product.user_price,
+                }).collect(),
+                item_condition_id,
+                paid_amount,
+            };
+
+            // Process sale
+            match app_state.sales_handler.process_sale(sale_input).await {
+                Ok(_sale) => {
+                    sale_message.set(Some((true, "Sale completed successfully!".to_string())));
+                    show_receipt.set(true);
+                    cart.write().clear();
+                    payment_amount.set(String::new());
+                    refresh_trigger.set(refresh_trigger() + 1); // Refresh product stock
+                },
+                Err(err) => {
+                    sale_message.set(Some((false, format!("Sale failed: {}", err))));
+                }
+            }
+        });
     };
 
     rsx! {
@@ -91,14 +151,52 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
                     style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; margin-bottom: 1.5rem; box-sizing: border-box;",
                 }
 
-                // Products grid
-                div {
-                    style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; max-height: 600px; overflow-y: auto;",
+                // Products based on loading state
+                match &*products_resource.read_unchecked() {
+                    Some(Ok(products)) => {
+                        // Filter products
+                        let filtered_products: Vec<Product> = products.iter()
+                            .filter(|p| {
+                                let query = search_query.read().to_lowercase();
+                                if query.is_empty() {
+                                    return true;
+                                }
+                                p.full_name.to_lowercase().contains(&query) ||
+                                p.barcode.as_ref().is_some_and(|b| b.contains(&query))
+                            })
+                            .cloned()
+                            .collect();
 
-                    for product in filtered_products {
-                        ProductCard {
-                            product: product.clone(),
-                            on_add: move |p: MockProduct| add_to_cart(p),
+                        rsx! {
+                            div {
+                                style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; max-height: 600px; overflow-y: auto;",
+
+                                if filtered_products.is_empty() {
+                                    div {
+                                        style: "grid-column: 1 / -1; padding: 2rem; text-align: center; color: #718096;",
+                                        "No products found"
+                                    }
+                                } else {
+                                    for product in filtered_products {
+                                        ProductCard {
+                                            product: product.clone(),
+                                            on_add: move |p: Product| add_to_cart(p),
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    Some(Err(err)) => rsx! {
+                        div {
+                            style: "padding: 2rem; text-align: center; color: #e53e3e; background: #fff5f5; border-radius: 0.5rem;",
+                            "❌ Error loading products: {err}"
+                        }
+                    },
+                    None => rsx! {
+                        div {
+                            style: "padding: 2rem; text-align: center; color: #718096;",
+                            "⏳ Loading products..."
                         }
                     }
                 }
@@ -111,6 +209,23 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
                 h3 {
                     style: "font-size: 1.25rem; font-weight: 600; color: #2d3748; margin: 0 0 1rem 0;",
                     "🛒 Cart ({cart.read().len()} items)"
+                }
+
+                // Sale message
+                if let Some((is_success, message)) = sale_message.read().clone() {
+                    div {
+                        style: if is_success {
+                            "padding: 0.75rem; margin-bottom: 1rem; background: #f0fff4; color: #22543d; border-radius: 0.5rem; border: 1px solid #48bb78;"
+                        } else {
+                            "padding: 0.75rem; margin-bottom: 1rem; background: #fff5f5; color: #c53030; border-radius: 0.5rem; border: 1px solid #f56565;"
+                        },
+                        "{message}"
+                        button {
+                            style: "float: right; background: transparent; border: none; cursor: pointer; font-weight: bold;",
+                            onclick: move |_| sale_message.set(None),
+                            "✕"
+                        }
+                    }
                 }
 
                 // Cart items
@@ -140,13 +255,13 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
                     div {
                         style: "display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 1.125rem;",
                         span { style: "font-weight: 500;", "Subtotal:" }
-                        span { style: "font-weight: 600;", "${cart_total}" }
+                        span { style: "font-weight: 600;", "{format_currency(cart_total)}" }
                     }
 
                     div {
                         style: "display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 1.5rem;",
                         span { style: "font-weight: 700;", "Total:" }
-                        span { style: "font-weight: 700; color: #667eea;", "${cart_total}" }
+                        span { style: "font-weight: 700; color: #667eea;", "{format_currency(cart_total)}" }
                     }
 
                     // Payment input
@@ -154,7 +269,7 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
                         style: "margin-bottom: 1rem;",
                         label {
                             style: "display: block; font-size: 0.875rem; font-weight: 500; color: #4a5568; margin-bottom: 0.5rem;",
-                            "Payment Amount"
+                            "Payment Amount (leave empty for loan)"
                         }
                         input {
                             r#type: "number",
@@ -177,7 +292,7 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
             }
         }
 
-        // Receipt modal (simplified for now)
+        // Receipt modal
         if *show_receipt.read() {
             div {
                 style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;",
@@ -188,7 +303,8 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
                     onclick: move |evt| evt.stop_propagation(),
 
                     h3 { style: "margin: 0 0 1rem 0; color: #48bb78;", "✓ Sale Completed!" }
-                    p { "Receipt would be generated here" }
+                    p { "The sale has been recorded successfully." }
+                    p { style: "font-size: 0.875rem; color: #718096;", "Inventory has been updated automatically." }
 
                     button {
                         style: "width: 100%; background: #667eea; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer;",
@@ -202,7 +318,7 @@ pub fn SalesView(products: Vec<MockProduct>) -> Element {
 }
 
 #[component]
-fn ProductCard(product: MockProduct, on_add: EventHandler<MockProduct>) -> Element {
+fn ProductCard(product: Product, on_add: EventHandler<Product>) -> Element {
     let is_low_stock = product.is_low_stock();
 
     rsx! {
@@ -212,17 +328,17 @@ fn ProductCard(product: MockProduct, on_add: EventHandler<MockProduct>) -> Eleme
 
             div {
                 style: "font-weight: 600; margin-bottom: 0.5rem; color: #2d3748;",
-                "{product.name}"
+                "{product.full_name}"
             }
 
             div {
                 style: "font-size: 1.25rem; font-weight: 700; color: #667eea; margin-bottom: 0.5rem;",
-                "${product.price}"
+                "{format_currency(product.user_price)}"
             }
 
             div {
                 style: "font-size: 0.875rem; color: #718096;",
-                "Stock: {product.stock} {product.unit}"
+                "Stock: {product.current_amount:.2}"
             }
 
             if is_low_stock {
@@ -237,7 +353,7 @@ fn ProductCard(product: MockProduct, on_add: EventHandler<MockProduct>) -> Eleme
 
 #[component]
 fn CartItemRow(item: CartItem, on_remove: EventHandler<String>) -> Element {
-    let subtotal = item.product.price * Decimal::from_f64_retain(item.quantity).unwrap_or_default();
+    let subtotal = item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default();
 
     rsx! {
         div {
@@ -247,11 +363,11 @@ fn CartItemRow(item: CartItem, on_remove: EventHandler<String>) -> Element {
                 style: "flex: 1;",
                 div {
                     style: "font-weight: 500; color: #2d3748;",
-                    "{item.product.name}"
+                    "{item.product.full_name}"
                 }
                 div {
                     style: "font-size: 0.875rem; color: #718096;",
-                    "{item.quantity} × ${item.product.price}"
+                    "{item.quantity} × {format_currency(item.product.user_price)}"
                 }
             }
 
@@ -259,7 +375,7 @@ fn CartItemRow(item: CartItem, on_remove: EventHandler<String>) -> Element {
                 style: "display: flex; align-items: center; gap: 1rem;",
                 div {
                     style: "font-weight: 600; color: #667eea;",
-                    "${subtotal}"
+                    "{format_currency(subtotal)}"
                 }
                 button {
                     style: "background: #f56565; color: white; border: none; border-radius: 0.25rem; padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.875rem;",
