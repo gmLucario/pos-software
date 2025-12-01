@@ -20,10 +20,13 @@ pub fn LoansView() -> Element {
     let mut refresh_trigger = use_signal(|| 0);
 
     // Load loans from database
-    let loans_resource = use_resource(move || {
-        let handler = app_state.loans_handler.clone();
-        async move {
-            handler.load_loans().await
+    let mut loans_resource = use_resource({
+        let loans_handler = app_state.loans_handler.clone();
+        move || {
+            let handler = loans_handler.clone();
+            async move {
+                handler.load_loans().await
+            }
         }
     });
 

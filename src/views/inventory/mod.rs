@@ -17,7 +17,7 @@ pub fn InventoryView() -> Element {
     let mut refresh_trigger = use_signal(|| 0);
 
     // Load products from database
-    let products_resource = use_resource(move || {
+    let mut products_resource = use_resource(move || {
         let handler = app_state.inventory_handler.clone();
         async move {
             handler.load_products().await

@@ -6,8 +6,21 @@ use crate::models::{Product, ProductInput};
 use crate::repo::ProductRepository;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct InventoryApi {
     product_repo: Arc<dyn ProductRepository>,
+}
+
+impl std::fmt::Debug for InventoryApi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InventoryApi").finish()
+    }
+}
+
+impl PartialEq for InventoryApi {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.product_repo, &other.product_repo)
+    }
 }
 
 impl InventoryApi {

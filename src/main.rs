@@ -9,8 +9,13 @@
 use dioxus::prelude::*;
 #[cfg(feature = "desktop")]
 use pos_app::views::App;
+#[cfg(feature = "desktop")]
+use std::sync::OnceLock;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
+
+#[cfg(feature = "desktop")]
+static APP_STATE: OnceLock<pos_app::handlers::AppState> = OnceLock::new();
 
 fn main() {
     #[cfg(not(feature = "desktop"))]
@@ -46,13 +51,21 @@ fn main() {
 
         tracing::info!("Database initialized successfully");
 
-        // Create app state
-        let app_state = pos_app::handlers::AppState::new(pool);
+        // Create app state and store it globally
+        APP_STATE.set(pos_app::handlers::AppState::new(pool))
+            .expect("Failed to set app state");
         tracing::info!("Application state created");
 
-        // Launch the Dioxus desktop app with app state
-        launch(|| rsx! {
-            App { app_state: app_state.clone() }
-        });
+        // Launch the Dioxus desktop app
+        launch(app_root);
+    }
+}
+
+#[cfg(feature = "desktop")]
+fn app_root() -> Element {
+    let app_state = APP_STATE.get().expect("App state not initialized").clone();
+
+    rsx! {
+        App { app_state }
     }
 }

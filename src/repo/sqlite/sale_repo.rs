@@ -30,18 +30,18 @@ impl SaleRepository for SqliteSaleRepository {
         sqlx::query(
             r#"
             INSERT INTO sale (
-                id, item_condition_id, total_amount, paid_amount,
-                change_amount, created_at
+                id, total_amount, paid_amount,
+                change_amount, is_loan, sold_at
             )
             VALUES (?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(&sale.id)
-        .bind(sale.item_condition_id)
         .bind(sale.total_amount.to_string())
         .bind(sale.paid_amount.to_string())
         .bind(sale.change_amount.to_string())
-        .bind(sale.created_at.to_rfc3339())
+        .bind(sale.is_loan as i32)
+        .bind(sale.sold_at.to_rfc3339())
         .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to insert sale: {}", e))?;
@@ -51,19 +51,20 @@ impl SaleRepository for SqliteSaleRepository {
             sqlx::query(
                 r#"
                 INSERT INTO operation (
-                    id, sale_id, product_id, quantity, unit_price,
-                    subtotal, created_at
+                    id, sale_id, product_id, product_name, quantity, unit_price,
+                    subtotal, recorded_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 "#,
             )
             .bind(&operation.id)
             .bind(&operation.sale_id)
             .bind(&operation.product_id)
+            .bind(&operation.product_name)
             .bind(operation.quantity)
             .bind(operation.unit_price.to_string())
             .bind(operation.subtotal.to_string())
-            .bind(operation.created_at.to_rfc3339())
+            .bind(operation.recorded_at.to_rfc3339())
             .execute(&mut *tx)
             .await
             .map_err(|e| format!("Failed to insert operation: {}", e))?;
@@ -78,7 +79,7 @@ impl SaleRepository for SqliteSaleRepository {
                 "#,
             )
             .bind(operation.quantity)
-            .bind(operation.created_at.to_rfc3339())
+            .bind(operation.recorded_at.to_rfc3339())
             .bind(&operation.product_id)
             .execute(&mut *tx)
             .await

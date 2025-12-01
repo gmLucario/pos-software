@@ -6,7 +6,7 @@ use crate::api::{InventoryApi, InventoryStats};
 use crate::models::{Product, ProductInput};
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct InventoryHandler {
     api: Arc<InventoryApi>,
 }

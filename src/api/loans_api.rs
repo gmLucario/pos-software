@@ -7,9 +7,23 @@ use crate::repo::{LoanRepository, SaleRepository};
 use rust_decimal::Decimal;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct LoansApi {
     loan_repo: Arc<dyn LoanRepository>,
     sale_repo: Arc<dyn SaleRepository>,
+}
+
+impl std::fmt::Debug for LoansApi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LoansApi").finish()
+    }
+}
+
+impl PartialEq for LoansApi {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.loan_repo, &other.loan_repo)
+            && Arc::ptr_eq(&self.sale_repo, &other.sale_repo)
+    }
 }
 
 impl LoansApi {

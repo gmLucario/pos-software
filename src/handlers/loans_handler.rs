@@ -6,7 +6,7 @@ use crate::api::{LoansApi, LoanWithPayments, LoanStats};
 use crate::models::{Loan, LoanInput, LoanPaymentInput};
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LoansHandler {
     api: Arc<LoansApi>,
 }

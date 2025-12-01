@@ -5,26 +5,63 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use std::str::FromStr;
 
 /// Sale entity
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sale {
     pub id: String,  // UUID as TEXT
 
-    #[sqlx(try_from = "String")]
     pub total_amount: Decimal,
 
-    #[sqlx(try_from = "String")]
     pub paid_amount: Decimal,
 
-    #[sqlx(try_from = "String")]
     pub change_amount: Decimal,
 
     pub is_loan: bool,  // Stored as INTEGER (0/1) in DB
 
-    #[sqlx(try_from = "String")]
     pub sold_at: DateTime<Utc>,
+}
+
+impl<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> for Sale {
+    fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        use sqlx::Row;
+
+        Ok(Sale {
+            id: row.try_get("id")?,
+            total_amount: {
+                let s: String = row.try_get("total_amount")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "total_amount".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            paid_amount: {
+                let s: String = row.try_get("paid_amount")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "paid_amount".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            change_amount: {
+                let s: String = row.try_get("change_amount")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "change_amount".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            is_loan: row.try_get("is_loan")?,
+            sold_at: {
+                let s: String = row.try_get("sold_at")?;
+                DateTime::parse_from_rfc3339(&s)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .map_err(|e| sqlx::Error::ColumnDecode {
+                        index: "sold_at".to_string(),
+                        source: Box::new(e),
+                    })?
+            },
+        })
+    }
 }
 
 impl Sale {
@@ -44,7 +81,7 @@ impl Sale {
 }
 
 /// Operation (sale line item) entity
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Operation {
     pub id: String,  // UUID as TEXT
     pub sale_id: String,
@@ -52,14 +89,48 @@ pub struct Operation {
     pub product_name: String,  // Denormalized for receipts
     pub quantity: f64,
 
-    #[sqlx(try_from = "String")]
     pub unit_price: Decimal,
 
-    #[sqlx(try_from = "String")]
     pub subtotal: Decimal,
 
-    #[sqlx(try_from = "String")]
     pub recorded_at: DateTime<Utc>,
+}
+
+impl<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> for Operation {
+    fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        use sqlx::Row;
+
+        Ok(Operation {
+            id: row.try_get("id")?,
+            sale_id: row.try_get("sale_id")?,
+            product_id: row.try_get("product_id")?,
+            product_name: row.try_get("product_name")?,
+            quantity: row.try_get("quantity")?,
+            unit_price: {
+                let s: String = row.try_get("unit_price")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "unit_price".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            subtotal: {
+                let s: String = row.try_get("subtotal")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "subtotal".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            recorded_at: {
+                let s: String = row.try_get("recorded_at")?;
+                DateTime::parse_from_rfc3339(&s)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .map_err(|e| sqlx::Error::ColumnDecode {
+                        index: "recorded_at".to_string(),
+                        source: Box::new(e),
+                    })?
+            },
+        })
+    }
 }
 
 /// Input for creating a new sale

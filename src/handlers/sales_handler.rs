@@ -6,7 +6,7 @@ use crate::api::{SalesApi, SaleWithOperations, SalesStats};
 use crate::models::{Sale, SaleInput};
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SalesHandler {
     api: Arc<SalesApi>,
 }

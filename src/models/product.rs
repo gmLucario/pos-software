@@ -5,31 +5,76 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::str::FromStr;
 
 /// Product entity
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Product {
     pub id: String,  // UUID as TEXT
     pub barcode: Option<String>,
     pub full_name: String,
 
-    #[sqlx(try_from = "String")]
     pub user_price: Decimal,  // Stored as TEXT in DB
 
-    #[sqlx(try_from = "Option<String>")]
     pub cost_price: Option<Decimal>,  // Stored as TEXT in DB
 
     pub min_amount: f64,  // Minimum stock threshold
     pub current_amount: f64,  // Current inventory
     pub unit_measurement_id: i32,
 
-    #[sqlx(try_from = "String")]
     pub created_at: DateTime<Utc>,
 
-    #[sqlx(try_from = "String")]
     pub updated_at: DateTime<Utc>,
+}
+
+// Manual FromRow implementation to handle Decimal as TEXT
+impl<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> for Product {
+    fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        use sqlx::Row;
+
+        Ok(Product {
+            id: row.try_get("id")?,
+            barcode: row.try_get("barcode")?,
+            full_name: row.try_get("full_name")?,
+            user_price: {
+                let s: String = row.try_get("user_price")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "user_price".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            cost_price: {
+                let s: Option<String> = row.try_get("cost_price")?;
+                s.map(|s| Decimal::from_str(&s))
+                    .transpose()
+                    .map_err(|e| sqlx::Error::ColumnDecode {
+                        index: "cost_price".to_string(),
+                        source: Box::new(e),
+                    })?
+            },
+            min_amount: row.try_get("min_amount")?,
+            current_amount: row.try_get("current_amount")?,
+            unit_measurement_id: row.try_get("unit_measurement_id")?,
+            created_at: {
+                let s: String = row.try_get("created_at")?;
+                DateTime::parse_from_rfc3339(&s)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .map_err(|e| sqlx::Error::ColumnDecode {
+                        index: "created_at".to_string(),
+                        source: Box::new(e),
+                    })?
+            },
+            updated_at: {
+                let s: String = row.try_get("updated_at")?;
+                DateTime::parse_from_rfc3339(&s)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .map_err(|e| sqlx::Error::ColumnDecode {
+                        index: "updated_at".to_string(),
+                        source: Box::new(e),
+                    })?
+            },
+        })
+    }
 }
 
 impl Product {

@@ -2,14 +2,28 @@
 //!
 //! Business logic for processing sales transactions.
 
-use crate::models::{Sale, Operation, SaleInput, ItemCondition};
+use crate::models::{Sale, Operation, SaleInput};
 use crate::repo::{SaleRepository, ProductRepository};
 use rust_decimal::Decimal;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct SalesApi {
     sale_repo: Arc<dyn SaleRepository>,
     product_repo: Arc<dyn ProductRepository>,
+}
+
+impl std::fmt::Debug for SalesApi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SalesApi").finish()
+    }
+}
+
+impl PartialEq for SalesApi {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.sale_repo, &other.sale_repo)
+            && Arc::ptr_eq(&self.product_repo, &other.product_repo)
+    }
 }
 
 impl SalesApi {
@@ -63,20 +77,14 @@ impl SalesApi {
             return Err("Paid amount cannot be negative".to_string());
         }
 
-        // Validate item condition
-        match input.item_condition_id {
-            ItemCondition::CASH => {
-                if input.paid_amount < total {
-                    return Err("Cash sales must be paid in full".to_string());
-                }
-            },
-            ItemCondition::LOAN => {
-                // Loans can have partial or zero payment
-            },
-            _ => {
-                return Err("Invalid item condition".to_string());
+        // Validate payment based on whether it's a loan
+        if !input.is_loan() {
+            // Cash sales must be paid in full
+            if input.paid_amount < total {
+                return Err("Cash sales must be paid in full".to_string());
             }
         }
+        // Loans can have partial or zero payment - no validation needed
 
         // Create the sale (repository handles stock deduction)
         self.sale_repo.create(input).await
@@ -120,11 +128,11 @@ impl SalesApi {
             .sum();
 
         let cash_sales = sales.iter()
-            .filter(|s| s.item_condition_id == ItemCondition::CASH)
+            .filter(|s| !s.is_loan)
             .count();
 
         let loan_sales = sales.iter()
-            .filter(|s| s.item_condition_id == ItemCondition::LOAN)
+            .filter(|s| s.is_loan)
             .count();
 
         let total_cash_received = sales.iter()
@@ -159,11 +167,11 @@ impl SalesApi {
             .sum();
 
         let cash_sales = sales.iter()
-            .filter(|s| s.item_condition_id == ItemCondition::CASH)
+            .filter(|s| !s.is_loan)
             .count();
 
         let loan_sales = sales.iter()
-            .filter(|s| s.item_condition_id == ItemCondition::LOAN)
+            .filter(|s| s.is_loan)
             .count();
 
         let total_cash_received = sales.iter()

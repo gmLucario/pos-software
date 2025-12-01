@@ -5,7 +5,7 @@
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
 use crate::handlers::AppState;
-use crate::models::{Product, SaleInput, SaleItem, ItemCondition};
+use crate::models::{Product, SaleInput, SaleItemInput};
 use crate::utils::formatting::format_currency;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -27,10 +27,13 @@ pub fn SalesView() -> Element {
     let mut refresh_trigger = use_signal(|| 0);
 
     // Load products from database
-    let products_resource = use_resource(move || {
-        let handler = app_state.inventory_handler.clone();
-        async move {
-            handler.load_products().await
+    let mut products_resource = use_resource({
+        let inventory_handler = app_state.inventory_handler.clone();
+        move || {
+            let handler = inventory_handler.clone();
+            async move {
+                handler.load_products().await
+            }
         }
     });
 
@@ -91,24 +94,18 @@ pub fn SalesView() -> Element {
             };
 
             // Determine if this is a cash sale or loan
-            let cart_total: Decimal = cart_items.iter()
+            let _cart_total: Decimal = cart_items.iter()
                 .map(|item| item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default())
                 .sum();
 
-            let item_condition_id = if paid_amount >= cart_total {
-                ItemCondition::CASH
-            } else {
-                ItemCondition::LOAN
-            };
-
             // Create sale input
             let sale_input = SaleInput {
-                items: cart_items.iter().map(|item| SaleItem {
+                items: cart_items.iter().map(|item| SaleItemInput {
                     product_id: item.product.id.clone(),
+                    product_name: item.product.full_name.clone(),
                     quantity: item.quantity,
                     unit_price: item.product.user_price,
                 }).collect(),
-                item_condition_id,
                 paid_amount,
             };
 

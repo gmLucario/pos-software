@@ -5,28 +5,67 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use std::str::FromStr;
 
 /// Loan entity
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Loan {
     pub id: String,  // References sale.id
 
-    #[sqlx(try_from = "String")]
     pub total_debt: Decimal,
 
-    #[sqlx(try_from = "String")]
     pub paid_amount: Decimal,
 
-    #[sqlx(try_from = "String")]
     pub remaining_amount: Decimal,
 
     pub debtor_name: String,
     pub debtor_phone: Option<String>,
     pub status_id: i32,
 
-    #[sqlx(try_from = "String")]
     pub created_at: DateTime<Utc>,
+}
+
+impl<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> for Loan {
+    fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        use sqlx::Row;
+
+        Ok(Loan {
+            id: row.try_get("id")?,
+            total_debt: {
+                let s: String = row.try_get("total_debt")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "total_debt".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            paid_amount: {
+                let s: String = row.try_get("paid_amount")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "paid_amount".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            remaining_amount: {
+                let s: String = row.try_get("remaining_amount")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "remaining_amount".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            debtor_name: row.try_get("debtor_name")?,
+            debtor_phone: row.try_get("debtor_phone")?,
+            status_id: row.try_get("status_id")?,
+            created_at: {
+                let s: String = row.try_get("created_at")?;
+                DateTime::parse_from_rfc3339(&s)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .map_err(|e| sqlx::Error::ColumnDecode {
+                        index: "created_at".to_string(),
+                        source: Box::new(e),
+                    })?
+            },
+        })
+    }
 }
 
 impl Loan {
@@ -57,18 +96,44 @@ impl Loan {
 }
 
 /// Loan payment entity
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoanPayment {
     pub id: String,  // UUID as TEXT
     pub loan_id: String,
 
-    #[sqlx(try_from = "String")]
     pub amount: Decimal,
 
-    #[sqlx(try_from = "String")]
     pub payment_date: DateTime<Utc>,
 
     pub notes: Option<String>,
+}
+
+impl<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> for LoanPayment {
+    fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        use sqlx::Row;
+
+        Ok(LoanPayment {
+            id: row.try_get("id")?,
+            loan_id: row.try_get("loan_id")?,
+            amount: {
+                let s: String = row.try_get("amount")?;
+                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "amount".to_string(),
+                    source: Box::new(e),
+                })?
+            },
+            payment_date: {
+                let s: String = row.try_get("payment_date")?;
+                DateTime::parse_from_rfc3339(&s)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .map_err(|e| sqlx::Error::ColumnDecode {
+                        index: "payment_date".to_string(),
+                        source: Box::new(e),
+                    })?
+            },
+            notes: row.try_get("notes")?,
+        })
+    }
 }
 
 /// Input for creating a new loan
