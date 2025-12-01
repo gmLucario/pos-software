@@ -16,6 +16,7 @@ pub fn InventoryView() -> Element {
 
     let mut search_query = use_signal(String::new);
     let mut show_add_form = use_signal(|| false);
+    let mut editing_product = use_signal(|| None::<Product>);
     let mut refresh_trigger = use_signal(|| 0);
 
     // Load products from database
@@ -26,6 +27,8 @@ pub fn InventoryView() -> Element {
     });
 
     let create_handler = app_state.inventory_handler.clone();
+    let update_handler = app_state.inventory_handler.clone();
+    let delete_handler = app_state.inventory_handler.clone();
 
     // Refresh products when trigger changes
     use_effect(move || {
@@ -50,15 +53,13 @@ pub fn InventoryView() -> Element {
                 div {
                     style: "display: flex; gap: 0.5rem;",
 
-                    button {
-                        style: "background: #48bb78; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer; transition: background 0.2s;",
-                        onclick: move |_| refresh_trigger.set(refresh_trigger() + 1),
-                        "🔄 Refresh"
-                    }
 
                     button {
-                        style: "background: #667eea; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer; transition: background 0.2s;",
-                        onclick: move |_| show_add_form.set(!show_add_form()),
+                        style: "background: #667eea; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer; transition: background 0.2s; font-size: 1rem;",
+                        onclick: move |_| {
+                            editing_product.set(None);
+                            show_add_form.set(true);
+                        },
                         "+ Add Product"
                     }
                 }
@@ -110,11 +111,12 @@ pub fn InventoryView() -> Element {
                                     tr {
                                         style: "background: #f7fafc; border-bottom: 2px solid #e2e8f0;",
 
-                                        th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;", "Product Name" }
-                                        th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;", "Barcode" }
-                                        th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Price" }
-                                        th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Stock" }
-                                        th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Status" }
+                                        th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;", "Product Name" }
+                                        th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;", "Barcode" }
+                                        th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;", "Price" }
+                                        th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;", "Stock" }
+                                        th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;", "Status" }
+                                        th { style: "padding: 0.75rem; text-align: right; font-weight: 600; color: #4a5568; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;", "Actions" }
                                     }
                                 }
 
@@ -129,7 +131,13 @@ pub fn InventoryView() -> Element {
                                         }
                                     } else {
                                         for product in filtered_products.iter() {
-                                            ProductRow { product: product.clone() }
+                                            ProductRow {
+                                                product: product.clone(),
+                                                on_edit: move |p| {
+                                                    editing_product.set(Some(p));
+                                                    show_add_form.set(true);
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -177,13 +185,40 @@ pub fn InventoryView() -> Element {
 
             if show_add_form() {
 
-                AddProductForm {
-                    on_close: move |_| show_add_form.set(false),
+
+                ProductForm {
+                    on_close: move |_| {
+                        show_add_form.set(false);
+                        editing_product.set(None);
+                    },
+                    initial_product: editing_product(),
                     on_save: move |input| {
                         let handler = create_handler.clone();
+                        let update_handler = update_handler.clone();
+                        let is_edit = editing_product().is_some();
+                        let edit_id = editing_product().as_ref().map(|p| p.id.clone());
+
                         spawn(async move {
-                            if handler.create_product(input).await.is_ok() {
+                            let result = if is_edit {
+                                update_handler.update_product(edit_id.unwrap(), input).await
+                            } else {
+                                handler.create_product(input).await
+                            };
+
+                            if result.is_ok() {
                                 show_add_form.set(false);
+                                editing_product.set(None);
+                                refresh_trigger.set(refresh_trigger() + 1);
+                            }
+                        });
+                    },
+
+                    on_delete: move |id| {
+                        let handler = delete_handler.clone();
+                        spawn(async move {
+                            if handler.delete_product(id).await.is_ok() {
+                                show_add_form.set(false);
+                                editing_product.set(None);
                                 refresh_trigger.set(refresh_trigger() + 1);
                             }
                         });
@@ -195,7 +230,7 @@ pub fn InventoryView() -> Element {
 }
 
 #[component]
-fn ProductRow(product: Product) -> Element {
+fn ProductRow(product: Product, on_edit: EventHandler<Product>) -> Element {
     let is_low_stock = product.is_low_stock();
 
     let stock_style = if is_low_stock {
@@ -210,19 +245,19 @@ fn ProductRow(product: Product) -> Element {
             onmouseenter: move |_| {},
 
             td {
-                style: "padding: 0.75rem; font-weight: 500;",
+                style: "padding: 0.75rem; font-weight: 500; font-size: 1rem;",
                 "{product.full_name}"
             }
             td {
-                style: "padding: 0.75rem; color: #718096; font-family: monospace;",
+                style: "padding: 0.75rem; color: #718096; font-family: monospace; font-size: 1rem;",
                 "{product.barcode.as_deref().unwrap_or(\"-\")}"
             }
             td {
-                style: "padding: 0.75rem; text-align: center; font-weight: 500;",
+                style: "padding: 0.75rem; text-align: center; font-weight: 500; font-size: 1rem;",
                 "{format_currency(product.user_price)}"
             }
             td {
-                style: "padding: 0.75rem; text-align: center; {stock_style}",
+                style: "padding: 0.75rem; text-align: center; font-size: 1rem; {stock_style}",
                 "{product.current_amount:.2}"
             }
             td {
@@ -239,7 +274,16 @@ fn ProductRow(product: Product) -> Element {
                     }
                 }
             }
+            td {
+                style: "padding: 0.75rem; text-align: right;",
+                button {
+                    style: "background: none; border: none; color: #667eea; font-weight: 500; cursor: pointer; padding: 0.25rem 0.5rem; font-size: 0.875rem;",
+                    onclick: move |_| on_edit.call(product.clone()),
+                    "Edit"
+                }
+            }
         }
+
     }
 }
 
@@ -262,24 +306,59 @@ fn StatCard(label: String, value: String, color: String) -> Element {
 }
 
 #[component]
-fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput>) -> Element {
-    let mut full_name = use_signal(String::new);
-    let mut barcode = use_signal(String::new);
-    let mut price = use_signal(String::new);
-    let mut cost = use_signal(String::new);
-    let mut stock = use_signal(String::new);
-    let mut min_stock = use_signal(String::new);
-    let mut unit_id = use_signal(|| 3); // Default to Unit (3)
+fn ProductForm(
+    on_close: EventHandler<()>,
+    on_save: EventHandler<ProductInput>,
+    on_delete: EventHandler<String>,
+    initial_product: Option<Product>,
+) -> Element {
+    let mut full_name = use_signal(|| {
+        initial_product
+            .as_ref()
+            .map(|p| p.full_name.clone())
+            .unwrap_or_default()
+    });
+    let mut barcode = use_signal(|| {
+        initial_product
+            .as_ref()
+            .and_then(|p| p.barcode.clone())
+            .unwrap_or_default()
+    });
+    let mut price = use_signal(|| {
+        initial_product
+            .as_ref()
+            .map(|p| p.user_price.to_string())
+            .unwrap_or_default()
+    });
+    let mut cost = use_signal(|| {
+        initial_product
+            .as_ref()
+            .and_then(|p| p.cost_price.map(|c| c.to_string()))
+            .unwrap_or_default()
+    });
+    let mut stock = use_signal(|| {
+        initial_product
+            .as_ref()
+            .map(|p| p.current_amount.to_string())
+            .unwrap_or_default()
+    });
+    let mut min_stock = use_signal(|| {
+        initial_product
+            .as_ref()
+            .map(|p| p.min_amount.to_string())
+            .unwrap_or_default()
+    });
+    let mut unit_id = use_signal(|| {
+        initial_product
+            .as_ref()
+            .map(|p| p.unit_measurement_id)
+            .unwrap_or(3)
+    }); // Default to Unit (3)
     let mut error_msg = use_signal(String::new);
 
-    let units_resource = use_resource(move || {
-        async move {
-            // We need access to inventory handler here.
-            // Since we can't easily pass it through props without changing signature significantly,
-            // let's use the context again.
-            let app_state = use_context::<AppState>();
-            app_state.inventory_handler.get_units().await
-        }
+    let units_resource = use_resource(move || async move {
+        let app_state = use_context::<AppState>();
+        app_state.inventory_handler.get_units().await
     });
 
     let handle_submit = move |_| {
@@ -327,6 +406,17 @@ fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput
         });
     };
 
+    let title = if initial_product.is_some() {
+        "Edit Product"
+    } else {
+        "Add New Product"
+    };
+    let save_label = if initial_product.is_some() {
+        "Update Product"
+    } else {
+        "Save Product"
+    };
+
     rsx! {
         div {
             style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;",
@@ -336,7 +426,18 @@ fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput
                 style: "background: white; padding: 2rem; border-radius: 0.5rem; width: 500px; max-width: 90%; max-height: 90vh; overflow-y: auto;",
                 onclick: move |evt| evt.stop_propagation(),
 
-                h3 { style: "margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;", "Add New Product" }
+                div {
+                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;",
+                    h3 { style: "margin: 0; font-size: 1.25rem;", "{title}" }
+
+                    if let Some(product) = initial_product {
+                        button {
+                            style: "background: #e53e3e; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
+                            onclick: move |_| on_delete.call(product.id.clone()),
+                            "Delete Product"
+                        }
+                    }
+                }
 
                 if !error_msg().is_empty() {
                     div {
@@ -347,10 +448,10 @@ fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput
 
                 div {
                     style: "margin-bottom: 1rem;",
-                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Product Name *" }
+                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: #4a5568;", "Product Name *" }
                     input {
                         r#type: "text",
-                        style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                        style: "width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; font-size: 1rem;",
                         value: "{full_name}",
                         oninput: move |e| full_name.set(e.value())
                     }
@@ -358,10 +459,10 @@ fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput
 
                 div {
                     style: "margin-bottom: 1rem;",
-                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Barcode" }
+                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: #4a5568;", "Barcode" }
                     input {
                         r#type: "text",
-                        style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                        style: "width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; font-size: 1rem;",
                         value: "{barcode}",
                         oninput: move |e| barcode.set(e.value())
                     }
@@ -370,21 +471,21 @@ fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput
                 div {
                     style: "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;",
                     div {
-                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Price *" }
+                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: #4a5568;", "Price *" }
                         input {
                             r#type: "number",
                             step: "0.01",
-                            style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                            style: "width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; font-size: 1rem;",
                             value: "{price}",
                             oninput: move |e| price.set(e.value())
                         }
                     }
                     div {
-                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Cost" }
+                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: #4a5568;", "Cost" }
                         input {
                             r#type: "number",
                             step: "0.01",
-                            style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                            style: "width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; font-size: 1rem;",
                             value: "{cost}",
                             oninput: move |e| cost.set(e.value())
                         }
@@ -394,19 +495,19 @@ fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput
                 div {
                     style: "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;",
                     div {
-                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Stock Amount" }
+                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: #4a5568;", "Stock Amount" }
                         input {
                             r#type: "number",
-                            style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                            style: "width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; font-size: 1rem;",
                             value: "{stock}",
                             oninput: move |e| stock.set(e.value())
                         }
                     }
                     div {
-                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Min Stock" }
+                        label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: #4a5568;", "Min Stock" }
                         input {
                             r#type: "number",
-                            style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem;",
+                            style: "width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; font-size: 1rem;",
                             value: "{min_stock}",
                             oninput: move |e| min_stock.set(e.value())
                         }
@@ -415,9 +516,9 @@ fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput
 
                 div {
                     style: "margin-bottom: 1.5rem;",
-                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500;", "Unit of Measurement" }
+                    label { style: "display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: #4a5568;", "Unit of Measurement" }
                     select {
-                        style: "width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; background: white;",
+                        style: "width: 100%; padding: 0.625rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; background: white; font-size: 1rem;",
                         onchange: move |evt| {
                             if let Ok(id) = evt.value().parse::<i32>() {
                                 unit_id.set(id);
@@ -438,14 +539,14 @@ fn AddProductForm(on_close: EventHandler<()>, on_save: EventHandler<ProductInput
                 div {
                     style: "display: flex; justify-content: flex-end; gap: 0.5rem;",
                     button {
-                        style: "padding: 0.5rem 1rem; border: 1px solid #e2e8f0; background: white; border-radius: 0.25rem; cursor: pointer;",
+                        style: "padding: 0.5rem 1rem; border: 1px solid #e2e8f0; background: white; border-radius: 0.25rem; cursor: pointer; font-size: 1rem; font-weight: 500;",
                         onclick: move |_| on_close.call(()),
                         "Cancel"
                     }
                     button {
-                        style: "padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                        style: "padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 1rem; font-weight: 500;",
                         onclick: handle_submit,
-                        "Save Product"
+                        "{save_label}"
                     }
                 }
             }

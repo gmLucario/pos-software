@@ -5,16 +5,12 @@
 
 #![allow(non_snake_case)]
 
-
-
 pub mod api;
 pub mod handlers;
-pub mod views;
 pub mod models;
 pub mod repo;
 pub mod utils;
-
-
+pub mod views;
 
 use dioxus::prelude::*;
 use std::sync::OnceLock;
