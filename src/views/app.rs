@@ -35,11 +35,6 @@ pub fn App(app_state: AppState) -> Element {
                 div {
                     style: "max-width: 1200px; margin: 0 auto;",
 
-                    h1 {
-                        style: "color: white; margin: 0 0 1rem 0; font-size: 1.8rem; font-weight: 600;",
-                        "🏪 POS System"
-                    }
-
                     // Tab navigation
                     nav {
                         class: "tab-navigation",

@@ -5,14 +5,6 @@ edition = "2021"
 authors = ["POS Development Team"]
 description = "Point of Sale system with inventory, sales, and loan management"
 
-[lib]
-name = "pos_app"
-path = "src/lib.rs"
-
-[[bin]]
-name = "pos-app"
-path = "src/main.rs"
-
 [dependencies]
 # UI Framework
 dioxus = { version = "0.7", features = ["desktop"] }
@@ -39,10 +31,6 @@ tracing-subscriber = "0.3"
 # Note: Development on macOS, targeting both macOS and Windows
 # For Windows builds from macOS, use: cargo build --target x86_64-pc-windows-gnu
 # Install Windows toolchain: rustup target add x86_64-pc-windows-gnu
-
-[features]
-default = ["desktop"]
-desktop = []
 
 [dev-dependencies]
 # Testing utilities (will be added later)
