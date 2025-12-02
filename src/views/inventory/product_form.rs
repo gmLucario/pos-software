@@ -15,13 +15,16 @@ pub fn ProductForm(
     on_delete: EventHandler<String>,
     initial_product: Option<Product>,
 ) -> Element {
-    let mut full_name = use_signal(|| extract_field(&initial_product, |p| p.full_name.clone()));
-    let mut barcode = use_signal(|| extract_optional_field(&initial_product, |p| p.barcode.clone()));
-    let mut price = use_signal(|| extract_field(&initial_product, |p| p.user_price.to_string()));
-    let mut cost = use_signal(|| extract_optional_field(&initial_product, |p| p.cost_price.map(|c| c.to_string())));
-    let mut stock = use_signal(|| extract_field(&initial_product, |p| p.current_amount.to_string()));
-    let mut min_stock = use_signal(|| extract_field(&initial_product, |p| p.min_amount.to_string()));
-    let mut unit_id = use_signal(|| initial_product.as_ref().map(|p| p.unit_measurement_id).unwrap_or(3));
+    // Clone initial_product to avoid lifetime issues
+    let product_clone = initial_product.clone();
+
+    let mut full_name = use_signal(|| extract_field(&product_clone, |p| p.full_name.clone()));
+    let mut barcode = use_signal(|| extract_optional_field(&product_clone, |p| p.barcode.clone()));
+    let mut price = use_signal(|| extract_field(&product_clone, |p| p.user_price.to_string()));
+    let mut cost = use_signal(|| extract_optional_field(&product_clone, |p| p.cost_price.map(|c| c.to_string())));
+    let mut stock = use_signal(|| extract_field(&product_clone, |p| p.current_amount.to_string()));
+    let mut min_stock = use_signal(|| extract_field(&product_clone, |p| p.min_amount.to_string()));
+    let mut unit_id = use_signal(|| product_clone.as_ref().map(|p| p.unit_measurement_id).unwrap_or(3));
     let mut error_msg = use_signal(String::new);
 
     let units_resource = use_resource(move || async move {
@@ -220,7 +223,7 @@ fn validate_and_build_product_input(
 fn form_input(
     label: &str,
     input_type: &str,
-    signal: Signal<String>,
+    mut signal: Signal<String>,
     step: Option<&str>,
     wrapper_style: Option<&str>,
 ) -> Element {
