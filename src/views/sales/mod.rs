@@ -2,16 +2,30 @@
 //!
 //! UI components for processing sales and managing the shopping cart.
 
+mod cart_item_row;
+mod cart_summary;
+mod product_card;
+mod products_list;
+mod quantity_modal;
+mod sale_message;
+mod validations;
+
+pub use cart_item_row::CartItemRow;
+pub use cart_summary::CartSummary;
+pub use product_card::ProductCard;
+pub use products_list::ProductsList;
+pub use quantity_modal::QuantityModal;
+pub use sale_message::SaleMessage;
+
 use crate::handlers::AppState;
 use crate::models::{Product, SaleInput, SaleItemInput};
-use crate::utils::formatting::format_currency;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
 
 #[derive(Clone, Debug, PartialEq)]
-struct CartItem {
-    product: Product,
-    quantity: f64,
+pub struct CartItem {
+    pub product: Product,
+    pub quantity: f64,
 }
 
 #[component]
@@ -25,6 +39,7 @@ pub fn SalesView() -> Element {
     let mut show_receipt = use_signal(|| false);
     let mut sale_message = use_signal(|| Option::<(bool, String)>::None); // (is_success, message)
     let mut refresh_trigger = use_signal(|| 0);
+    let mut show_quantity_modal = use_signal(|| Option::<Product>::None); // Product to add
 
     // Load products from database
     let mut products_resource = use_resource({
@@ -41,28 +56,81 @@ pub fn SalesView() -> Element {
         products_resource.restart();
     });
 
-    // Calculate cart total
-    let cart_total: Decimal = cart
-        .read()
-        .iter()
-        .map(|item| {
-            item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default()
-        })
-        .sum();
+    // Calculate cart total (reactive)
+    let cart_total = use_memo(move || {
+        cart.read()
+            .iter()
+            .map(|item| {
+                item.product.user_price
+                    * Decimal::from_f64_retain(item.quantity).unwrap_or_default()
+            })
+            .sum::<Decimal>()
+    });
 
-    // Add product to cart
-    let mut add_to_cart = move |product: Product| {
+    // Calculate change (subtotal to return to buyer) - reactive
+    let change_amount = use_memo(move || {
+        let payment = payment_amount.read();
+        let total = *cart_total.read();
+
+        if payment.is_empty() {
+            Decimal::ZERO
+        } else {
+            match payment.parse::<Decimal>() {
+                Ok(paid) => {
+                    if paid > total {
+                        paid - total
+                    } else {
+                        Decimal::ZERO
+                    }
+                }
+                Err(_) => Decimal::ZERO,
+            }
+        }
+    });
+
+    // Show quantity modal for product
+    let mut show_product_modal = move |product: Product| {
+        show_quantity_modal.set(Some(product));
+    };
+
+    // Add product to cart with specified quantity
+    let add_to_cart_with_quantity = move |(product, quantity): (Product, f64)| {
+        let cart_items_read = cart.read();
+
+        // Check if quantity exceeds available stock
+        let existing_quantity = cart_items_read
+            .iter()
+            .find(|item| item.product.id == product.id)
+            .map(|item| item.quantity)
+            .unwrap_or(0.0);
+
+        let total_quantity = existing_quantity + quantity;
+
+        if total_quantity > product.current_amount {
+            sale_message.set(Some((
+                false,
+                format!(
+                    "Cannot add {}. Only {} available (already have {} in cart)",
+                    quantity, product.current_amount, existing_quantity
+                ),
+            )));
+            show_quantity_modal.set(None);
+            return;
+        }
+
+        // Drop the read guard before writing
+        drop(cart_items_read);
         let mut cart_items = cart.write();
 
-        // Check if product already in cart
+        // Add or update cart item
         if let Some(item) = cart_items.iter_mut().find(|i| i.product.id == product.id) {
-            item.quantity += 1.0;
+            item.quantity += quantity;
         } else {
-            cart_items.push(CartItem {
-                product,
-                quantity: 1.0,
-            });
+            cart_items.push(CartItem { product, quantity });
         }
+
+        // Close modal
+        show_quantity_modal.set(None);
     };
 
     // Remove from cart
@@ -94,15 +162,6 @@ pub fn SalesView() -> Element {
                     }
                 }
             };
-
-            // Determine if this is a cash sale or loan
-            let _cart_total: Decimal = cart_items
-                .iter()
-                .map(|item| {
-                    item.product.user_price
-                        * Decimal::from_f64_retain(item.quantity).unwrap_or_default()
-                })
-                .sum();
 
             // Create sale input
             let sale_input = SaleInput {
@@ -159,38 +218,12 @@ pub fn SalesView() -> Element {
 
                 // Products based on loading state
                 match &*products_resource.read_unchecked() {
-                    Some(Ok(products)) => {
-                        // Filter products
-                        let filtered_products: Vec<Product> = products.iter()
-                            .filter(|p| {
-                                let query = search_query.read().to_lowercase();
-                                if query.is_empty() {
-                                    return true;
-                                }
-                                p.full_name.to_lowercase().contains(&query) ||
-                                p.barcode.as_ref().is_some_and(|b| b.contains(&query))
-                            })
-                            .cloned()
-                            .collect();
-
-                        rsx! {
-                            div {
-                                style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; max-height: 600px; overflow-y: auto;",
-
-                                if filtered_products.is_empty() {
-                                    div {
-                                        style: "grid-column: 1 / -1; padding: 2rem; text-align: center; color: #718096;",
-                                        "No products found"
-                                    }
-                                } else {
-                                    for product in filtered_products {
-                                        ProductCard {
-                                            product: product.clone(),
-                                            on_add: move |p: Product| add_to_cart(p),
-                                        }
-                                    }
-                                }
-                            }
+                    Some(Ok(products)) => rsx! {
+                        ProductsList {
+                            products: products.clone(),
+                            cart_items: cart.read().clone(),
+                            search_query: search_query.read().clone(),
+                            on_add: move |p: Product| show_product_modal(p),
                         }
                     },
                     Some(Err(err)) => rsx! {
@@ -219,18 +252,10 @@ pub fn SalesView() -> Element {
 
                 // Sale message
                 if let Some((is_success, message)) = sale_message.read().clone() {
-                    div {
-                        style: if is_success {
-                            "padding: 0.75rem; margin-bottom: 1rem; background: #f0fff4; color: #22543d; border-radius: 0.5rem; border: 1px solid #48bb78;"
-                        } else {
-                            "padding: 0.75rem; margin-bottom: 1rem; background: #fff5f5; color: #c53030; border-radius: 0.5rem; border: 1px solid #f56565;"
-                        },
-                        "{message}"
-                        button {
-                            style: "float: right; background: transparent; border: none; cursor: pointer; font-weight: bold;",
-                            onclick: move |_| sale_message.set(None),
-                            "✕"
-                        }
+                    SaleMessage {
+                        is_success,
+                        message,
+                        on_dismiss: move |_| sale_message.set(None),
                     }
                 }
 
@@ -255,46 +280,24 @@ pub fn SalesView() -> Element {
                 }
 
                 // Cart summary
-                div {
-                    style: "border-top: 2px solid #e2e8f0; padding-top: 1rem;",
-
-                    div {
-                        style: "display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 1.125rem;",
-                        span { style: "font-weight: 500;", "Subtotal:" }
-                        span { style: "font-weight: 600;", "{format_currency(cart_total)}" }
-                    }
-
-                    div {
-                        style: "display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 1.5rem;",
-                        span { style: "font-weight: 700;", "Total:" }
-                        span { style: "font-weight: 700; color: #667eea;", "{format_currency(cart_total)}" }
-                    }
-
-                    // Payment input
-                    div {
-                        style: "margin-bottom: 1rem;",
-                        label {
-                            style: "display: block; font-size: 0.875rem; font-weight: 500; color: #4a5568; margin-bottom: 0.5rem;",
-                            "Payment Amount (leave empty for loan)"
-                        }
-                        input {
-                            r#type: "number",
-                            step: "0.01",
-                            placeholder: "0.00",
-                            value: "{payment_amount}",
-                            oninput: move |evt| payment_amount.set(evt.value().clone()),
-                            style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box;",
-                        }
-                    }
-
-                    // Complete sale button
-                    button {
-                        style: "width: 100%; background: #48bb78; color: white; padding: 1rem; border: none; border-radius: 0.5rem; font-size: 1.125rem; font-weight: 600; cursor: pointer; transition: background 0.2s;",
-                        disabled: cart.read().is_empty(),
-                        onclick: complete_sale,
-                        "💳 Complete Sale"
-                    }
+                CartSummary {
+                    cart_total: *cart_total.read(),
+                    change_amount: *change_amount.read(),
+                    payment_amount: payment_amount.read().clone(),
+                    cart_is_empty: cart.read().is_empty(),
+                    on_payment_change: move |value: String| payment_amount.set(value),
+                    on_complete_sale: complete_sale,
                 }
+            }
+        }
+
+        // Quantity modal
+        if let Some(product) = show_quantity_modal.read().clone() {
+            QuantityModal {
+                product: product.clone(),
+                unit_abbreviation: get_unit_abbreviation(product.unit_measurement_id).to_string(),
+                on_confirm: add_to_cart_with_quantity,
+                on_cancel: move |_| show_quantity_modal.set(None),
             }
         }
 
@@ -323,73 +326,17 @@ pub fn SalesView() -> Element {
     }
 }
 
-#[component]
-fn ProductCard(product: Product, on_add: EventHandler<Product>) -> Element {
-    let is_low_stock = product.is_low_stock();
-
-    rsx! {
-        div {
-            style: "border: 2px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; cursor: pointer; transition: all 0.2s; background: white;",
-            onclick: move |_| on_add.call(product.clone()),
-
-            div {
-                style: "font-weight: 600; margin-bottom: 0.5rem; color: #2d3748;",
-                "{product.full_name}"
-            }
-
-            div {
-                style: "font-size: 1.25rem; font-weight: 700; color: #667eea; margin-bottom: 0.5rem;",
-                "{format_currency(product.user_price)}"
-            }
-
-            div {
-                style: "font-size: 0.875rem; color: #718096;",
-                "Stock: {product.current_amount:.2}"
-            }
-
-            if is_low_stock {
-                div {
-                    style: "margin-top: 0.5rem; background: #fff5f5; color: #c53030; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; text-align: center;",
-                    "⚠️ Low Stock"
-                }
-            }
-        }
-    }
-}
-
-#[component]
-fn CartItemRow(item: CartItem, on_remove: EventHandler<String>) -> Element {
-    let subtotal =
-        item.product.user_price * Decimal::from_f64_retain(item.quantity).unwrap_or_default();
-
-    rsx! {
-        div {
-            style: "padding: 0.75rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;",
-
-            div {
-                style: "flex: 1;",
-                div {
-                    style: "font-weight: 500; color: #2d3748;",
-                    "{item.product.full_name}"
-                }
-                div {
-                    style: "font-size: 0.875rem; color: #718096;",
-                    "{item.quantity} × {format_currency(item.product.user_price)}"
-                }
-            }
-
-            div {
-                style: "display: flex; align-items: center; gap: 1rem;",
-                div {
-                    style: "font-weight: 600; color: #667eea;",
-                    "{format_currency(subtotal)}"
-                }
-                button {
-                    style: "background: #f56565; color: white; border: none; border-radius: 0.25rem; padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.875rem;",
-                    onclick: move |_| on_remove.call(item.product.id.clone()),
-                    "✕"
-                }
-            }
-        }
+/// Get unit measurement abbreviation from ID
+fn get_unit_abbreviation(unit_id: i32) -> &'static str {
+    use crate::models::UnitMeasurement;
+    match unit_id {
+        UnitMeasurement::KILOGRAM => "kg",
+        UnitMeasurement::LITER => "lt",
+        UnitMeasurement::UNIT => "unit",
+        UnitMeasurement::PIECE => "pcs",
+        UnitMeasurement::BOX => "box",
+        UnitMeasurement::CAN => "can",
+        UnitMeasurement::BOTTLE => "btl",
+        _ => "unit",
     }
 }
