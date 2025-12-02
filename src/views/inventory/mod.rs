@@ -199,7 +199,7 @@ pub fn InventoryView() -> Element {
                         }
 
                         // Pagination controls (only show when not searching)
-                        if !is_search_mode && total_pages > 1 {
+                        if !is_search_mode {
                             div {
                                 style: "margin-top: 1.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem;",
 

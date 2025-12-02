@@ -89,10 +89,6 @@ impl InventoryApi {
 
     /// List products with pagination
     pub async fn list_products_paginated(&self, page: i64, page_size: i64) -> Result<PaginatedResult<Product>, String> {
-        if page < 1 {
-            return Err("Page number must be at least 1".to_string());
-        }
-
         if page_size < 1 || page_size > 100 {
             return Err("Page size must be between 1 and 100".to_string());
         }
