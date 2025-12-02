@@ -1,33 +1,61 @@
-//! Entry point of the application
-#[macro_use]
-extern crate log;
-extern crate simplelog;
+//! POS Application - Point of Sale System
+//!
+//! A desktop application for managing inventory, sales, and loans.
+//! Built with Dioxus for cross-platform support (macOS, Windows).
 
-pub mod config;
-pub mod constants;
-pub mod controllers;
-pub mod db;
-pub mod domain;
-pub mod errors;
-pub mod events;
-pub mod helpers;
-pub mod kinds;
+#![allow(non_snake_case)]
+
+pub mod api;
+pub mod handlers;
 pub mod models;
 pub mod repo;
-pub mod result;
-pub mod schemas;
-pub mod setup;
+pub mod utils;
 pub mod views;
 
-#[async_std::main]
-async fn main() -> result::GenericReturn<()> {
-    setup::setup_app_config()?;
+use dioxus::prelude::*;
+use std::sync::OnceLock;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
-    setup::logger_wrapper()?;
+static APP_STATE: OnceLock<handlers::AppState> = OnceLock::new();
 
-    setup::setup_db(config::AppConfig::get()).await?;
+fn main() {
+    // Initialize logging
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("Failed to set tracing subscriber");
 
-    setup::setup_main_app().await?;
+    tracing::info!("Starting POS Application");
 
-    Ok(())
+    // Initialize database
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+
+    let pool = runtime.block_on(async {
+        let db_url = utils::db::get_database_url();
+        tracing::info!("Initializing database at: {}", db_url);
+
+        utils::db::initialize_database(&db_url)
+            .await
+            .expect("Failed to initialize database")
+    });
+
+    tracing::info!("Database initialized successfully");
+
+    // Create app state and store it globally
+    APP_STATE
+        .set(handlers::AppState::new(pool))
+        .expect("Failed to set app state");
+    tracing::info!("Application state created");
+
+    // Launch the Dioxus desktop app
+    launch(app_root);
+}
+
+fn app_root() -> Element {
+    let app_state = APP_STATE.get().expect("App state not initialized").clone();
+
+    rsx! {
+        views::app::App { app_state }
+    }
 }
