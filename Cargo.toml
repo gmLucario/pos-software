@@ -43,8 +43,20 @@ rfd = "0.15"
 # For Windows builds from macOS, use: cargo build --target x86_64-pc-windows-gnu
 # Install Windows toolchain: rustup target add x86_64-pc-windows-gnu
 
+[build-dependencies]
+winresource = "0.1"
+
 [dev-dependencies]
 # Testing utilities (will be added later)
+
+# Dioxus desktop configuration
+[package.metadata.bundle]
+name = "POS System"
+identifier = "com.pos.app"
+version = "0.2.0"
+resources = ["assets"]
+copyright = "Copyright (c) POS Development Team 2024"
+category = "Business"
 
 # Build profiles
 [profile.release]

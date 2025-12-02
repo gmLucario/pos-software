@@ -4,6 +4,10 @@
 //! Built with Dioxus for cross-platform support (macOS, Windows).
 
 #![allow(non_snake_case)]
+#![cfg_attr(
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
+)]
 
 pub mod api;
 pub mod handlers;
