@@ -20,7 +20,7 @@ pub fn CartItemRow(item: CartItem, on_remove: EventHandler<String>) -> Element {
             div {
                 style: "flex: 1;",
                 div {
-                    style: "font-weight: 500; color: #2d3748;",
+                    style: "font-weight: 500; color: #2d3748; font-size: 1rem;",
                     "{item.product.full_name}"
                 }
                 div {
@@ -32,7 +32,7 @@ pub fn CartItemRow(item: CartItem, on_remove: EventHandler<String>) -> Element {
             div {
                 style: "display: flex; align-items: center; gap: 1rem;",
                 div {
-                    style: "font-weight: 600; color: #667eea;",
+                    style: "font-weight: 600; color: #667eea; font-size: 1rem;",
                     "{format_currency(subtotal)}"
                 }
                 button {

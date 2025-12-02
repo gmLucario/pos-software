@@ -11,13 +11,14 @@ pub fn LoanRow(
     loan: Loan,
     on_select: EventHandler<Loan>,
     on_view_receipt: EventHandler<String>,
+    on_view_payment_history: EventHandler<String>,
 ) -> Element {
-    let percentage = loan.payment_percentage();
     let is_paid = loan.is_paid_off();
 
     // Clone loan for closures
     let loan_for_receipt = loan.clone();
     let loan_for_payment = loan.clone();
+    let loan_for_history = loan.clone();
 
     rsx! {
         tr {
@@ -32,32 +33,20 @@ pub fn LoanRow(
                 "{loan.debtor_phone.as_deref().unwrap_or(\"-\")}"
             }
             td {
-                style: "padding: 0.75rem; text-align: right; font-weight: 500;",
+                style: "padding: 0.75rem; text-align: center; font-weight: 500;",
                 "{format_currency(loan.total_debt)}"
             }
             td {
-                style: "padding: 0.75rem; text-align: right; color: #48bb78; font-weight: 500;",
-                "{format_currency(loan.paid_amount)}"
-            }
-            td {
-                style: "padding: 0.75rem; text-align: right; color: #f56565; font-weight: 600;",
-                "{format_currency(loan.remaining_amount)}"
-            }
-            td {
-                style: "padding: 0.75rem;",
-                div {
-                    style: "width: 100px;",
-                    div {
-                        style: "background: #e2e8f0; height: 8px; border-radius: 9999px; overflow: hidden;",
-                        div {
-                            style: "background: #48bb78; height: 100%; width: {percentage}%; transition: width 0.3s;",
-                        }
-                    }
-                    div {
-                        style: "font-size: 0.75rem; color: #718096; margin-top: 0.25rem; text-align: center;",
-                        "{percentage:.0}%"
-                    }
+                style: "padding: 0.75rem; text-align: center;",
+                button {
+                    style: "background: transparent; border: none; color: #48bb78; font-weight: 600; cursor: pointer; text-decoration: underline; font-family: inherit; font-size: inherit; padding: 0;",
+                    onclick: move |_| on_view_payment_history.call(loan_for_history.id.clone()),
+                    "{format_currency(loan.paid_amount)}"
                 }
+            }
+            td {
+                style: "padding: 0.75rem; text-align: center; color: #f56565; font-weight: 600;",
+                "{format_currency(loan.remaining_amount)}"
             }
             td {
                 style: "padding: 0.75rem; text-align: center;",

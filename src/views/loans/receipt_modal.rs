@@ -4,11 +4,16 @@
 
 use crate::models::{Operation, Sale};
 use crate::utils::formatting::format_currency;
+use chrono_tz::America::Mexico_City;
 use dioxus::prelude::*;
 
 #[component]
 pub fn ReceiptModal(sale: Sale, operations: Vec<Operation>, on_close: EventHandler<()>) -> Element {
-    let formatted_date = sale.sold_at.format("%Y-%m-%d %H:%M:%S").to_string();
+    let formatted_date = sale
+        .sold_at
+        .with_timezone(&Mexico_City)
+        .format("%d-%b-%Y %H:%M")
+        .to_string();
 
     rsx! {
         // Modal overlay

@@ -96,7 +96,7 @@ impl Loan {
 }
 
 /// Loan payment entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoanPayment {
     pub id: String, // UUID as TEXT
     pub loan_id: String,

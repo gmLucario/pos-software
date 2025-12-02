@@ -55,9 +55,9 @@ pub fn CartSummary(
                         }
                     },
                     style: if *has_invalid_input.read() {
-                        "width: 100%; padding: 0.75rem; border: 2px solid #f56565; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box; background: #fff5f5;"
+                        "width: 100%; padding: 0.75rem; border: 2px solid #f56565; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box; background: #fff5f5;"
                     } else {
-                        "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box;"
+                        "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;"
                     },
                 }
                 if *has_invalid_input.read() {
@@ -70,7 +70,7 @@ pub fn CartSummary(
 
             // Change
             div {
-                style: "display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 1.125rem;",
+                style: "display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 1rem;",
                 span { style: "font-weight: 500;", "Change:" }
                 span {
                     style: if change_amount > Decimal::ZERO {
@@ -84,7 +84,7 @@ pub fn CartSummary(
 
             // Complete sale button
             button {
-                style: "width: 100%; background: #48bb78; color: white; padding: 1rem; border: none; border-radius: 0.5rem; font-size: 1.125rem; font-weight: 600; cursor: pointer; transition: background 0.2s;",
+                style: "width: 100%; background: #48bb78; color: white; padding: 1rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;",
                 disabled: cart_is_empty,
                 onclick: move |_| on_complete_sale.call(()),
                 "💳 Complete Sale"

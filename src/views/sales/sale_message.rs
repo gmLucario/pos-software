@@ -22,7 +22,7 @@ pub fn SaleMessage(is_success: bool, message: String, on_dismiss: EventHandler<(
 
     rsx! {
         div {
-            style: "padding: 0.75rem; margin-bottom: 1rem; background: {bg_color}; color: {text_color}; border-radius: 0.5rem; border: 1px solid {border_color};",
+            style: "padding: 0.75rem; margin-bottom: 1rem; background: {bg_color}; color: {text_color}; border-radius: 0.5rem; border: 1px solid {border_color}; font-size: 1rem;",
             "{message}"
             button {
                 style: "float: right; background: transparent; border: none; cursor: pointer; font-weight: bold;",

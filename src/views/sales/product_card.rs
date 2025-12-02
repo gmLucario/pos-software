@@ -45,7 +45,7 @@ pub fn ProductCard(
             onclick: move |_| on_add.call(product.clone()),
 
             div {
-                style: "font-weight: 600; margin-bottom: 0.5rem; color: #2d3748;",
+                style: "font-weight: 600; margin-bottom: 0.5rem; color: #2d3748; font-size: 1rem;",
                 "{product.full_name}"
             }
 

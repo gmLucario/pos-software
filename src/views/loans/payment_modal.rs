@@ -10,7 +10,9 @@ use dioxus::prelude::*;
 pub fn PaymentModal(
     loan: Loan,
     payment_amount: String,
+    payment_notes: String,
     on_amount_change: EventHandler<String>,
+    on_notes_change: EventHandler<String>,
     on_cancel: EventHandler<()>,
     on_confirm: EventHandler<()>,
 ) -> Element {
@@ -53,7 +55,7 @@ pub fn PaymentModal(
 
                 // Payment input
                 div {
-                    style: "margin-bottom: 1.5rem;",
+                    style: "margin-bottom: 1rem;",
                     label {
                         style: "display: block; font-size: 0.875rem; font-weight: 500; color: #4a5568; margin-bottom: 0.5rem;",
                         "Payment Amount"
@@ -65,14 +67,33 @@ pub fn PaymentModal(
                         value: "{payment_amount}",
                         autofocus: true,
                         oninput: move |evt| on_amount_change.call(evt.value()),
+                        style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box;",
+                    }
+                }
+
+                // Notes input
+                div {
+                    style: "margin-bottom: 1.5rem;",
+                    label {
+                        style: "display: block; font-size: 0.875rem; font-weight: 500; color: #4a5568; margin-bottom: 0.5rem;",
+                        "Notes (optional)"
+                    }
+                    textarea {
+                        placeholder: "Add notes about this payment...",
+                        value: "{payment_notes}",
+                        oninput: move |evt| on_notes_change.call(evt.value()),
                         onkeydown: move |evt| {
-                            if evt.key() == Key::Enter {
+                            if evt.key() == Key::Enter && evt.modifiers().ctrl() {
                                 on_confirm.call(());
                             } else if evt.key() == Key::Escape {
                                 on_cancel.call(());
                             }
                         },
-                        style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box;",
+                        style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box; min-height: 80px; resize: vertical; font-family: inherit;",
+                    }
+                    div {
+                        style: "font-size: 0.75rem; color: #718096; margin-top: 0.25rem;",
+                        "Press Ctrl+Enter to submit"
                     }
                 }
 

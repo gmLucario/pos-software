@@ -4,18 +4,20 @@
 
 mod loan_form;
 mod loan_row;
+mod payment_history_modal;
 mod payment_modal;
 mod receipt_modal;
 mod stat_card;
 
 pub use loan_form::LoanForm;
 use loan_row::LoanRow;
+use payment_history_modal::PaymentHistoryModal;
 use payment_modal::PaymentModal;
 use receipt_modal::ReceiptModal;
 use stat_card::StatCard;
 
 use crate::handlers::AppState;
-use crate::models::{Loan, LoanPaymentInput, Operation, Sale};
+use crate::models::{Loan, LoanPayment, LoanPaymentInput, Operation, Sale};
 use crate::utils::formatting::format_currency;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
@@ -28,9 +30,11 @@ pub fn LoansView() -> Element {
     let mut search_query = use_signal(String::new);
     let mut selected_loan = use_signal(|| Option::<Loan>::None);
     let mut payment_amount = use_signal(String::new);
+    let mut payment_notes = use_signal(String::new);
     let mut payment_message = use_signal(|| Option::<(bool, String)>::None);
     let mut refresh_trigger = use_signal(|| 0);
     let mut selected_receipt = use_signal(|| Option::<(Sale, Vec<Operation>)>::None);
+    let mut selected_payment_history = use_signal(|| Option::<(String, Vec<LoanPayment>)>::None);
 
     // Load loans from database
     let mut loans_resource = use_resource({
@@ -50,6 +54,7 @@ pub fn LoansView() -> Element {
     // Clone app_state for closures
     let app_state_for_payment = app_state.clone();
     let app_state_for_receipt = app_state.clone();
+    let app_state_for_history = app_state.clone();
 
     // View receipt handler (as callback so it can be copied in the loop)
     let view_receipt_handler = use_callback(move |sale_id: String| {
@@ -66,11 +71,33 @@ pub fn LoansView() -> Element {
         });
     });
 
+    // View payment history handler (as callback so it can be copied in the loop)
+    let view_payment_history_handler = use_callback(move |loan_id: String| {
+        let app_state = app_state_for_history.clone();
+        spawn(async move {
+            match app_state.loans_handler.get_loan_details(loan_id).await {
+                Ok(loan_with_payments) => {
+                    selected_payment_history.set(Some((
+                        loan_with_payments.loan.debtor_name,
+                        loan_with_payments.payments,
+                    )));
+                }
+                Err(err) => {
+                    payment_message.set(Some((
+                        false,
+                        format!("Failed to load payment history: {}", err),
+                    )));
+                }
+            }
+        });
+    });
+
     // Record payment
     let record_payment = move |_| {
         let app_state = app_state_for_payment.clone();
         let loan_id = selected_loan.read().as_ref().map(|l| l.id.clone());
         let payment = payment_amount.read().clone();
+        let notes = payment_notes.read().clone();
 
         spawn(async move {
             let Some(loan_id) = loan_id else {
@@ -93,11 +120,15 @@ pub fn LoansView() -> Element {
                 }
             };
 
-            // Create payment input
+            // Create payment input with notes
             let payment_input = LoanPaymentInput {
                 loan_id: loan_id.clone(),
                 amount,
-                notes: None,
+                notes: if notes.trim().is_empty() {
+                    None
+                } else {
+                    Some(notes.trim().to_string())
+                },
             };
 
             // Record the payment
@@ -106,6 +137,7 @@ pub fn LoansView() -> Element {
                     payment_message.set(Some((true, "Payment recorded successfully!".to_string())));
                     selected_loan.set(None);
                     payment_amount.set(String::new());
+                    payment_notes.set(String::new());
                     refresh_trigger.set(refresh_trigger() + 1);
                 }
                 Err(err) => {
@@ -231,10 +263,9 @@ pub fn LoansView() -> Element {
 
                                             th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;", "Debtor" }
                                             th { style: "padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;", "Phone" }
-                                            th { style: "padding: 0.75rem; text-align: right; font-weight: 600; color: #4a5568;", "Total Debt" }
-                                            th { style: "padding: 0.75rem; text-align: right; font-weight: 600; color: #4a5568;", "Paid" }
-                                            th { style: "padding: 0.75rem; text-align: right; font-weight: 600; color: #4a5568;", "Remaining" }
-                                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Progress" }
+                                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Total Debt" }
+                                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Paid" }
+                                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Remaining" }
                                             th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Receipt" }
                                             th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Payment" }
                                         }
@@ -244,7 +275,7 @@ pub fn LoansView() -> Element {
                                         if filtered_loans.is_empty() {
                                             tr {
                                                 td {
-                                                    colspan: "8",
+                                                    colspan: "7",
                                                     style: "padding: 3rem; text-align: center; color: #a0aec0;",
                                                     "No loans found"
                                                 }
@@ -255,6 +286,7 @@ pub fn LoansView() -> Element {
                                                     loan: loan.clone(),
                                                     on_select: move |l: Loan| selected_loan.set(Some(l)),
                                                     on_view_receipt: view_receipt_handler,
+                                                    on_view_payment_history: view_payment_history_handler,
                                                 }
                                             }
                                         }
@@ -283,10 +315,13 @@ pub fn LoansView() -> Element {
                 PaymentModal {
                     loan: loan.clone(),
                     payment_amount: payment_amount.read().clone(),
+                    payment_notes: payment_notes.read().clone(),
                     on_amount_change: move |value: String| payment_amount.set(value),
+                    on_notes_change: move |value: String| payment_notes.set(value),
                     on_cancel: move |_| {
                         selected_loan.set(None);
                         payment_amount.set(String::new());
+                        payment_notes.set(String::new());
                     },
                     on_confirm: record_payment,
                 }
@@ -298,6 +333,15 @@ pub fn LoansView() -> Element {
                     sale: sale.clone(),
                     operations: operations.clone(),
                     on_close: move |_| selected_receipt.set(None),
+                }
+            }
+
+            // Payment history modal
+            if let Some((debtor_name, payments)) = selected_payment_history.read().as_ref() {
+                PaymentHistoryModal {
+                    debtor_name: debtor_name.clone(),
+                    payments: payments.clone(),
+                    on_close: move |_| selected_payment_history.set(None),
                 }
             }
         }

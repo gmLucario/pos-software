@@ -42,11 +42,11 @@ pub fn QuantityModal(
                 div {
                     style: "background: #f7fafc; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;",
                     div {
-                        style: "font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;",
+                        style: "font-weight: 600; color: #2d3748; margin-bottom: 0.5rem; font-size: 1rem;",
                         "{product.full_name}"
                     }
                     div {
-                        style: "color: #667eea; font-size: 1.125rem; font-weight: 700;",
+                        style: "color: #667eea; font-size: 1rem; font-weight: 700;",
                         "{format_currency(product.user_price)} / {unit_abbreviation}"
                     }
                     div {
@@ -93,9 +93,9 @@ pub fn QuantityModal(
                             }
                         },
                         style: if *has_invalid_input.read() {
-                            "width: 100%; padding: 0.75rem; border: 2px solid #f56565; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box; background: #fff5f5;"
+                            "width: 100%; padding: 0.75rem; border: 2px solid #f56565; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box; background: #fff5f5;"
                         } else {
-                            "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box;"
+                            "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;"
                         },
                     }
                     if *has_invalid_input.read() {
@@ -110,12 +110,12 @@ pub fn QuantityModal(
                 div {
                     style: "display: flex; gap: 0.75rem;",
                     button {
-                        style: "flex: 1; background: #e2e8f0; color: #2d3748; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                        style: "flex: 1; background: #e2e8f0; color: #2d3748; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500; font-size: 1rem;",
                         onclick: move |_| on_cancel.call(()),
                         "Cancel"
                     }
                     button {
-                        style: "flex: 1; background: #48bb78; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;",
+                        style: "flex: 1; background: #48bb78; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 1rem;",
                         onclick: move |_| {
                             let quantity_str = quantity_input.read().clone();
                             if let Ok(quantity) = quantity_str.parse::<f64>() {
