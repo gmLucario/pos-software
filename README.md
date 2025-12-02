@@ -1,142 +1,141 @@
-# About
+# POS Software - Point of Sale System
 
-Help to manage a small store like:
-- Handle your inventory
-- Make sales
-- Sales info
-- Products to buy
-...
+A desktop application built with Rust, designed for small retail stores. Features inventory management, sales processing, and customer loan tracking with a clean, intuitive interface.
 
+## Features
 
-# Todo
+### 🛒 Sales Management
+- **Real-time Sales Processing**: Quick product scanning and cart management
+- **Cash Payment Method**: Cash sales with automatic change calculation
+- **Loan Sales**: Create and track customer credit/loan purchases
+- **Receipt Generation**: Detailed sale receipts with itemized products
+- **Sales History**: Search and view past transactions by date range or customer
 
-- [x] select migration tool
-- [x] select dependency make interaction db
-- [x] define basic models
-- [x] data - sales_info view linked
-- [x] read input external device
-- [ ] catalog flow
-    - [x] schemas
-    - [x] save new products list to save
-    - [x] delete product record before save them
-    - [x] save list products
-    - [x] show message products saved/not saved
-- [ ] view edit catalog
-- [ ] sale flow
-    - [x] validate amount product input
-    - [x] btns `ok` and `cancel` form product
-    - [x] list products view
-    - [x] logic remove product list
-    - [x] total to pay sale view
-    - [x] payback money logic
-    - [x] store operations
-    - [x] update tables based on operations
-    - [x] save info if sale is a loan
-    - [x] show message products can't be added to sale list
-- [ ] sale loan info
-    - [ ] query get paginated loans by `name_debtor` and `range_dates`
-    - [x] name client like lower case and remove spaces
-    - [x] view search loans
-- [ ] sale info statics
-    - [ ] sale earnings and total list
-- [x] logger handler
-    - [x] save logs file
-- [ ] add general doc comments
-    - [ ] models module docs
-    - [x] schemas module docs
-    - [x] views module docs
-- [ ] add unit tests
-- [ ] add integration tests
-- [ ] rollback when db errors
+### 📦 Inventory Management
+- **Product Catalog**: Complete product database with pricing and stock tracking
+- **Unit-based Inventory**: Support for both unit-based and quantity-based products
+- **Stock Tracking**: Real-time inventory updates with each sale
+- **Product Search**: Fast product lookup with barcode support
+- **Add/Edit Products**: Easy product management interface
 
+### 💰 Customer Loans
+- **Loan Creation**: Create loan records directly from sales
+- **Payment Tracking**: Record partial or full loan payments with notes
+- **Payment History**: View complete payment timeline with dates and amounts
+- **Loan Dashboard**: Overview of active loans with totals and statistics
+- **Automatic Calculations**: Real-time remaining balance updates
 
-# For devs
+### 📊 Business Intelligence
+- **Sales Statistics**: Daily, weekly, and monthly sales summaries
+- **Revenue Tracking**: Total earnings and payment analysis
+- **Loan Analytics**: Outstanding debt and payment trends
+- **Inventory Insights**: Low stock alerts and product performance
 
-## Env
+## Technology Stack
 
-```
-DB_HOST=host.docker.internal
-DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}:@${DB_HOST}:${DB_PORT}/${DB_NAME}
+- **Language**: Rust 2021 Edition
+- **UI Framework**: Dioxus 0.7 (Desktop)
+- **Database**: SQLite with sqlx
+- **Async Runtime**: Tokio
+- **Date/Time**: Chrono with timezone support (America/Mexico_City)
+- **Decimal Math**: rust_decimal for precise currency calculations
+
+## Getting Started
+
+### Prerequisites
+
+- Rust 1.70 or higher
+- Cargo (comes with Rust)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd pos-software
 ```
 
-## Build
+2. Build the project:
+```bash
+cargo build --release
+```
 
-### Linux
+3. Run the application:
+```bash
+cargo run --release
+```
+
+The application will automatically:
+- Create the SQLite database file (`data/pos.db`)
+- Run all necessary migrations
+- Launch the desktop interface
+
+### Database Setup
+
+The database is automatically initialized on first run. The schema includes:
+- `product` - Product catalog with pricing and stock
+- `sale` - Sales transactions with payment details
+- `operation` - Individual line items for each sale
+- `loan` - Customer loan records
+- `loan_payment` - Payment history for loans
+- `status_loan` - Loan status tracking
+
+## Development
+
+### Building
+
+Development build:
+```bash
+cargo build
+```
+
+Release build (optimized):
+```bash
+cargo build --release
+```
+
+### Running Tests
 
 ```bash
-$ cargo build --release
+cargo test
 ```
 
-### Linux to Windows
+### Code Documentation
 
-> Previosly [these steps](https://bevy-cheatbook.github.io/setup/cross/linux-windows.html) must be followed
-
+Generate and open the documentation:
 ```bash
-$ cargo build --target=x86_64-pc-windows-gnu --release
+cargo doc --no-deps --open
 ```
 
-## Run locally the app
+### Cross-compilation
 
-1. start docker compose
+#### macOS to Windows
 
+1. Install the Windows target:
 ```bash
-$ docker compose up -d
+rustup target add x86_64-pc-windows-gnu
 ```
 
-2. Run app
-
-```
-$ cargo run
-```
-
-## Migrations
-
-### Installing sqlx
-
-Install [sqlx-cli](https://crates.io/crates/sqlx-cli) to run the migrations:
-
+2. Install MinGW-w64:
 ```bash
-$ sqlx migrate add -r <name>
+brew install mingw-w64
 ```
 
+3. Build:
 ```bash
-$ sqlx migrate run
+cargo build --target x86_64-pc-windows-gnu --release
 ```
 
-```bash
-$ sqlx migrate revert
-```
+## License
 
-### Using docker
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-```bash
-docker compose up -d
-```
+## Acknowledgments
 
-```bash
-docker compose exec sqlx bash
-```
+- Built with [Dioxus](https://dioxuslabs.com/) - A portable, performant, and ergonomic framework for building cross-platform user interfaces in Rust
+- Database powered by [SQLx](https://github.com/launchbadge/sqlx) - The Rust SQL Toolkit
+- Currency calculations with [rust_decimal](https://github.com/paupino/rust-decimal)
 
-## Define enviroment variables
+---
 
-You can use [direnv](https://direnv.net/) to manage them or create a `.env`
-
-Using [direnv](https://direnv.net/)
-
-1. Create a `.envrc`
-2. Define the varibles in `.env.default`
-3. Run
-
-```bash
-$ direnv allow .
-```
-
-## Open docs
-
-```bash
-$ cargo doc --no-deps --open
-```
-
-# Useful links
-1. [frontend-example-iced](https://github.com/zupzup/rust-frontend-example-iced/blob/main/src/main.rs)
-2. [iced-application-impl](https://github.com/irvingfisica/iced_examples/blob/master/examples/hola_app.rs)
+**Made with ❤️ and Rust**
