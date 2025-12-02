@@ -13,3 +13,5 @@
 
 # logs app
 **/*.log
+
+package/*
