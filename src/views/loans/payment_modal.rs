@@ -102,13 +102,13 @@ pub fn PaymentModal(
                     style: "display: flex; gap: 1rem;",
 
                     button {
-                        style: "flex: 1; background: #e2e8f0; color: #2d3748; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer;",
+                        style: "flex: 1; background: #e2e8f0; color: #2d3748; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer; font-size: 1rem;",
                         onclick: move |_| on_cancel.call(()),
                         "Cancel"
                     }
 
                     button {
-                        style: "flex: 1; background: #48bb78; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer;",
+                        style: "flex: 1; background: #48bb78; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer; font-size: 1rem;",
                         onclick: move |_| on_confirm.call(()),
                         "💰 Record Payment"
                     }

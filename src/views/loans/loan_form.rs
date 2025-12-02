@@ -83,15 +83,15 @@ pub fn LoanForm(
                 div {
                     style: "display: flex; gap: 0.75rem;",
                     button {
-                        style: "flex: 1; background: #e2e8f0; color: #2d3748; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                        style: "flex: 1; background: #e2e8f0; color: #2d3748; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500; font-size: 1rem;",
                         onclick: move |_| on_cancel.call(()),
                         "Cancel"
                     }
                     button {
                         style: if is_valid {
-                            "flex: 1; background: #ed8936; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;"
+                            "flex: 1; background: #ed8936; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 1rem;"
                         } else {
-                            "flex: 1; background: #cbd5e0; color: #718096; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: not-allowed; font-weight: 600;"
+                            "flex: 1; background: #cbd5e0; color: #718096; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: not-allowed; font-weight: 600; font-size: 1rem;"
                         },
                         disabled: !is_valid,
                         onclick: move |_| {

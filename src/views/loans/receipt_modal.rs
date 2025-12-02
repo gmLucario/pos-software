@@ -127,7 +127,7 @@ pub fn ReceiptModal(sale: Sale, operations: Vec<Operation>, on_close: EventHandl
                 div {
                     style: "margin-top: 1.5rem;",
                     button {
-                        style: "width: 100%; background: #667eea; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer;",
+                        style: "width: 100%; background: #667eea; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer; font-size: 1rem;",
                         onclick: move |_| on_close.call(()),
                         "Close"
                     }
