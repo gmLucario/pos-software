@@ -117,7 +117,7 @@ impl SaleRepository for SqliteSaleRepository {
 
     async fn get_operations(&self, sale_id: &str) -> Result<Vec<Operation>, String> {
         let operations = sqlx::query_as::<_, Operation>(
-            "SELECT * FROM operation WHERE sale_id = ? ORDER BY created_at",
+            "SELECT * FROM operation WHERE sale_id = ? ORDER BY recorded_at",
         )
         .bind(sale_id)
         .fetch_all(&self.pool)

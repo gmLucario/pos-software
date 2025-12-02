@@ -19,6 +19,7 @@ pub use sale_message::SaleMessage;
 
 use crate::handlers::AppState;
 use crate::models::{Product, SaleInput, SaleItemInput};
+use crate::views::loans::LoanForm;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
 
@@ -40,6 +41,9 @@ pub fn SalesView() -> Element {
     let mut sale_message = use_signal(|| Option::<(bool, String)>::None); // (is_success, message)
     let mut refresh_trigger = use_signal(|| 0);
     let mut show_quantity_modal = use_signal(|| Option::<Product>::None); // Product to add
+    let mut show_loan_form = use_signal(|| false);
+    let mut debtor_name = use_signal(String::new);
+    let mut debtor_phone = use_signal(String::new);
 
     // Load products from database
     let mut products_resource = use_resource({
@@ -138,18 +142,80 @@ pub fn SalesView() -> Element {
         cart.write().retain(|item| item.product.id != product_id);
     };
 
-    // Complete sale
+    // Clone app_state for closures
+    let app_state_for_sale = app_state.clone();
+    let app_state_for_loan = app_state.clone();
+
+    // Check if sale is a loan and show form or complete sale
     let complete_sale = move |_| {
-        let app_state = app_state.clone();
         let cart_items = cart.read().clone();
         let payment = payment_amount.read().clone();
+        let total = *cart_total.read();
+
+        if cart_items.is_empty() {
+            sale_message.set(Some((false, "Cart is empty".to_string())));
+            return;
+        }
+
+        // Parse payment amount
+        let paid_amount = if payment.is_empty() {
+            Decimal::ZERO
+        } else {
+            match payment.parse::<Decimal>() {
+                Ok(amount) => amount,
+                Err(_) => {
+                    sale_message.set(Some((false, "Invalid payment amount".to_string())));
+                    return;
+                }
+            }
+        };
+
+        // Check if this is a loan (payment < total)
+        if paid_amount < total {
+            // Show loan form to collect debtor information
+            show_loan_form.set(true);
+        } else {
+            // Process cash sale directly
+            let app_state = app_state_for_sale.clone();
+            spawn(async move {
+                let sale_input = SaleInput {
+                    items: cart_items
+                        .iter()
+                        .map(|item| SaleItemInput {
+                            product_id: item.product.id.clone(),
+                            product_name: item.product.full_name.clone(),
+                            quantity: item.quantity,
+                            unit_price: item.product.user_price,
+                        })
+                        .collect(),
+                    paid_amount,
+                };
+
+                match app_state.sales_handler.process_sale(sale_input).await {
+                    Ok(_sale) => {
+                        sale_message.set(Some((true, "Sale completed successfully!".to_string())));
+                        show_receipt.set(true);
+                        cart.write().clear();
+                        payment_amount.set(String::new());
+                        refresh_trigger.set(refresh_trigger() + 1);
+                    }
+                    Err(err) => {
+                        sale_message.set(Some((false, format!("Sale failed: {}", err))));
+                    }
+                }
+            });
+        }
+    };
+
+    // Process loan sale after collecting debtor information
+    let complete_loan_sale = move |_| {
+        let app_state = app_state_for_loan.clone();
+        let cart_items = cart.read().clone();
+        let payment = payment_amount.read().clone();
+        let debtor_name_value = debtor_name.read().clone();
+        let debtor_phone_value = debtor_phone.read().clone();
 
         spawn(async move {
-            if cart_items.is_empty() {
-                sale_message.set(Some((false, "Cart is empty".to_string())));
-                return;
-            }
-
             // Parse payment amount
             let paid_amount = if payment.is_empty() {
                 Decimal::ZERO
@@ -179,15 +245,47 @@ pub fn SalesView() -> Element {
 
             // Process sale
             match app_state.sales_handler.process_sale(sale_input).await {
-                Ok(_sale) => {
-                    sale_message.set(Some((true, "Sale completed successfully!".to_string())));
-                    show_receipt.set(true);
-                    cart.write().clear();
-                    payment_amount.set(String::new());
-                    refresh_trigger.set(refresh_trigger() + 1); // Refresh product stock
+                Ok(sale) => {
+                    // Create loan with debtor information
+                    use crate::models::LoanInput;
+                    let loan_input = LoanInput {
+                        sale_id: sale.id.clone(),
+                        debtor_name: debtor_name_value,
+                        debtor_phone: if debtor_phone_value.trim().is_empty() {
+                            None
+                        } else {
+                            Some(debtor_phone_value)
+                        },
+                    };
+
+                    match app_state
+                        .loans_handler
+                        .create_loan(sale.id, loan_input)
+                        .await
+                    {
+                        Ok(_loan) => {
+                            sale_message.set(Some((
+                                true,
+                                "Loan sale completed successfully!".to_string(),
+                            )));
+                            show_receipt.set(true);
+                            cart.write().clear();
+                            payment_amount.set(String::new());
+                            debtor_name.set(String::new());
+                            debtor_phone.set(String::new());
+                            show_loan_form.set(false);
+                            refresh_trigger.set(refresh_trigger() + 1);
+                        }
+                        Err(err) => {
+                            sale_message
+                                .set(Some((false, format!("Loan creation failed: {}", err))));
+                            show_loan_form.set(false);
+                        }
+                    }
                 }
                 Err(err) => {
                     sale_message.set(Some((false, format!("Sale failed: {}", err))));
+                    show_loan_form.set(false);
                 }
             }
         });
@@ -298,6 +396,18 @@ pub fn SalesView() -> Element {
                 unit_abbreviation: get_unit_abbreviation(product.unit_measurement_id).to_string(),
                 on_confirm: add_to_cart_with_quantity,
                 on_cancel: move |_| show_quantity_modal.set(None),
+            }
+        }
+
+        // Loan form modal
+        if *show_loan_form.read() {
+            LoanForm {
+                debtor_name: debtor_name.read().clone(),
+                debtor_phone: debtor_phone.read().clone(),
+                on_name_change: move |value: String| debtor_name.set(value),
+                on_phone_change: move |value: String| debtor_phone.set(value),
+                on_cancel: move |_| show_loan_form.set(false),
+                on_confirm: complete_loan_sale,
             }
         }
 

@@ -2,8 +2,20 @@
 //!
 //! UI components for tracking and managing customer loans.
 
+mod loan_form;
+mod loan_row;
+mod payment_modal;
+mod receipt_modal;
+mod stat_card;
+
+pub use loan_form::LoanForm;
+use loan_row::LoanRow;
+use payment_modal::PaymentModal;
+use receipt_modal::ReceiptModal;
+use stat_card::StatCard;
+
 use crate::handlers::AppState;
-use crate::models::{Loan, LoanPaymentInput};
+use crate::models::{Loan, LoanPaymentInput, Operation, Sale};
 use crate::utils::formatting::format_currency;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
@@ -18,6 +30,7 @@ pub fn LoansView() -> Element {
     let mut payment_amount = use_signal(String::new);
     let mut payment_message = use_signal(|| Option::<(bool, String)>::None);
     let mut refresh_trigger = use_signal(|| 0);
+    let mut selected_receipt = use_signal(|| Option::<(Sale, Vec<Operation>)>::None);
 
     // Load loans from database
     let mut loans_resource = use_resource({
@@ -34,9 +47,28 @@ pub fn LoansView() -> Element {
         loans_resource.restart();
     });
 
+    // Clone app_state for closures
+    let app_state_for_payment = app_state.clone();
+    let app_state_for_receipt = app_state.clone();
+
+    // View receipt handler (as callback so it can be copied in the loop)
+    let view_receipt_handler = use_callback(move |sale_id: String| {
+        let app_state = app_state_for_receipt.clone();
+        spawn(async move {
+            match app_state.sales_handler.get_sale_details(sale_id).await {
+                Ok(sale_with_ops) => {
+                    selected_receipt.set(Some((sale_with_ops.sale, sale_with_ops.operations)));
+                }
+                Err(err) => {
+                    payment_message.set(Some((false, format!("Failed to load receipt: {}", err))));
+                }
+            }
+        });
+    });
+
     // Record payment
     let record_payment = move |_| {
-        let app_state = app_state.clone();
+        let app_state = app_state_for_payment.clone();
         let loan_id = selected_loan.read().as_ref().map(|l| l.id.clone());
         let payment = payment_amount.read().clone();
 
@@ -154,12 +186,6 @@ pub fn LoansView() -> Element {
                                     style: "font-size: 1.5rem; font-weight: 600; color: #2d3748; margin: 0;",
                                     "💰 Customer Loans"
                                 }
-
-                                button {
-                                    style: "background: #48bb78; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer;",
-                                    onclick: move |_| refresh_trigger.set(refresh_trigger() + 1),
-                                    "🔄 Refresh"
-                                }
                             }
 
                             // Payment message
@@ -209,7 +235,8 @@ pub fn LoansView() -> Element {
                                             th { style: "padding: 0.75rem; text-align: right; font-weight: 600; color: #4a5568;", "Paid" }
                                             th { style: "padding: 0.75rem; text-align: right; font-weight: 600; color: #4a5568;", "Remaining" }
                                             th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Progress" }
-                                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Actions" }
+                                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Receipt" }
+                                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Payment" }
                                         }
                                     }
 
@@ -217,7 +244,7 @@ pub fn LoansView() -> Element {
                                         if filtered_loans.is_empty() {
                                             tr {
                                                 td {
-                                                    colspan: "7",
+                                                    colspan: "8",
                                                     style: "padding: 3rem; text-align: center; color: #a0aec0;",
                                                     "No loans found"
                                                 }
@@ -227,6 +254,7 @@ pub fn LoansView() -> Element {
                                                 LoanRow {
                                                     loan: loan.clone(),
                                                     on_select: move |l: Loan| selected_loan.set(Some(l)),
+                                                    on_view_receipt: view_receipt_handler,
                                                 }
                                             }
                                         }
@@ -252,167 +280,25 @@ pub fn LoansView() -> Element {
 
             // Payment modal
             if let Some(loan) = selected_loan.read().as_ref() {
-                div {
-                    style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;",
-                    onclick: move |_| selected_loan.set(None),
-
-                    div {
-                        style: "background: white; padding: 2rem; border-radius: 0.5rem; max-width: 500px; width: 100%;",
-                        onclick: move |evt| evt.stop_propagation(),
-
-                        h3 {
-                            style: "margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 600; color: #2d3748;",
-                            "💳 Record Payment"
-                        }
-
-                        // Loan details
-                        div {
-                            style: "background: #f7fafc; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;",
-
-                            div {
-                                style: "margin-bottom: 0.5rem;",
-                                span { style: "font-weight: 500;", "Debtor: " }
-                                span { "{loan.debtor_name}" }
-                            }
-                            div {
-                                style: "margin-bottom: 0.5rem;",
-                                span { style: "font-weight: 500;", "Phone: " }
-                                span { "{loan.debtor_phone.as_deref().unwrap_or(\"-\")}" }
-                            }
-                            div {
-                                style: "margin-bottom: 0.5rem;",
-                                span { style: "font-weight: 500;", "Remaining: " }
-                                span { style: "color: #f56565; font-weight: 600;", "{format_currency(loan.remaining_amount)}" }
-                            }
-                        }
-
-                        // Payment input
-                        div {
-                            style: "margin-bottom: 1.5rem;",
-                            label {
-                                style: "display: block; font-size: 0.875rem; font-weight: 500; color: #4a5568; margin-bottom: 0.5rem;",
-                                "Payment Amount"
-                            }
-                            input {
-                                r#type: "number",
-                                step: "0.01",
-                                placeholder: "0.00",
-                                value: "{payment_amount}",
-                                oninput: move |evt| payment_amount.set(evt.value().clone()),
-                                style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1.125rem; box-sizing: border-box;",
-                            }
-                        }
-
-                        // Buttons
-                        div {
-                            style: "display: flex; gap: 1rem;",
-
-                            button {
-                                style: "flex: 1; background: #e2e8f0; color: #2d3748; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer;",
-                                onclick: move |_| {
-                                    selected_loan.set(None);
-                                    payment_amount.set(String::new());
-                                },
-                                "Cancel"
-                            }
-
-                            button {
-                                style: "flex: 1; background: #48bb78; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer;",
-                                onclick: record_payment,
-                                "💰 Record Payment"
-                            }
-                        }
-                    }
+                PaymentModal {
+                    loan: loan.clone(),
+                    payment_amount: payment_amount.read().clone(),
+                    on_amount_change: move |value: String| payment_amount.set(value),
+                    on_cancel: move |_| {
+                        selected_loan.set(None);
+                        payment_amount.set(String::new());
+                    },
+                    on_confirm: record_payment,
                 }
             }
-        }
-    }
-}
 
-#[component]
-fn LoanRow(loan: Loan, on_select: EventHandler<Loan>) -> Element {
-    let percentage = loan.payment_percentage();
-    let is_paid = loan.is_paid_off();
-
-    rsx! {
-        tr {
-            style: "border-bottom: 1px solid #e2e8f0;",
-
-            td {
-                style: "padding: 0.75rem; font-weight: 500;",
-                "{loan.debtor_name}"
-            }
-            td {
-                style: "padding: 0.75rem; color: #718096; font-family: monospace;",
-                "{loan.debtor_phone.as_deref().unwrap_or(\"-\")}"
-            }
-            td {
-                style: "padding: 0.75rem; text-align: right; font-weight: 500;",
-                "{format_currency(loan.total_debt)}"
-            }
-            td {
-                style: "padding: 0.75rem; text-align: right; color: #48bb78; font-weight: 500;",
-                "{format_currency(loan.paid_amount)}"
-            }
-            td {
-                style: "padding: 0.75rem; text-align: right; color: #f56565; font-weight: 600;",
-                "{format_currency(loan.remaining_amount)}"
-            }
-            td {
-                style: "padding: 0.75rem;",
-                div {
-                    style: "width: 100px;",
-                    div {
-                        style: "background: #e2e8f0; height: 8px; border-radius: 9999px; overflow: hidden;",
-                        div {
-                            style: "background: #48bb78; height: 100%; width: {percentage}%; transition: width 0.3s;",
-                        }
-                    }
-                    div {
-                        style: "font-size: 0.75rem; color: #718096; margin-top: 0.25rem; text-align: center;",
-                        "{percentage:.0}%"
-                    }
+            // Receipt modal
+            if let Some((sale, operations)) = selected_receipt.read().as_ref() {
+                ReceiptModal {
+                    sale: sale.clone(),
+                    operations: operations.clone(),
+                    on_close: move |_| selected_receipt.set(None),
                 }
-            }
-            td {
-                style: "padding: 0.75rem; text-align: center;",
-                if !is_paid {
-                    button {
-                        style: "background: #667eea; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
-                        onclick: move |_| on_select.call(loan.clone()),
-                        "💳 Pay"
-                    }
-                } else {
-                    span {
-                        style: "background: #f0fff4; color: #22543d; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500;",
-                        "✓ Paid"
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[component]
-fn StatCard(label: String, value: String, color: String, icon: String) -> Element {
-    rsx! {
-        div {
-            style: "background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid {color};",
-
-            div {
-                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;",
-                span {
-                    style: "font-size: 0.875rem; color: #718096; font-weight: 500;",
-                    "{label}"
-                }
-                span {
-                    style: "font-size: 1.5rem;",
-                    "{icon}"
-                }
-            }
-            div {
-                style: "font-size: 1.75rem; font-weight: 700; color: {color};",
-                "{value}"
             }
         }
     }

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 /// Sale entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Sale {
     pub id: String, // UUID as TEXT
 
@@ -81,7 +81,7 @@ impl Sale {
 }
 
 /// Operation (sale line item) entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Operation {
     pub id: String, // UUID as TEXT
     pub sale_id: String,
