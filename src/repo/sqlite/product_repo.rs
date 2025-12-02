@@ -1,7 +1,7 @@
 //! SQLite Product Repository Implementation
 
 use crate::models::{Product, ProductInput};
-use crate::repo::ProductRepository;
+use crate::repo::{PaginatedResult, ProductRepository};
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 
@@ -74,6 +74,38 @@ impl ProductRepository for SqliteProductRepository {
             .map_err(|e| format!("Failed to list products: {}", e))?;
 
         Ok(products)
+    }
+
+    async fn list_paginated(
+        &self,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Product>, String> {
+        // Get total count
+        let total_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM product")
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to count products: {}", e))?;
+
+        // Calculate offset
+        let offset = (page - 1) * page_size;
+
+        // Get paginated products
+        let products = sqlx::query_as::<_, Product>(
+            "SELECT * FROM product ORDER BY full_name LIMIT ? OFFSET ?",
+        )
+        .bind(page_size)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to list products: {}", e))?;
+
+        Ok(PaginatedResult {
+            items: products,
+            total_count,
+            page,
+            page_size,
+        })
     }
 
     async fn update(&self, id: &str, input: ProductInput) -> Result<Product, String> {

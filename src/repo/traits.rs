@@ -5,6 +5,15 @@
 use crate::models::*;
 use async_trait::async_trait;
 
+/// Pagination result wrapper
+#[derive(Debug, Clone)]
+pub struct PaginatedResult<T> {
+    pub items: Vec<T>,
+    pub total_count: i64,
+    pub page: i64,
+    pub page_size: i64,
+}
+
 /// Product repository trait
 #[async_trait]
 pub trait ProductRepository: Send + Sync {
@@ -19,6 +28,13 @@ pub trait ProductRepository: Send + Sync {
 
     /// List all products
     async fn list_all(&self) -> Result<Vec<Product>, String>;
+
+    /// List products with pagination
+    async fn list_paginated(
+        &self,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Product>, String>;
 
     /// Update product
     async fn update(&self, id: &str, input: ProductInput) -> Result<Product, String>;
