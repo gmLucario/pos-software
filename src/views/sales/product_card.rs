@@ -2,34 +2,21 @@
 //!
 //! Displays a product card in the sales view with product information and add to cart functionality.
 
-use crate::models::{Product, UnitMeasurement};
+use crate::models::Product;
 use crate::utils::formatting::format_currency;
 use dioxus::prelude::*;
 
-use super::CartItem;
-
-/// Get unit measurement abbreviation from ID
-fn get_unit_abbreviation(unit_id: i32) -> &'static str {
-    match unit_id {
-        UnitMeasurement::KILOGRAM => "kg",
-        UnitMeasurement::LITER => "lt",
-        UnitMeasurement::UNIT => "unit",
-        UnitMeasurement::PIECE => "pcs",
-        UnitMeasurement::BOX => "box",
-        UnitMeasurement::CAN => "can",
-        UnitMeasurement::BOTTLE => "btl",
-        _ => "unit",
-    }
-}
+use super::{get_unit_abbreviation, CartItem};
 
 #[component]
 pub fn ProductCard(
     product: Product,
-    cart_items: Vec<CartItem>,
+    cart_items: ReadSignal<Vec<CartItem>>,
     on_add: EventHandler<Product>,
 ) -> Element {
     // Calculate remaining stock (current stock - quantity in cart)
     let quantity_in_cart = cart_items
+        .read()
         .iter()
         .find(|item| item.product.id == product.id)
         .map(|item| item.quantity)

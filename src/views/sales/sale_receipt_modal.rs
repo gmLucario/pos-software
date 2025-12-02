@@ -20,25 +20,27 @@ pub fn SaleReceiptModal(
         .to_string();
 
     // Clone values for print handler
-    let sale_for_print = sale.clone();
-    let operations_for_print = operations.clone();
-    let date_for_print = formatted_date.clone();
+    let sale_clone = sale.clone();
+    let operations_clone = operations.clone();
+    let date_clone = formatted_date.clone();
 
     // Print handler
     let print_receipt = move |_| {
         #[cfg(not(target_arch = "wasm32"))]
         {
+            let sale_id = sale_clone.id.clone();
+            let sale_ref = &sale_clone;
+            let ops_ref = &operations_clone;
+            let date_ref = &date_clone;
+
             // Show file save dialog
             if let Some(file_path) = rfd::FileDialog::new()
-                .set_file_name(format!("receipt_{}.pdf", sale_for_print.id))
+                .set_file_name(format!("receipt_{}.pdf", sale_id))
                 .add_filter("PDF", &["pdf"])
                 .save_file()
             {
                 if let Err(e) = super::receipt_template::generate_receipt_pdf(
-                    &sale_for_print,
-                    &operations_for_print,
-                    &date_for_print,
-                    file_path,
+                    sale_ref, ops_ref, date_ref, file_path,
                 ) {
                     tracing::error!("Failed to generate receipt: {}", e);
                 }
