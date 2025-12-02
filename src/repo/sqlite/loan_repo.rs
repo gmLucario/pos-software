@@ -90,6 +90,32 @@ impl LoanRepository for SqliteLoanRepository {
             .await
             .map_err(|e| format!("Failed to start transaction: {}", e))?;
 
+        // Get current loan details to calculate new values in Rust
+        // This avoids SQLite string arithmetic issues (especially on Windows)
+        let loan = sqlx::query_as::<_, Loan>("SELECT * FROM loan WHERE id = ?")
+            .bind(&payment.loan_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| format!("Failed to fetch loan: {}", e))?
+            .ok_or_else(|| "Loan not found".to_string())?;
+
+        // Calculate new amounts
+        let new_paid_amount = loan.paid_amount + payment.amount;
+        let new_remaining_amount = if loan.total_debt > new_paid_amount {
+            loan.total_debt - new_paid_amount
+        } else {
+            Decimal::ZERO
+        };
+
+        // Determine new status
+        let new_status_id = if new_remaining_amount <= Decimal::ZERO {
+            3 // Fully Paid
+        } else if new_paid_amount > Decimal::ZERO {
+            2 // Partially Paid
+        } else {
+            1 // Active
+        };
+
         // Insert payment
         sqlx::query(
             r#"
@@ -108,28 +134,19 @@ impl LoanRepository for SqliteLoanRepository {
         .await
         .map_err(|e| format!("Failed to insert payment: {}", e))?;
 
-        // Update loan amounts
+        // Update loan with calculated values
         sqlx::query(
             r#"
             UPDATE loan
-            SET paid_amount = paid_amount + ?,
-                remaining_amount = CASE
-                    WHEN total_debt > (paid_amount + ?) THEN total_debt - (paid_amount + ?)
-                    ELSE '0'
-                END,
-                status_id = CASE
-                    WHEN total_debt <= (paid_amount + ?) THEN 3  -- Fully Paid
-                    WHEN (paid_amount + ?) > '0' THEN 2  -- Partially Paid
-                    ELSE 1  -- Active
-                END
+            SET paid_amount = ?,
+                remaining_amount = ?,
+                status_id = ?
             WHERE id = ?
             "#,
         )
-        .bind(payment.amount.to_string())
-        .bind(payment.amount.to_string())
-        .bind(payment.amount.to_string())
-        .bind(payment.amount.to_string())
-        .bind(payment.amount.to_string())
+        .bind(new_paid_amount.to_string())
+        .bind(new_remaining_amount.to_string())
+        .bind(new_status_id)
         .bind(&payment.loan_id)
         .execute(&mut *tx)
         .await
