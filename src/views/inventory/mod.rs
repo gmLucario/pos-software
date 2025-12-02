@@ -21,17 +21,41 @@ pub fn InventoryView() -> Element {
     let mut current_page = use_signal(|| 1i64);
     let page_size = 10i64; // Items per page
 
-    // Load products from database with pagination
+    // Load products from database with pagination or search
     let products_handler = app_state.inventory_handler.clone();
+    let search_handler = app_state.inventory_handler.clone();
+
+    // Use pagination when no search, use search when there's a query
     let mut products_resource = use_resource(move || {
         let handler = products_handler.clone();
+        let search_h = search_handler.clone();
         let page = current_page();
-        async move { handler.load_products_paginated(page, page_size).await }
+        let query = search_query();
+
+        async move {
+            if query.trim().is_empty() {
+                // No search query - use pagination
+                handler.load_products_paginated(page, page_size).await.map(|paginated| {
+                    (paginated.items, Some((paginated.total_count, paginated.page)))
+                })
+            } else {
+                // Search query present - return all matching products
+                search_h.search_products(query).await.map(|products| {
+                    (products, None)
+                })
+            }
+        }
     });
 
     let create_handler = app_state.inventory_handler.clone();
     let update_handler = app_state.inventory_handler.clone();
     let delete_handler = app_state.inventory_handler.clone();
+
+    // Reset to page 1 when search query changes
+    use_effect(move || {
+        let _ = search_query();
+        current_page.set(1);
+    });
 
     // Refresh products when trigger changes
     use_effect(move || {
@@ -83,26 +107,22 @@ pub fn InventoryView() -> Element {
 
             // Content based on loading state
             match &*products_resource.read_unchecked() {
-                Some(Ok(paginated_result)) => {
-                    let products = &paginated_result.items;
-                    let total_count = paginated_result.total_count;
-                    let total_pages = ((total_count as f64) / (page_size as f64)).ceil() as i64;
+                Some(Ok((products, pagination_info))) => {
+                    // Determine if we're in search mode or pagination mode
+                    let is_search_mode = pagination_info.is_none();
+                    let total_count = if let Some((count, _)) = pagination_info {
+                        *count
+                    } else {
+                        products.len() as i64
+                    };
+                    let total_pages = if let Some((count, _)) = pagination_info {
+                        ((*count as f64) / (page_size as f64)).ceil() as i64
+                    } else {
+                        1
+                    };
 
-                    // Filter products based on search (client-side for current page)
-                    let filtered_products: Vec<Product> = products.iter()
-                        .filter(|p| {
-                            let query = search_query.read().to_lowercase();
-                            if query.is_empty() {
-                                return true;
-                            }
-                            p.full_name.to_lowercase().contains(&query) ||
-                            p.barcode.as_ref().is_some_and(|b| b.contains(&query))
-                        })
-                        .cloned()
-                        .collect();
-
-                    let low_stock_count = filtered_products.iter().filter(|p| p.is_low_stock()).count();
-                    let total_value: rust_decimal::Decimal = filtered_products.iter()
+                    let low_stock_count = products.iter().filter(|p| p.is_low_stock()).count();
+                    let total_value: rust_decimal::Decimal = products.iter()
                         .map(|p| p.user_price * rust_decimal::Decimal::from_f64_retain(p.current_amount).unwrap_or_default())
                         .sum();
 
@@ -128,16 +148,20 @@ pub fn InventoryView() -> Element {
                                 }
 
                                 tbody {
-                                    if filtered_products.is_empty() {
+                                    if products.is_empty() {
                                         tr {
                                             td {
                                                 colspan: "5",
                                                 style: "padding: 2rem; text-align: center; color: #718096;",
-                                                "No products found. Add some products to get started!"
+                                                if is_search_mode {
+                                                    "No products found matching your search."
+                                                } else {
+                                                    "No products found. Add some products to get started!"
+                                                }
                                             }
                                         }
                                     } else {
-                                        for product in filtered_products.iter() {
+                                        for product in products.iter() {
                                             ProductRow {
                                                 product: product.clone(),
                                                 on_edit: move |p| {
@@ -156,7 +180,7 @@ pub fn InventoryView() -> Element {
                             style: "margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e2e8f0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;",
 
                             StatCard {
-                                label: "Total Products",
+                                label: if is_search_mode { "Matching Products" } else { "Total Products" },
                                 value: format!("{}", total_count),
                                 color: "#667eea",
                             }
@@ -168,14 +192,14 @@ pub fn InventoryView() -> Element {
                             }
 
                             StatCard {
-                                label: "Total Value",
+                                label: if is_search_mode { "Search Value" } else { "Total Value" },
                                 value: format_currency(total_value),
                                 color: "#48bb78",
                             }
                         }
 
-                        // Pagination controls
-                        if total_pages > 1 {
+                        // Pagination controls (only show when not searching)
+                        if !is_search_mode && total_pages > 1 {
                             div {
                                 style: "margin-top: 1.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem;",
 
