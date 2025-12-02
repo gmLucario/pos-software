@@ -107,24 +107,27 @@ Generate and open the documentation:
 cargo doc --no-deps --open
 ```
 
-### Cross-compilation
+### Windows (Cross-compile from macOS)
 
-#### macOS to Windows
+To build a single executable (no DLLs required) for Windows from macOS, we use `cargo-xwin` with the MSVC toolchain.
 
-1. Install the Windows target:
-```bash
-rustup target add x86_64-pc-windows-gnu
-```
+1.  **Install prerequisites:**
+    ```bash
+    brew install llvm
+    cargo install cargo-xwin
+    ```
 
-2. Install MinGW-w64:
-```bash
-brew install mingw-w64
-```
+2.  **Build for Windows:**
+    
+    Since LLVM is keg-only on macOS, you need to add it to your PATH for the build:
 
-3. Build:
-```bash
-cargo build --target x86_64-pc-windows-gnu --release
-```
+    ```bash
+    export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+    cargo xwin build --target x86_64-pc-windows-msvc --release
+    ```
+
+    The executable will be located at:
+    `target/x86_64-pc-windows-msvc/release/pos-app.exe`
 
 ## License
 
