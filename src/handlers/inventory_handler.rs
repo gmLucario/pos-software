@@ -4,6 +4,7 @@
 
 use crate::api::{InventoryApi, InventoryStats};
 use crate::models::{Product, ProductInput, UnitMeasurement};
+use crate::repo::PaginatedResult;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -19,6 +20,11 @@ impl InventoryHandler {
     /// Load all products
     pub async fn load_products(&self) -> Result<Vec<Product>, String> {
         self.api.list_products().await
+    }
+
+    /// Load products with pagination
+    pub async fn load_products_paginated(&self, page: i64, page_size: i64) -> Result<PaginatedResult<Product>, String> {
+        self.api.list_products_paginated(page, page_size).await
     }
 
     /// Create a new product

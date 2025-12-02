@@ -18,12 +18,15 @@ pub fn InventoryView() -> Element {
     let mut show_add_form = use_signal(|| false);
     let mut editing_product = use_signal(|| None::<Product>);
     let mut refresh_trigger = use_signal(|| 0);
+    let mut current_page = use_signal(|| 1i64);
+    let page_size = 10i64; // Items per page
 
-    // Load products from database
+    // Load products from database with pagination
     let products_handler = app_state.inventory_handler.clone();
     let mut products_resource = use_resource(move || {
         let handler = products_handler.clone();
-        async move { handler.load_products().await }
+        let page = current_page();
+        async move { handler.load_products_paginated(page, page_size).await }
     });
 
     let create_handler = app_state.inventory_handler.clone();
@@ -80,8 +83,12 @@ pub fn InventoryView() -> Element {
 
             // Content based on loading state
             match &*products_resource.read_unchecked() {
-                Some(Ok(products)) => {
-                    // Filter products based on search
+                Some(Ok(paginated_result)) => {
+                    let products = &paginated_result.items;
+                    let total_count = paginated_result.total_count;
+                    let total_pages = ((total_count as f64) / (page_size as f64)).ceil() as i64;
+
+                    // Filter products based on search (client-side for current page)
                     let filtered_products: Vec<Product> = products.iter()
                         .filter(|p| {
                             let query = search_query.read().to_lowercase();
@@ -150,7 +157,7 @@ pub fn InventoryView() -> Element {
 
                             StatCard {
                                 label: "Total Products",
-                                value: format!("{}", filtered_products.len()),
+                                value: format!("{}", total_count),
                                 color: "#667eea",
                             }
 
@@ -164,6 +171,50 @@ pub fn InventoryView() -> Element {
                                 label: "Total Value",
                                 value: format_currency(total_value),
                                 color: "#48bb78",
+                            }
+                        }
+
+                        // Pagination controls
+                        if total_pages > 1 {
+                            div {
+                                style: "margin-top: 1.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem;",
+
+                                button {
+                                    style: format!(
+                                        "padding: 0.5rem 1rem; border: 1px solid #e2e8f0; background: {}; border-radius: 0.5rem; cursor: {}; font-size: 0.875rem; font-weight: 500; color: {};",
+                                        if current_page() > 1 { "white" } else { "#f7fafc" },
+                                        if current_page() > 1 { "pointer" } else { "not-allowed" },
+                                        if current_page() > 1 { "#4a5568" } else { "#cbd5e0" }
+                                    ),
+                                    disabled: current_page() <= 1,
+                                    onclick: move |_| {
+                                        if current_page() > 1 {
+                                            current_page.set(current_page() - 1);
+                                        }
+                                    },
+                                    "← Previous"
+                                }
+
+                                span {
+                                    style: "font-size: 0.875rem; color: #4a5568;",
+                                    "Page {current_page()} of {total_pages}"
+                                }
+
+                                button {
+                                    style: format!(
+                                        "padding: 0.5rem 1rem; border: 1px solid #e2e8f0; background: {}; border-radius: 0.5rem; cursor: {}; font-size: 0.875rem; font-weight: 500; color: {};",
+                                        if current_page() < total_pages { "white" } else { "#f7fafc" },
+                                        if current_page() < total_pages { "pointer" } else { "not-allowed" },
+                                        if current_page() < total_pages { "#4a5568" } else { "#cbd5e0" }
+                                    ),
+                                    disabled: current_page() >= total_pages,
+                                    onclick: move |_| {
+                                        if current_page() < total_pages {
+                                            current_page.set(current_page() + 1);
+                                        }
+                                    },
+                                    "Next →"
+                                }
                             }
                         }
                     }
