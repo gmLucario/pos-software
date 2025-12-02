@@ -6,6 +6,7 @@ use crate::models::Product;
 use rust_decimal::Decimal;
 
 /// Calculate statistics for a list of products
+#[derive(Clone, PartialEq)]
 pub struct InventoryStats {
     pub total_count: i64,
     pub low_stock_count: usize,
@@ -18,9 +19,7 @@ impl InventoryStats {
 
         let total_value: Decimal = products
             .iter()
-            .map(|p| {
-                p.user_price * Decimal::from_f64_retain(p.current_amount).unwrap_or_default()
-            })
+            .map(|p| p.user_price * Decimal::from_f64_retain(p.current_amount).unwrap_or_default())
             .sum();
 
         Self {
@@ -39,22 +38,4 @@ pub fn calculate_total_pages(total_count: i64, page_size: i64) -> i64 {
 /// Determine if we're in search mode based on pagination info
 pub fn is_search_mode(pagination_info: &Option<(i64, i64)>) -> bool {
     pagination_info.is_none()
-}
-
-/// Get the appropriate stat labels based on mode
-pub fn get_stat_labels(is_search: bool) -> (&'static str, &'static str) {
-    if is_search {
-        ("Matching Products", "Search Value")
-    } else {
-        ("Total Products", "Total Value")
-    }
-}
-
-/// Get the appropriate empty state message
-pub fn get_empty_message(is_search: bool) -> &'static str {
-    if is_search {
-        "No products found matching your search."
-    } else {
-        "No products found. Add some products to get started!"
-    }
 }

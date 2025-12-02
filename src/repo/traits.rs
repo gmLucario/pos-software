@@ -30,7 +30,11 @@ pub trait ProductRepository: Send + Sync {
     async fn list_all(&self) -> Result<Vec<Product>, String>;
 
     /// List products with pagination
-    async fn list_paginated(&self, page: i64, page_size: i64) -> Result<PaginatedResult<Product>, String>;
+    async fn list_paginated(
+        &self,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Product>, String>;
 
     /// Update product
     async fn update(&self, id: &str, input: ProductInput) -> Result<Product, String>;

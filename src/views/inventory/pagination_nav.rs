@@ -5,10 +5,7 @@
 use dioxus::prelude::*;
 
 #[component]
-pub fn PaginationNav(
-    current_page: Signal<i64>,
-    total_pages: i64,
-) -> Element {
+pub fn PaginationNav(current_page: Signal<i64>, total_pages: i64) -> Element {
     rsx! {
         div {
             style: "margin-top: 1.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem;",

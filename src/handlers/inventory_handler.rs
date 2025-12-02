@@ -23,7 +23,11 @@ impl InventoryHandler {
     }
 
     /// Load products with pagination
-    pub async fn load_products_paginated(&self, page: i64, page_size: i64) -> Result<PaginatedResult<Product>, String> {
+    pub async fn load_products_paginated(
+        &self,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Product>, String> {
         self.api.list_products_paginated(page, page_size).await
     }
 

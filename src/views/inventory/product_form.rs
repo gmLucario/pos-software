@@ -18,13 +18,20 @@ pub fn ProductForm(
     // Clone initial_product to avoid lifetime issues
     let product_clone = initial_product.clone();
 
-    let mut full_name = use_signal(|| extract_field(&product_clone, |p| p.full_name.clone()));
-    let mut barcode = use_signal(|| extract_optional_field(&product_clone, |p| p.barcode.clone()));
-    let mut price = use_signal(|| extract_field(&product_clone, |p| p.user_price.to_string()));
-    let mut cost = use_signal(|| extract_optional_field(&product_clone, |p| p.cost_price.map(|c| c.to_string())));
-    let mut stock = use_signal(|| extract_field(&product_clone, |p| p.current_amount.to_string()));
-    let mut min_stock = use_signal(|| extract_field(&product_clone, |p| p.min_amount.to_string()));
-    let mut unit_id = use_signal(|| product_clone.as_ref().map(|p| p.unit_measurement_id).unwrap_or(3));
+    let full_name = use_signal(|| extract_field(&product_clone, |p| p.full_name.clone()));
+    let barcode = use_signal(|| extract_optional_field(&product_clone, |p| p.barcode.clone()));
+    let price = use_signal(|| extract_field(&product_clone, |p| p.user_price.to_string()));
+    let cost = use_signal(|| {
+        extract_optional_field(&product_clone, |p| p.cost_price.map(|c| c.to_string()))
+    });
+    let stock = use_signal(|| extract_field(&product_clone, |p| p.current_amount.to_string()));
+    let min_stock = use_signal(|| extract_field(&product_clone, |p| p.min_amount.to_string()));
+    let mut unit_id = use_signal(|| {
+        product_clone
+            .as_ref()
+            .map(|p| p.unit_measurement_id)
+            .unwrap_or(3)
+    });
     let mut error_msg = use_signal(String::new);
 
     let units_resource = use_resource(move || async move {
@@ -32,27 +39,26 @@ pub fn ProductForm(
         app_state.inventory_handler.get_units().await
     });
 
-    let handle_submit = move |_| {
-        match validate_and_build_product_input(
-            &full_name(),
-            &barcode(),
-            &price(),
-            &cost(),
-            &stock(),
-            &min_stock(),
-            unit_id(),
-        ) {
-            Ok(input) => {
-                error_msg.set(String::new());
-                on_save.call(input);
-            }
-            Err(err) => {
-                error_msg.set(err);
-            }
+    let handle_submit = move |_| match validate_and_build_product_input(
+        &full_name(),
+        &barcode(),
+        &price(),
+        &cost(),
+        &stock(),
+        &min_stock(),
+        unit_id(),
+    ) {
+        Ok(input) => {
+            error_msg.set(String::new());
+            on_save.call(input);
+        }
+        Err(err) => {
+            error_msg.set(err);
         }
     };
 
     let (title, save_label) = get_form_labels(&initial_product);
+    let product_id_for_delete = initial_product.as_ref().map(|p| p.id.clone());
 
     rsx! {
         div {
@@ -68,10 +74,10 @@ pub fn ProductForm(
                     style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;",
                     h3 { style: "margin: 0; font-size: 1.25rem;", "{title}" }
 
-                    if let Some(product) = &initial_product {
+                    if let Some(product_id) = product_id_for_delete.clone() {
                         button {
                             style: "background: #e53e3e; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
-                            onclick: move |_| on_delete.call(product.id.clone()),
+                            onclick: move |_| on_delete.call(product_id.clone()),
                             "Delete Product"
                         }
                     }
@@ -190,8 +196,7 @@ fn validate_and_build_product_input(
     }
 
     // Parse and validate price
-    let user_price = Decimal::from_str(price)
-        .map_err(|_| "Invalid price".to_string())?;
+    let user_price = Decimal::from_str(price).map_err(|_| "Invalid price".to_string())?;
 
     // Parse optional cost
     let cost_price = if cost.is_empty() {

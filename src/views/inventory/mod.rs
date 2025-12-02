@@ -11,7 +11,7 @@ mod stat_card;
 mod stats_summary;
 
 use crate::handlers::AppState;
-use crate::models::{Product, ProductInput};
+use crate::models::Product;
 use dioxus::prelude::*;
 use helpers::{calculate_total_pages, is_search_mode, InventoryStats};
 use pagination_nav::PaginationNav;
@@ -26,10 +26,10 @@ pub fn InventoryView() -> Element {
     let app_state = use_context::<AppState>();
 
     // State management
-    let search_query = use_signal(String::new);
+    let mut search_query = use_signal(String::new);
     let mut show_add_form = use_signal(|| false);
     let mut editing_product = use_signal(|| None::<Product>);
-    let refresh_trigger = use_signal(|| 0);
+    let mut refresh_trigger = use_signal(|| 0);
     let mut current_page = use_signal(|| 1i64);
 
     // Load products with pagination or search
@@ -48,7 +48,12 @@ pub fn InventoryView() -> Element {
                     handler
                         .load_products_paginated(page, PAGE_SIZE)
                         .await
-                        .map(|paginated| (paginated.items, Some((paginated.total_count, paginated.page))))
+                        .map(|paginated| {
+                            (
+                                paginated.items,
+                                Some((paginated.total_count, paginated.page)),
+                            )
+                        })
                 } else {
                     search_h
                         .search_products(query)
@@ -131,17 +136,18 @@ pub fn InventoryView() -> Element {
                                 }
                             }
 
-                            StatsSummary {
-                                stats: stats,
-                                is_search_mode: is_search,
-                            }
-
                             if !is_search {
                                 PaginationNav {
                                     current_page,
                                     total_pages,
                                 }
                             }
+
+                            StatsSummary {
+                                stats: stats,
+                                is_search_mode: is_search,
+                            }
+
                         }
                     }
                     Some(Err(err)) => rsx! {

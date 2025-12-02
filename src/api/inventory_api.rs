@@ -3,7 +3,7 @@
 //! Business logic for product and inventory management.
 
 use crate::models::{Product, ProductInput, UnitMeasurement};
-use crate::repo::{CatalogRepository, ProductRepository, PaginatedResult};
+use crate::repo::{CatalogRepository, PaginatedResult, ProductRepository};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -88,7 +88,11 @@ impl InventoryApi {
     }
 
     /// List products with pagination
-    pub async fn list_products_paginated(&self, page: i64, page_size: i64) -> Result<PaginatedResult<Product>, String> {
+    pub async fn list_products_paginated(
+        &self,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Product>, String> {
         if page_size < 1 || page_size > 100 {
             return Err("Page size must be between 1 and 100".to_string());
         }
