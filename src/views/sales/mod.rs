@@ -7,7 +7,9 @@ mod cart_summary;
 mod product_card;
 mod products_list;
 mod quantity_modal;
+mod receipt_template;
 mod sale_message;
+mod sale_receipt_modal;
 mod validations;
 
 pub use cart_item_row::CartItemRow;
@@ -16,9 +18,10 @@ pub use product_card::ProductCard;
 pub use products_list::ProductsList;
 pub use quantity_modal::QuantityModal;
 pub use sale_message::SaleMessage;
+use sale_receipt_modal::SaleReceiptModal;
 
 use crate::handlers::AppState;
-use crate::models::{Product, SaleInput, SaleItemInput};
+use crate::models::{Operation, Product, Sale, SaleInput, SaleItemInput};
 use crate::views::loans::LoanForm;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
@@ -37,7 +40,7 @@ pub fn SalesView() -> Element {
     let mut cart = use_signal(Vec::<CartItem>::new);
     let mut search_query = use_signal(String::new);
     let mut payment_amount = use_signal(String::new);
-    let mut show_receipt = use_signal(|| false);
+    let mut completed_sale = use_signal(|| Option::<(Sale, Vec<Operation>)>::None); // Completed sale with operations
     let mut sale_message = use_signal(|| Option::<(bool, String)>::None); // (is_success, message)
     let mut refresh_trigger = use_signal(|| 0);
     let mut show_quantity_modal = use_signal(|| Option::<Product>::None); // Product to add
@@ -192,12 +195,21 @@ pub fn SalesView() -> Element {
                 };
 
                 match app_state.sales_handler.process_sale(sale_input).await {
-                    Ok(_sale) => {
-                        sale_message.set(Some((true, "Sale completed successfully!".to_string())));
-                        show_receipt.set(true);
-                        cart.write().clear();
-                        payment_amount.set(String::new());
-                        refresh_trigger.set(refresh_trigger() + 1);
+                    Ok(sale) => {
+                        // Fetch sale details with operations to show receipt
+                        match app_state.sales_handler.get_sale_details(sale.id).await {
+                            Ok(sale_with_ops) => {
+                                completed_sale
+                                    .set(Some((sale_with_ops.sale, sale_with_ops.operations)));
+                                cart.write().clear();
+                                payment_amount.set(String::new());
+                                refresh_trigger.set(refresh_trigger() + 1);
+                            }
+                            Err(err) => {
+                                sale_message
+                                    .set(Some((false, format!("Failed to load receipt: {}", err))));
+                            }
+                        }
                     }
                     Err(err) => {
                         sale_message.set(Some((false, format!("Sale failed: {}", err))));
@@ -260,21 +272,30 @@ pub fn SalesView() -> Element {
 
                     match app_state
                         .loans_handler
-                        .create_loan(sale.id, loan_input)
+                        .create_loan(sale.id.clone(), loan_input)
                         .await
                     {
                         Ok(_loan) => {
-                            sale_message.set(Some((
-                                true,
-                                "Loan sale completed successfully!".to_string(),
-                            )));
-                            show_receipt.set(true);
-                            cart.write().clear();
-                            payment_amount.set(String::new());
-                            debtor_name.set(String::new());
-                            debtor_phone.set(String::new());
-                            show_loan_form.set(false);
-                            refresh_trigger.set(refresh_trigger() + 1);
+                            // Fetch sale details with operations to show receipt
+                            match app_state.sales_handler.get_sale_details(sale.id).await {
+                                Ok(sale_with_ops) => {
+                                    completed_sale
+                                        .set(Some((sale_with_ops.sale, sale_with_ops.operations)));
+                                    cart.write().clear();
+                                    payment_amount.set(String::new());
+                                    debtor_name.set(String::new());
+                                    debtor_phone.set(String::new());
+                                    show_loan_form.set(false);
+                                    refresh_trigger.set(refresh_trigger() + 1);
+                                }
+                                Err(err) => {
+                                    sale_message.set(Some((
+                                        false,
+                                        format!("Failed to load receipt: {}", err),
+                                    )));
+                                    show_loan_form.set(false);
+                                }
+                            }
                         }
                         Err(err) => {
                             sale_message
@@ -412,25 +433,11 @@ pub fn SalesView() -> Element {
         }
 
         // Receipt modal
-        if *show_receipt.read() {
-            div {
-                style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;",
-                onclick: move |_| show_receipt.set(false),
-
-                div {
-                    style: "background: white; padding: 2rem; border-radius: 0.5rem; max-width: 400px;",
-                    onclick: move |evt| evt.stop_propagation(),
-
-                    h3 { style: "margin: 0 0 1rem 0; color: #48bb78;", "✓ Sale Completed!" }
-                    p { "The sale has been recorded successfully." }
-                    p { style: "font-size: 0.875rem; color: #718096;", "Inventory has been updated automatically." }
-
-                    button {
-                        style: "width: 100%; background: #667eea; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer;",
-                        onclick: move |_| show_receipt.set(false),
-                        "Close"
-                    }
-                }
+        if let Some((sale, operations)) = completed_sale.read().as_ref() {
+            SaleReceiptModal {
+                sale: sale.clone(),
+                operations: operations.clone(),
+                on_close: move |_| completed_sale.set(None),
             }
         }
     }

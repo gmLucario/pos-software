@@ -4,4 +4,5 @@
 
 pub mod db;
 pub mod formatting;
+pub mod pdf;
 pub mod validation;

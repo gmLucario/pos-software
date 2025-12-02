@@ -1,0 +1,95 @@
+#set page(
+  paper: "a4",
+  margin: (x: 1.5cm, y: 2cm),
+)
+#set text(font: "Arial", size: 10pt)
+
+// Header with line
+#align(center)[
+  #text(size: 18pt, weight: "bold", fill: rgb("#2d3748"))[Casa Ramirez]
+  #v(10pt)
+]
+
+// Receipt info box
+#rect(
+  width: 100%,
+  stroke: 1pt + rgb("#e2e8f0"),
+  fill: rgb("#f7fafc"),
+  inset: 12pt,
+  radius: 4pt,
+)[
+  #grid(
+    columns: (auto, 1fr),
+    row-gutter: 6pt,
+    column-gutter: 12pt,
+    text(weight: "bold", fill: rgb("#4a5568"), [Receipt \#:]),
+    text(font: "Courier New", size: 9pt, [<%= self.receipt_id %>]),
+    text(weight: "bold", fill: rgb("#4a5568"), [Date:]),
+    [<%= self.date %>],
+  )
+]
+
+#v(12pt)
+
+// Items section
+#text(size: 11pt, weight: "bold", fill: rgb("#2d3748"))[Items (<%= self.items_count %>)]
+#v(8pt)
+
+#table(
+  columns: (1fr, auto, auto, auto),
+  stroke: none,
+  inset: 8pt,
+  fill: (x, y) => if y == 0 { rgb("#f7fafc") },
+  table.header(
+    table.cell(text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Product])),
+    table.cell(align: right, text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Qty])),
+    table.cell(align: right, text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Price])),
+    table.cell(align: right, text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Subtotal])),
+  ),
+  table.hline(stroke: 2pt + rgb("#e2e8f0")),
+<% for item in &self.items { %>
+  table.cell([<%= item.product_name %>]),
+  table.cell(align: right, [<%= item.quantity %>]),
+  table.cell(align: right, [<%= item.price %>]),
+  table.cell(align: right, text(weight: "bold", [<%= item.subtotal %>])),
+<% } %>
+  table.hline(stroke: 1pt + rgb("#e2e8f0")),
+)
+
+#v(8pt)
+
+// Totals section
+#line(length: 100%, stroke: 2pt + rgb("#e2e8f0"))
+#v(10pt)
+
+#grid(
+  columns: (1fr, auto),
+  row-gutter: 8pt,
+  text(size: 11pt, weight: "bold", fill: rgb("#2d3748"), [Total:]),
+  text(size: 11pt, weight: "bold", fill: rgb("#2d3748"), [<%= self.total %>]),
+  [Paid:],
+  text(fill: rgb("#48bb78"), weight: "semibold", [<%= self.paid %>]),
+)
+
+<% if let Some(change) = &self.change_amount { %>
+#v(8pt)
+#grid(
+  columns: (1fr, auto),
+  row-gutter: 8pt,
+  [Change:],
+  text(fill: rgb("#667eea"), weight: "semibold", [<%= change %>]),
+)
+<% } %>
+
+<% if let Some(owed) = &self.amount_owed { %>
+#v(8pt)
+#line(length: 100%, stroke: 2pt + rgb("#e2e8f0"))
+#v(8pt)
+
+#grid(
+  columns: (1fr, auto),
+  row-gutter: 8pt,
+  text(size: 11pt, weight: "bold", fill: rgb("#c53030"), [Amount Owed:]),
+  text(size: 11pt, weight: "bold", fill: rgb("#c53030"), [<%= owed %>]),
+)
+<% } %>
