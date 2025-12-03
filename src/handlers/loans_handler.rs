@@ -61,11 +61,13 @@ impl LoansHandler {
 
     /// Record a payment for a loan
     pub async fn record_payment(&self, input: LoanPaymentInput) -> Result<Loan, String> {
+        let loan_id = input.loan_id.clone();
+
         // Record the payment
-        self.api.record_payment(input.clone()).await?;
+        self.api.record_payment(input).await?;
 
         // Return updated loan
-        self.api.get_loan(&input.loan_id).await
+        self.api.get_loan(&loan_id).await
     }
 
     /// Cancel a loan

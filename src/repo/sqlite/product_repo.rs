@@ -81,21 +81,20 @@ impl ProductRepository for SqliteProductRepository {
         page: i64,
         page_size: i64,
     ) -> Result<PaginatedResult<Product>, String> {
+        use crate::utils::db_parsing::calculate_offset;
+
         // Get total count
         let total_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM product")
             .fetch_one(&self.pool)
             .await
             .map_err(|e| format!("Failed to count products: {}", e))?;
 
-        // Calculate offset
-        let offset = (page - 1) * page_size;
-
         // Get paginated products
         let products = sqlx::query_as::<_, Product>(
             "SELECT * FROM product ORDER BY full_name LIMIT ? OFFSET ?",
         )
         .bind(page_size)
-        .bind(offset)
+        .bind(calculate_offset(page, page_size))
         .fetch_all(&self.pool)
         .await
         .map_err(|e| format!("Failed to list products: {}", e))?;
@@ -164,7 +163,9 @@ impl ProductRepository for SqliteProductRepository {
     }
 
     async fn search(&self, query: &str) -> Result<Vec<Product>, String> {
-        let search_term = format!("%{}%", query);
+        use crate::utils::db_parsing::format_like_pattern;
+
+        let search_term = format_like_pattern(query);
 
         let products = sqlx::query_as::<_, Product>(
             r#"
@@ -188,7 +189,9 @@ impl ProductRepository for SqliteProductRepository {
         page: i64,
         page_size: i64,
     ) -> Result<PaginatedResult<Product>, String> {
-        let search_term = format!("%{}%", query);
+        use crate::utils::db_parsing::{calculate_offset, format_like_pattern};
+
+        let search_term = format_like_pattern(query);
 
         // Get total count of matching products
         let total_count: i64 = sqlx::query_scalar(
@@ -203,9 +206,6 @@ impl ProductRepository for SqliteProductRepository {
         .await
         .map_err(|e| format!("Failed to count search results: {}", e))?;
 
-        // Calculate offset
-        let offset = (page - 1) * page_size;
-
         // Get paginated search results
         let products = sqlx::query_as::<_, Product>(
             r#"
@@ -218,7 +218,7 @@ impl ProductRepository for SqliteProductRepository {
         .bind(&search_term)
         .bind(&search_term)
         .bind(page_size)
-        .bind(offset)
+        .bind(calculate_offset(page, page_size))
         .fetch_all(&self.pool)
         .await
         .map_err(|e| format!("Failed to search products: {}", e))?;

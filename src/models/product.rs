@@ -5,7 +5,6 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 
 /// Product entity
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -30,49 +29,20 @@ pub struct Product {
 // Manual FromRow implementation to handle Decimal as TEXT
 impl<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> for Product {
     fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        use crate::utils::db_parsing::{parse_datetime_from_row, parse_decimal_from_row, parse_optional_decimal_from_row};
         use sqlx::Row;
 
         Ok(Product {
             id: row.try_get("id")?,
             barcode: row.try_get("barcode")?,
             full_name: row.try_get("full_name")?,
-            user_price: {
-                let s: String = row.try_get("user_price")?;
-                Decimal::from_str(&s).map_err(|e| sqlx::Error::ColumnDecode {
-                    index: "user_price".to_string(),
-                    source: Box::new(e),
-                })?
-            },
-            cost_price: {
-                let s: Option<String> = row.try_get("cost_price")?;
-                s.map(|s| Decimal::from_str(&s)).transpose().map_err(|e| {
-                    sqlx::Error::ColumnDecode {
-                        index: "cost_price".to_string(),
-                        source: Box::new(e),
-                    }
-                })?
-            },
+            user_price: parse_decimal_from_row(row, "user_price")?,
+            cost_price: parse_optional_decimal_from_row(row, "cost_price")?,
             min_amount: row.try_get("min_amount")?,
             current_amount: row.try_get("current_amount")?,
             unit_measurement_id: row.try_get("unit_measurement_id")?,
-            created_at: {
-                let s: String = row.try_get("created_at")?;
-                DateTime::parse_from_rfc3339(&s)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .map_err(|e| sqlx::Error::ColumnDecode {
-                        index: "created_at".to_string(),
-                        source: Box::new(e),
-                    })?
-            },
-            updated_at: {
-                let s: String = row.try_get("updated_at")?;
-                DateTime::parse_from_rfc3339(&s)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .map_err(|e| sqlx::Error::ColumnDecode {
-                        index: "updated_at".to_string(),
-                        source: Box::new(e),
-                    })?
-            },
+            created_at: parse_datetime_from_row(row, "created_at")?,
+            updated_at: parse_datetime_from_row(row, "updated_at")?,
         })
     }
 }
@@ -114,18 +84,19 @@ pub struct ProductInput {
 
 impl ProductInput {
     /// Create a new Product from this input
-    pub fn to_product(&self) -> Product {
+    pub fn to_product(self) -> Product {
+        let now = Utc::now();
         Product {
             id: uuid::Uuid::new_v4().to_string(),
-            barcode: self.barcode.clone(),
-            full_name: self.full_name.clone(),
+            barcode: self.barcode,
+            full_name: self.full_name,
             user_price: self.user_price,
             cost_price: self.cost_price,
             min_amount: self.min_amount,
             current_amount: self.current_amount,
             unit_measurement_id: self.unit_measurement_id,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            created_at: now,
+            updated_at: now,
         }
     }
 }
