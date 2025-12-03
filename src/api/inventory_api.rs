@@ -254,7 +254,7 @@ impl InventoryApi {
 }
 
 /// Inventory statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InventoryStats {
     pub total_products: usize,
     pub low_stock_count: usize,
