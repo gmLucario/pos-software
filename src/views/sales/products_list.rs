@@ -20,7 +20,7 @@ pub fn ProductsList(
         let products_read = products.read();
 
         if query.is_empty() {
-            products_read.clone()
+            Vec::new()
         } else {
             let query_lower = query.to_lowercase();
             products_read
@@ -29,6 +29,7 @@ pub fn ProductsList(
                     p.full_name.to_lowercase().contains(&query_lower)
                         || p.barcode.as_ref().is_some_and(|b| b.contains(&query_lower))
                 })
+                .take(5)
                 .cloned()
                 .collect()
         }

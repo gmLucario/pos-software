@@ -404,26 +404,18 @@ pub fn SalesView() -> Element {
                     style: "width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; margin-bottom: 1.5rem; box-sizing: border-box;",
                 }
 
-                // Products based on loading state
-                match &*products_resource.read_unchecked() {
-                    Some(Ok(products)) => rsx! {
+                // Products list - only shows when search is active
+                {
+                    let products = match &*products_resource.read_unchecked() {
+                        Some(Ok(products)) => products.clone(),
+                        _ => Vec::new(),
+                    };
+                    rsx! {
                         ProductsList {
-                            products: Signal::new(products.clone()),
+                            products: Signal::new(products),
                             cart_items: cart,
                             search_query: search_query,
                             on_add: move |p: Product| show_product_modal(p),
-                        }
-                    },
-                    Some(Err(err)) => rsx! {
-                        div {
-                            style: "padding: 2rem; text-align: center; color: #e53e3e; background: #fff5f5; border-radius: 0.5rem;",
-                            "❌ Error loading products: {err}"
-                        }
-                    },
-                    None => rsx! {
-                        div {
-                            style: "padding: 2rem; text-align: center; color: #718096;",
-                            "⏳ Loading products..."
                         }
                     }
                 }
