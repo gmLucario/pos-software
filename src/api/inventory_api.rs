@@ -93,7 +93,7 @@ impl InventoryApi {
         page: i64,
         page_size: i64,
     ) -> Result<PaginatedResult<Product>, String> {
-        if page_size < 1 || page_size > 100 {
+        if !(1..=100).contains(&page_size) {
             return Err("Page size must be between 1 and 100".to_string());
         }
 
@@ -197,7 +197,7 @@ impl InventoryApi {
         page: i64,
         page_size: i64,
     ) -> Result<PaginatedResult<Product>, String> {
-        if page_size < 1 || page_size > 100 {
+        if !(1..=100).contains(&page_size) {
             return Err("Page size must be between 1 and 100".to_string());
         }
 
@@ -205,7 +205,9 @@ impl InventoryApi {
             return self.list_products_paginated(page, page_size).await;
         }
 
-        self.product_repo.search_paginated(query, page, page_size).await
+        self.product_repo
+            .search_paginated(query, page, page_size)
+            .await
     }
 
     /// Get low stock products

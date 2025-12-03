@@ -34,8 +34,3 @@ impl InventoryStats {
 pub fn calculate_total_pages(total_count: i64, page_size: i64) -> i64 {
     ((total_count as f64) / (page_size as f64)).ceil() as i64
 }
-
-/// Determine if we're in search mode based on pagination info
-pub fn is_search_mode(pagination_info: &Option<(i64, i64)>) -> bool {
-    pagination_info.is_none()
-}

@@ -58,7 +58,9 @@ impl InventoryHandler {
         page: i64,
         page_size: i64,
     ) -> Result<PaginatedResult<Product>, String> {
-        self.api.search_products_paginated(&query, page, page_size).await
+        self.api
+            .search_products_paginated(&query, page, page_size)
+            .await
     }
 
     /// Get low stock products
