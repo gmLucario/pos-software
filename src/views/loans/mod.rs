@@ -18,6 +18,7 @@ use payment_modal::PaymentModal;
 use receipt_modal::ReceiptModal;
 use stat_card::StatCard;
 
+use crate::api::LoanStats;
 use crate::handlers::AppState;
 use crate::models::{Loan, LoanPayment, LoanPaymentInput, Operation, Sale};
 use crate::utils::formatting::format_currency;
@@ -64,16 +65,26 @@ pub fn LoansView() -> Element {
         }
     });
 
+    // Load loan stats from all database records
+    let mut stats_resource = use_resource({
+        let loans_handler = app_state.loans_handler.clone();
+        move || {
+            let handler = loans_handler.clone();
+            async move { handler.get_loan_stats().await }
+        }
+    });
+
     // Reset to page 1 when search query changes
     use_effect(move || {
         let _ = search_query();
         current_page.set(1);
     });
 
-    // Refresh loans when trigger changes
+    // Refresh loans and stats when trigger changes
     use_effect(move || {
         let _ = refresh_trigger();
         loans_resource.restart();
+        stats_resource.restart();
     });
 
     // Clone app_state for closures
@@ -182,42 +193,53 @@ pub fn LoansView() -> Element {
                     let total_count = pagination_info.map(|(count, _)| count).unwrap_or(loans.len() as i64);
                     let total_pages = calculate_total_pages(total_count, PAGE_SIZE);
 
-                    // Calculate totals (only for current page items)
-                    let total_debt: Decimal = loans.iter().map(|l| l.total_debt).sum();
-                    let total_paid: Decimal = loans.iter().map(|l| l.paid_amount).sum();
-                    let total_remaining: Decimal = loans.iter().map(|l| l.remaining_amount).sum();
-
                     rsx! {
-                        // Stats cards
-                        div {
-                            style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;",
+                        // Stats cards - using stats from all database records
+                        match &*stats_resource.read_unchecked() {
+                            Some(Ok(stats)) => rsx! {
+                                div {
+                                    style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;",
 
-                            StatCard {
-                                label: "Total Debt",
-                                value: format_currency(total_debt),
-                                color: "#f56565",
-                                icon: "💳",
-                            }
+                                    StatCard {
+                                        label: "Total Debt",
+                                        value: format_currency(stats.total_debt),
+                                        color: "#f56565",
+                                        icon: "💳",
+                                    }
 
-                            StatCard {
-                                label: "Total Paid",
-                                value: format_currency(total_paid),
-                                color: "#48bb78",
-                                icon: "💰",
-                            }
+                                    StatCard {
+                                        label: "Total Paid",
+                                        value: format_currency(stats.total_paid),
+                                        color: "#48bb78",
+                                        icon: "💰",
+                                    }
 
-                            StatCard {
-                                label: "Remaining",
-                                value: format_currency(total_remaining),
-                                color: "#ed8936",
-                                icon: "⏳",
-                            }
+                                    StatCard {
+                                        label: "Remaining",
+                                        value: format_currency(stats.total_remaining),
+                                        color: "#ed8936",
+                                        icon: "⏳",
+                                    }
 
-                            StatCard {
-                                label: "Total Results",
-                                value: format!("{}", total_count),
-                                color: "#667eea",
-                                icon: "📊",
+                                    StatCard {
+                                        label: "Total Loans",
+                                        value: format!("{}", stats.total_loans),
+                                        color: "#667eea",
+                                        icon: "📊",
+                                    }
+                                }
+                            },
+                            Some(Err(_)) => rsx! {
+                                div {
+                                    style: "padding: 1rem; margin-bottom: 1.5rem; text-align: center; color: #718096;",
+                                    "Unable to load statistics"
+                                }
+                            },
+                            None => rsx! {
+                                div {
+                                    style: "padding: 1rem; margin-bottom: 1.5rem; text-align: center; color: #718096;",
+                                    "Loading statistics..."
+                                }
                             }
                         }
 

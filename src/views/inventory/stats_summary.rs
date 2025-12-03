@@ -2,8 +2,8 @@
 //!
 //! Displays inventory statistics in card format.
 
+use crate::api::InventoryStats;
 use crate::utils::formatting::format_currency;
-use crate::views::inventory::helpers::InventoryStats;
 use crate::views::inventory::stat_card::StatCard;
 use dioxus::prelude::*;
 
@@ -17,7 +17,7 @@ pub fn StatsSummary(stats: InventoryStats, is_search_mode: bool) -> Element {
 
             StatCard {
                 label: products_label.to_string(),
-                value: format!("{}", stats.total_count),
+                value: format!("{}", stats.total_products),
                 color: "#667eea".to_string(),
             }
 

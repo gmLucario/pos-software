@@ -9,11 +9,12 @@ mod products_table;
 mod stat_card;
 mod stats_summary;
 
+use crate::api::InventoryStats;
 use crate::handlers::AppState;
 use crate::models::Product;
 use crate::views::pagination_nav::PaginationNav;
 use dioxus::prelude::*;
-use helpers::{calculate_total_pages, InventoryStats};
+use helpers::calculate_total_pages;
 use product_form::ProductForm;
 use products_table::ProductsTable;
 use stats_summary::StatsSummary;
@@ -54,16 +55,26 @@ pub fn InventoryView() -> Element {
         }
     });
 
+    // Load inventory stats from all database records
+    let mut stats_resource = use_resource({
+        let handler = app_state.inventory_handler.clone();
+        move || {
+            let handler = handler.clone();
+            async move { handler.get_stats().await }
+        }
+    });
+
     // Reset to page 1 when search query changes
     use_effect(move || {
         let _ = search_query();
         current_page.set(1);
     });
 
-    // Refresh products when trigger changes
+    // Refresh products and stats when trigger changes
     use_effect(move || {
         let _ = refresh_trigger();
         products_resource.restart();
+        stats_resource.restart();
     });
 
     // Clone handlers for use in closures
@@ -114,7 +125,6 @@ pub fn InventoryView() -> Element {
                         let is_searching = !search_query().trim().is_empty();
                         let total_count = pagination_info.map(|(count, _)| count).unwrap_or(products.len() as i64);
                         let total_pages = calculate_total_pages(total_count, PAGE_SIZE);
-                        let stats = InventoryStats::calculate(products, total_count);
 
                         rsx! {
                             ProductsTable {
@@ -131,9 +141,26 @@ pub fn InventoryView() -> Element {
                                 total_pages,
                             }
 
-                            StatsSummary {
-                                stats: stats,
-                                is_search_mode: is_searching,
+                            // Display stats from all database records
+                            match &*stats_resource.read_unchecked() {
+                                Some(Ok(stats)) => rsx! {
+                                    StatsSummary {
+                                        stats: stats.clone(),
+                                        is_search_mode: is_searching,
+                                    }
+                                },
+                                Some(Err(_)) => rsx! {
+                                    div {
+                                        style: "margin-top: 1.5rem; padding: 1rem; text-align: center; color: #718096;",
+                                        "Unable to load statistics"
+                                    }
+                                },
+                                None => rsx! {
+                                    div {
+                                        style: "margin-top: 1.5rem; padding: 1rem; text-align: center; color: #718096;",
+                                        "Loading statistics..."
+                                    }
+                                }
                             }
 
                         }
