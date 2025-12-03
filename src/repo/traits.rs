@@ -116,6 +116,14 @@ pub trait LoanRepository: Send + Sync {
 
     /// Search loans by debtor name or phone
     async fn search(&self, query: &str) -> Result<Vec<Loan>, String>;
+
+    /// Search loans with pagination
+    async fn search_paginated(
+        &self,
+        query: &str,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Loan>, String>;
 }
 
 /// Catalog repository trait

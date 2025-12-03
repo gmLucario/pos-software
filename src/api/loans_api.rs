@@ -3,7 +3,7 @@
 //! Business logic for loan management and payment processing.
 
 use crate::models::{Loan, LoanInput, LoanPayment, LoanPaymentInput, StatusLoan};
-use crate::repo::{LoanRepository, SaleRepository};
+use crate::repo::{LoanRepository, PaginatedResult, SaleRepository};
 use rust_decimal::Decimal;
 use std::sync::Arc;
 
@@ -130,6 +130,20 @@ impl LoansApi {
         }
 
         self.loan_repo.search(query).await
+    }
+
+    /// Search loans with pagination
+    pub async fn search_loans_paginated(
+        &self,
+        query: &str,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Loan>, String> {
+        if !(1..=100).contains(&page_size) {
+            return Err("Page size must be between 1 and 100".to_string());
+        }
+
+        self.loan_repo.search_paginated(query, page, page_size).await
     }
 
     /// Get loan statistics

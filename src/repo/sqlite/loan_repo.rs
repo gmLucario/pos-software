@@ -1,7 +1,7 @@
 //! SQLite Loan Repository Implementation
 
 use crate::models::{Loan, LoanInput, LoanPayment, LoanPaymentInput};
-use crate::repo::LoanRepository;
+use crate::repo::{LoanRepository, PaginatedResult};
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use sqlx::SqlitePool;
@@ -212,5 +212,54 @@ impl LoanRepository for SqliteLoanRepository {
         .map_err(|e| format!("Failed to search loans: {}", e))?;
 
         Ok(loans)
+    }
+
+    async fn search_paginated(
+        &self,
+        query: &str,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Loan>, String> {
+        let search_term = format!("%{}%", query);
+
+        // Get total count of matching loans
+        let total_count: i64 = sqlx::query_scalar(
+            r#"
+            SELECT COUNT(*) FROM loan
+            WHERE debtor_name LIKE ? OR debtor_phone LIKE ?
+            "#,
+        )
+        .bind(&search_term)
+        .bind(&search_term)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to count search results: {}", e))?;
+
+        // Calculate offset
+        let offset = (page - 1) * page_size;
+
+        // Get paginated search results
+        let loans = sqlx::query_as::<_, Loan>(
+            r#"
+            SELECT * FROM loan
+            WHERE debtor_name LIKE ? OR debtor_phone LIKE ?
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+            "#,
+        )
+        .bind(&search_term)
+        .bind(&search_term)
+        .bind(page_size)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to search loans: {}", e))?;
+
+        Ok(PaginatedResult {
+            items: loans,
+            total_count,
+            page,
+            page_size,
+        })
     }
 }
