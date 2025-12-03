@@ -13,7 +13,7 @@ mod stats_summary;
 use crate::handlers::AppState;
 use crate::models::Product;
 use dioxus::prelude::*;
-use helpers::{calculate_total_pages, is_search_mode, InventoryStats};
+use helpers::{calculate_total_pages, InventoryStats};
 use pagination_nav::PaginationNav;
 use product_form::ProductForm;
 use products_table::ProductsTable;
@@ -32,34 +32,25 @@ pub fn InventoryView() -> Element {
     let mut refresh_trigger = use_signal(|| 0);
     let mut current_page = use_signal(|| 1i64);
 
-    // Load products with pagination or search
+    // Load products with pagination (always paginated, whether searching or not)
     let mut products_resource = use_resource({
         let handler = app_state.inventory_handler.clone();
-        let search_handler = app_state.inventory_handler.clone();
 
         move || {
             let handler = handler.clone();
-            let search_h = search_handler.clone();
             let page = current_page();
             let query = search_query();
 
             async move {
-                if query.trim().is_empty() {
-                    handler
-                        .load_products_paginated(page, PAGE_SIZE)
-                        .await
-                        .map(|paginated| {
-                            (
-                                paginated.items,
-                                Some((paginated.total_count, paginated.page)),
-                            )
-                        })
-                } else {
-                    search_h
-                        .search_products(query)
-                        .await
-                        .map(|products| (products, None))
-                }
+                handler
+                    .search_products_paginated(query, page, PAGE_SIZE)
+                    .await
+                    .map(|paginated| {
+                        (
+                            paginated.items,
+                            Some((paginated.total_count, paginated.page)),
+                        )
+                    })
             }
         }
     });
@@ -121,7 +112,7 @@ pub fn InventoryView() -> Element {
             {
                 match &*products_resource.read_unchecked() {
                     Some(Ok((products, pagination_info))) => {
-                        let is_search = is_search_mode(pagination_info);
+                        let is_searching = !search_query().trim().is_empty();
                         let total_count = pagination_info.map(|(count, _)| count).unwrap_or(products.len() as i64);
                         let total_pages = calculate_total_pages(total_count, PAGE_SIZE);
                         let stats = InventoryStats::calculate(products, total_count);
@@ -129,23 +120,21 @@ pub fn InventoryView() -> Element {
                         rsx! {
                             ProductsTable {
                                 products: products.clone(),
-                                is_search_mode: is_search,
+                                is_search_mode: is_searching,
                                 on_edit: move |p| {
                                     editing_product.set(Some(p));
                                     show_add_form.set(true);
                                 }
                             }
 
-                            if !is_search {
-                                PaginationNav {
-                                    current_page,
-                                    total_pages,
-                                }
+                            PaginationNav {
+                                current_page,
+                                total_pages,
                             }
 
                             StatsSummary {
                                 stats: stats,
-                                is_search_mode: is_search,
+                                is_search_mode: is_searching,
                             }
 
                         }

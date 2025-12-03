@@ -190,6 +190,24 @@ impl InventoryApi {
         self.product_repo.search(query).await
     }
 
+    /// Search products with pagination
+    pub async fn search_products_paginated(
+        &self,
+        query: &str,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Product>, String> {
+        if page_size < 1 || page_size > 100 {
+            return Err("Page size must be between 1 and 100".to_string());
+        }
+
+        if query.trim().is_empty() {
+            return self.list_products_paginated(page, page_size).await;
+        }
+
+        self.product_repo.search_paginated(query, page, page_size).await
+    }
+
     /// Get low stock products
     pub async fn get_low_stock_products(&self) -> Result<Vec<Product>, String> {
         self.product_repo.get_low_stock().await

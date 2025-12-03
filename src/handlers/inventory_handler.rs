@@ -51,6 +51,16 @@ impl InventoryHandler {
         self.api.search_products(&query).await
     }
 
+    /// Search products with pagination
+    pub async fn search_products_paginated(
+        &self,
+        query: String,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Product>, String> {
+        self.api.search_products_paginated(&query, page, page_size).await
+    }
+
     /// Get low stock products
     pub async fn get_low_stock(&self) -> Result<Vec<Product>, String> {
         self.api.get_low_stock_products().await
