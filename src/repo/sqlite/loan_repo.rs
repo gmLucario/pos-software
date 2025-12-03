@@ -196,7 +196,9 @@ impl LoanRepository for SqliteLoanRepository {
     }
 
     async fn search(&self, query: &str) -> Result<Vec<Loan>, String> {
-        let search_term = format!("%{}%", query);
+        use crate::utils::db_parsing::format_like_pattern;
+
+        let search_term = format_like_pattern(query);
 
         let loans = sqlx::query_as::<_, Loan>(
             r#"
@@ -220,7 +222,9 @@ impl LoanRepository for SqliteLoanRepository {
         page: i64,
         page_size: i64,
     ) -> Result<PaginatedResult<Loan>, String> {
-        let search_term = format!("%{}%", query);
+        use crate::utils::db_parsing::{calculate_offset, format_like_pattern};
+
+        let search_term = format_like_pattern(query);
 
         // Get total count of matching loans
         let total_count: i64 = sqlx::query_scalar(
@@ -235,9 +239,6 @@ impl LoanRepository for SqliteLoanRepository {
         .await
         .map_err(|e| format!("Failed to count search results: {}", e))?;
 
-        // Calculate offset
-        let offset = (page - 1) * page_size;
-
         // Get paginated search results
         let loans = sqlx::query_as::<_, Loan>(
             r#"
@@ -250,7 +251,7 @@ impl LoanRepository for SqliteLoanRepository {
         .bind(&search_term)
         .bind(&search_term)
         .bind(page_size)
-        .bind(offset)
+        .bind(calculate_offset(page, page_size))
         .fetch_all(&self.pool)
         .await
         .map_err(|e| format!("Failed to search loans: {}", e))?;
