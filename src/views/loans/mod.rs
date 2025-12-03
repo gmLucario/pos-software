@@ -25,7 +25,7 @@ use crate::views::pagination_nav::PaginationNav;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
 
-const PAGE_SIZE: i64 = 1;
+const PAGE_SIZE: i64 = 10;
 
 #[component]
 pub fn LoansView() -> Element {
