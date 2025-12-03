@@ -9,7 +9,6 @@ mod products_table;
 mod stat_card;
 mod stats_summary;
 
-use crate::api::InventoryStats;
 use crate::handlers::AppState;
 use crate::models::Product;
 use crate::views::pagination_nav::PaginationNav;

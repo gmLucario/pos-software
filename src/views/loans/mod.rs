@@ -18,7 +18,6 @@ use payment_modal::PaymentModal;
 use receipt_modal::ReceiptModal;
 use stat_card::StatCard;
 
-use crate::api::LoanStats;
 use crate::handlers::AppState;
 use crate::models::{Loan, LoanPayment, LoanPaymentInput, Operation, Sale};
 use crate::utils::formatting::format_currency;
