@@ -12,7 +12,7 @@ use super::validations::is_valid_payment_amount;
 pub fn CartSummary(
     cart_total: Decimal,
     change_amount: Decimal,
-    payment_amount: String,
+    payment_amount: ReadSignal<String>,
     cart_is_empty: bool,
     on_payment_change: EventHandler<String>,
     on_complete_sale: EventHandler<()>,

@@ -9,39 +9,45 @@ use super::{CartItem, ProductCard};
 
 #[component]
 pub fn ProductsList(
-    products: Vec<Product>,
-    cart_items: Vec<CartItem>,
-    search_query: String,
+    products: ReadSignal<Vec<Product>>,
+    cart_items: ReadSignal<Vec<CartItem>>,
+    search_query: ReadSignal<String>,
     on_add: EventHandler<Product>,
 ) -> Element {
-    // Filter products based on search query
-    let filtered_products: Vec<Product> = products
-        .iter()
-        .filter(|p| {
-            if search_query.is_empty() {
-                return true;
-            }
-            let query = search_query.to_lowercase();
-            p.full_name.to_lowercase().contains(&query)
-                || p.barcode.as_ref().is_some_and(|b| b.contains(&query))
-        })
-        .cloned()
-        .collect();
+    // Filter products based on search query - use memo to avoid re-filtering
+    let filtered_products = use_memo(move || {
+        let query = search_query.read();
+        let products_read = products.read();
+
+        if query.is_empty() {
+            products_read.clone()
+        } else {
+            let query_lower = query.to_lowercase();
+            products_read
+                .iter()
+                .filter(|p| {
+                    p.full_name.to_lowercase().contains(&query_lower)
+                        || p.barcode.as_ref().is_some_and(|b| b.contains(&query_lower))
+                })
+                .cloned()
+                .collect()
+        }
+    });
 
     rsx! {
         div {
             style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; max-height: 600px; overflow-y: auto;",
 
-            if filtered_products.is_empty() {
+            if filtered_products.read().is_empty() {
                 div {
                     style: "grid-column: 1 / -1; padding: 2rem; text-align: center; color: #718096;",
                     "No products found"
                 }
             } else {
-                for product in filtered_products {
+                for product in filtered_products.read().iter() {
                     ProductCard {
                         product: product.clone(),
-                        cart_items: cart_items.clone(),
+                        cart_items: cart_items,
                         on_add: move |p: Product| on_add.call(p),
                     }
                 }

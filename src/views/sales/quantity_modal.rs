@@ -18,9 +18,9 @@ pub fn QuantityModal(
     let mut quantity_input = use_signal(|| String::from("1"));
     let mut has_invalid_input = use_signal(|| false);
 
-    // Clone product for use in closures
+    // Clone product for closures
     let product_for_keydown = product.clone();
-    let product_for_onclick = product.clone();
+    let product_for_button = product.clone();
 
     rsx! {
         // Modal overlay
@@ -80,7 +80,7 @@ pub fn QuantityModal(
                         },
                         onkeydown: move |evt| {
                             if evt.key() == Key::Enter {
-                                let quantity_str = quantity_input.read().clone();
+                                let quantity_str = quantity_input.read();
                                 if let Ok(quantity) = quantity_str.parse::<f64>() {
                                     if is_valid_quantity(&quantity_str) {
                                         on_confirm.call((product_for_keydown.clone(), quantity));
@@ -117,10 +117,10 @@ pub fn QuantityModal(
                     button {
                         style: "flex: 1; background: #48bb78; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 1rem;",
                         onclick: move |_| {
-                            let quantity_str = quantity_input.read().clone();
+                            let quantity_str = quantity_input.read();
                             if let Ok(quantity) = quantity_str.parse::<f64>() {
                                 if is_valid_quantity(&quantity_str) {
-                                    on_confirm.call((product_for_onclick.clone(), quantity));
+                                    on_confirm.call((product_for_button.clone(), quantity));
                                 } else {
                                     has_invalid_input.set(true);
                                 }
