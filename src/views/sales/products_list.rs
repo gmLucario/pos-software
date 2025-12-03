@@ -20,7 +20,7 @@ pub fn ProductsList(
         let products_read = products.read();
 
         if query.is_empty() {
-            products_read.clone()
+            Vec::new()
         } else {
             let query_lower = query.to_lowercase();
             products_read
@@ -29,6 +29,7 @@ pub fn ProductsList(
                     p.full_name.to_lowercase().contains(&query_lower)
                         || p.barcode.as_ref().is_some_and(|b| b.contains(&query_lower))
                 })
+                .take(5)
                 .cloned()
                 .collect()
         }
@@ -38,7 +39,7 @@ pub fn ProductsList(
         div {
             style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; max-height: 600px; overflow-y: auto;",
 
-            if filtered_products.read().is_empty() {
+            if !search_query.read().is_empty() && filtered_products.read().is_empty() {
                 div {
                     style: "grid-column: 1 / -1; padding: 2rem; text-align: center; color: #718096;",
                     "No products found"
