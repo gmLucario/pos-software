@@ -48,6 +48,14 @@ pub trait ProductRepository: Send + Sync {
     /// Search products by name or barcode
     async fn search(&self, query: &str) -> Result<Vec<Product>, String>;
 
+    /// Search products with pagination
+    async fn search_paginated(
+        &self,
+        query: &str,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Product>, String>;
+
     /// Get low stock products
     async fn get_low_stock(&self) -> Result<Vec<Product>, String>;
 }
@@ -108,6 +116,14 @@ pub trait LoanRepository: Send + Sync {
 
     /// Search loans by debtor name or phone
     async fn search(&self, query: &str) -> Result<Vec<Loan>, String>;
+
+    /// Search loans with pagination
+    async fn search_paginated(
+        &self,
+        query: &str,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Loan>, String>;
 }
 
 /// Catalog repository trait

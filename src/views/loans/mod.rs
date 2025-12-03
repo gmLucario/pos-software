@@ -2,6 +2,7 @@
 //!
 //! UI components for tracking and managing customer loans.
 
+mod helpers;
 mod loan_form;
 mod loan_row;
 mod payment_history_modal;
@@ -9,6 +10,7 @@ mod payment_modal;
 mod receipt_modal;
 mod stat_card;
 
+use helpers::calculate_total_pages;
 pub use loan_form::LoanForm;
 use loan_row::LoanRow;
 use payment_history_modal::PaymentHistoryModal;
@@ -19,8 +21,11 @@ use stat_card::StatCard;
 use crate::handlers::AppState;
 use crate::models::{Loan, LoanPayment, LoanPaymentInput, Operation, Sale};
 use crate::utils::formatting::format_currency;
+use crate::views::pagination_nav::PaginationNav;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
+
+const PAGE_SIZE: i64 = 10;
 
 #[component]
 pub fn LoansView() -> Element {
@@ -35,14 +40,34 @@ pub fn LoansView() -> Element {
     let mut refresh_trigger = use_signal(|| 0);
     let mut selected_receipt = use_signal(|| Option::<(Sale, Vec<Operation>)>::None);
     let mut selected_payment_history = use_signal(|| Option::<(String, Vec<LoanPayment>)>::None);
+    let mut current_page = use_signal(|| 1i64);
 
-    // Load loans from database
+    // Load loans with pagination (always paginated, whether searching or not)
     let mut loans_resource = use_resource({
         let loans_handler = app_state.loans_handler.clone();
         move || {
             let handler = loans_handler.clone();
-            async move { handler.load_loans().await }
+            let page = current_page();
+            let query = search_query();
+
+            async move {
+                handler
+                    .search_loans_paginated(query, page, PAGE_SIZE)
+                    .await
+                    .map(|paginated| {
+                        (
+                            paginated.items,
+                            Some((paginated.total_count, paginated.page)),
+                        )
+                    })
+            }
         }
+    });
+
+    // Reset to page 1 when search query changes
+    use_effect(move || {
+        let _ = search_query();
+        current_page.set(1);
     });
 
     // Refresh loans when trigger changes
@@ -153,24 +178,14 @@ pub fn LoansView() -> Element {
 
             // Content based on loading state
             match &*loans_resource.read_unchecked() {
-                Some(Ok(loans)) => {
-                    // Filter loans based on search
-                    let filtered_loans: Vec<Loan> = loans.iter()
-                        .filter(|loan| {
-                            let query = search_query.read().to_lowercase();
-                            if query.is_empty() {
-                                return true;
-                            }
-                            loan.debtor_name.to_lowercase().contains(&query) ||
-                            loan.debtor_phone.as_ref().is_some_and(|p| p.contains(&query))
-                        })
-                        .cloned()
-                        .collect();
+                Some(Ok((loans, pagination_info))) => {
+                    let total_count = pagination_info.map(|(count, _)| count).unwrap_or(loans.len() as i64);
+                    let total_pages = calculate_total_pages(total_count, PAGE_SIZE);
 
-                    // Calculate totals
-                    let total_debt: Decimal = filtered_loans.iter().map(|l| l.total_debt).sum();
-                    let total_paid: Decimal = filtered_loans.iter().map(|l| l.paid_amount).sum();
-                    let total_remaining: Decimal = filtered_loans.iter().map(|l| l.remaining_amount).sum();
+                    // Calculate totals (only for current page items)
+                    let total_debt: Decimal = loans.iter().map(|l| l.total_debt).sum();
+                    let total_paid: Decimal = loans.iter().map(|l| l.paid_amount).sum();
+                    let total_remaining: Decimal = loans.iter().map(|l| l.remaining_amount).sum();
 
                     rsx! {
                         // Stats cards
@@ -199,8 +214,8 @@ pub fn LoansView() -> Element {
                             }
 
                             StatCard {
-                                label: "Active Loans",
-                                value: format!("{}", filtered_loans.len()),
+                                label: "Total Results",
+                                value: format!("{}", total_count),
                                 color: "#667eea",
                                 icon: "📊",
                             }
@@ -272,7 +287,7 @@ pub fn LoansView() -> Element {
                                     }
 
                                     tbody {
-                                        if filtered_loans.is_empty() {
+                                        if loans.is_empty() {
                                             tr {
                                                 td {
                                                     colspan: "7",
@@ -281,7 +296,7 @@ pub fn LoansView() -> Element {
                                                 }
                                             }
                                         } else {
-                                            for loan in filtered_loans {
+                                            for loan in loans {
                                                 LoanRow {
                                                     loan: loan.clone(),
                                                     on_select: move |l: Loan| selected_loan.set(Some(l)),
@@ -292,6 +307,11 @@ pub fn LoansView() -> Element {
                                         }
                                     }
                                 }
+                            }
+
+                            PaginationNav {
+                                current_page,
+                                total_pages,
                             }
                         }
                     }

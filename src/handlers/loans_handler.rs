@@ -4,6 +4,7 @@
 
 use crate::api::{LoanStats, LoanWithPayments, LoansApi};
 use crate::models::{Loan, LoanInput, LoanPaymentInput};
+use crate::repo::PaginatedResult;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -44,6 +45,18 @@ impl LoansHandler {
     /// Search loans by debtor name or phone
     pub async fn search_loans(&self, query: String) -> Result<Vec<Loan>, String> {
         self.api.search_loans(&query).await
+    }
+
+    /// Search loans with pagination
+    pub async fn search_loans_paginated(
+        &self,
+        query: String,
+        page: i64,
+        page_size: i64,
+    ) -> Result<PaginatedResult<Loan>, String> {
+        self.api
+            .search_loans_paginated(&query, page, page_size)
+            .await
     }
 
     /// Record a payment for a loan
