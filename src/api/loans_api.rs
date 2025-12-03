@@ -143,7 +143,9 @@ impl LoansApi {
             return Err("Page size must be between 1 and 100".to_string());
         }
 
-        self.loan_repo.search_paginated(query, page, page_size).await
+        self.loan_repo
+            .search_paginated(query, page, page_size)
+            .await
     }
 
     /// Get loan statistics

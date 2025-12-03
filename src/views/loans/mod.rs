@@ -11,8 +11,8 @@ mod payment_modal;
 mod receipt_modal;
 mod stat_card;
 
-pub use loan_form::LoanForm;
 use helpers::calculate_total_pages;
+pub use loan_form::LoanForm;
 use loan_row::LoanRow;
 use pagination_nav::PaginationNav;
 use payment_history_modal::PaymentHistoryModal;
@@ -26,7 +26,7 @@ use crate::utils::formatting::format_currency;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
 
-const PAGE_SIZE: i64 = 10;
+const PAGE_SIZE: i64 = 1;
 
 #[component]
 pub fn LoansView() -> Element {

@@ -54,7 +54,9 @@ impl LoansHandler {
         page: i64,
         page_size: i64,
     ) -> Result<PaginatedResult<Loan>, String> {
-        self.api.search_loans_paginated(&query, page, page_size).await
+        self.api
+            .search_loans_paginated(&query, page, page_size)
+            .await
     }
 
     /// Record a payment for a loan
