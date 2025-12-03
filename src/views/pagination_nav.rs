@@ -1,6 +1,6 @@
-//! Pagination Navigation Component
+//! Shared Pagination Navigation Component
 //!
-//! Provides navigation controls for paginated loan listings.
+//! Provides reusable navigation controls for paginated listings.
 
 use dioxus::prelude::*;
 

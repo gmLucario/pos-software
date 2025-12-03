@@ -5,7 +5,6 @@
 mod helpers;
 mod loan_form;
 mod loan_row;
-mod pagination_nav;
 mod payment_history_modal;
 mod payment_modal;
 mod receipt_modal;
@@ -14,7 +13,6 @@ mod stat_card;
 use helpers::calculate_total_pages;
 pub use loan_form::LoanForm;
 use loan_row::LoanRow;
-use pagination_nav::PaginationNav;
 use payment_history_modal::PaymentHistoryModal;
 use payment_modal::PaymentModal;
 use receipt_modal::ReceiptModal;
@@ -23,6 +21,7 @@ use stat_card::StatCard;
 use crate::handlers::AppState;
 use crate::models::{Loan, LoanPayment, LoanPaymentInput, Operation, Sale};
 use crate::utils::formatting::format_currency;
+use crate::views::pagination_nav::PaginationNav;
 use dioxus::prelude::*;
 use rust_decimal::Decimal;
 

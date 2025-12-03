@@ -3,7 +3,6 @@
 //! UI components for managing product inventory.
 
 mod helpers;
-mod pagination_nav;
 mod product_form;
 mod product_row;
 mod products_table;
@@ -12,9 +11,9 @@ mod stats_summary;
 
 use crate::handlers::AppState;
 use crate::models::Product;
+use crate::views::pagination_nav::PaginationNav;
 use dioxus::prelude::*;
 use helpers::{calculate_total_pages, InventoryStats};
-use pagination_nav::PaginationNav;
 use product_form::ProductForm;
 use products_table::ProductsTable;
 use stats_summary::StatsSummary;
