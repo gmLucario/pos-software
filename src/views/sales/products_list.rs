@@ -39,7 +39,7 @@ pub fn ProductsList(
         div {
             style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; max-height: 600px; overflow-y: auto;",
 
-            if filtered_products.read().is_empty() {
+            if !search_query.read().is_empty() && filtered_products.read().is_empty() {
                 div {
                     style: "grid-column: 1 / -1; padding: 2rem; text-align: center; color: #718096;",
                     "No products found"
