@@ -83,14 +83,6 @@ pub fn App(app_state: AppState) -> Element {
                     }
                 }
             }
-
-            // Footer
-            footer {
-                class: "app-footer",
-                style: "background: #2d3748; color: #a0aec0; padding: 1rem; text-align: center; font-size: 0.875rem;",
-
-                "POS System v0.2.0 | Built with Dioxus 🚀"
-            }
         }
     }
 }
