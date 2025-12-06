@@ -39,7 +39,9 @@ pub fn LoansView() -> Element {
     let mut payment_notes = use_signal(String::new);
     let mut payment_message = use_signal(|| Option::<(bool, String)>::None);
     let mut refresh_trigger = use_signal(|| 0);
-    let mut selected_receipt = use_signal(|| Option::<(Sale, Vec<Operation>, Option<Loan>, Option<Vec<LoanPayment>>)>::None);
+    let mut selected_receipt = use_signal(|| {
+        Option::<(Sale, Vec<Operation>, Option<Loan>, Option<Vec<LoanPayment>>)>::None
+    });
     let mut selected_payment_history = use_signal(|| Option::<(String, Vec<LoanPayment>)>::None);
     let mut current_page = use_signal(|| 1i64);
 
@@ -97,7 +99,11 @@ pub fn LoansView() -> Element {
         let app_state = app_state_for_receipt.clone();
         spawn(async move {
             // First get the sale details
-            match app_state.sales_handler.get_sale_details(sale_id.clone()).await {
+            match app_state
+                .sales_handler
+                .get_sale_details(sale_id.clone())
+                .await
+            {
                 Ok(sale_with_ops) => {
                     // Then try to get the loan details (may not exist for non-loan sales)
                     let loan_result = app_state.loans_handler.get_loan_details(sale_id).await;
