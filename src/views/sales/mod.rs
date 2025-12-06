@@ -462,7 +462,7 @@ pub fn SalesView() -> Element {
                 // Cart summary
                 CartSummary {
                     cart_total: *cart_total.read(),
-                    change_amount: *change_amount.read(),
+                    change_amount: change_amount,
                     payment_amount: payment_amount,
                     cart_is_empty: cart.read().is_empty(),
                     on_payment_change: move |value: String| payment_amount.set(value),
