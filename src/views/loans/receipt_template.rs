@@ -16,6 +16,7 @@ struct LoanReceiptTemplate {
     items_count: usize,
     items: Vec<ReceiptItem>,
     total: String,
+    initial_payment: String,
     payments: Vec<PaymentItem>,
     total_paid: String,
     remaining_amount: String,
@@ -59,36 +60,22 @@ pub fn generate_loan_receipt_pdf(
         })
         .collect();
 
-    // Prepare payment history (without notes)
-    let mut payment_items: Vec<PaymentItem> = Vec::new();
+    // Prepare payment history - only subsequent payments from loan_payment table
+    let payment_items: Vec<PaymentItem> = payments
+        .iter()
+        .map(|payment| {
+            let payment_date = payment
+                .payment_date
+                .with_timezone(&Mexico_City)
+                .format("%d-%b-%Y %H:%M")
+                .to_string();
 
-    // Add initial payment if any was made at the time of sale
-    if sale.paid_amount > rust_decimal::Decimal::ZERO {
-        let initial_payment_date = sale
-            .sold_at
-            .with_timezone(&Mexico_City)
-            .format("%d-%b-%Y %H:%M")
-            .to_string();
-
-        payment_items.push(PaymentItem {
-            date: escape_typst(&initial_payment_date),
-            amount: escape_typst(&format_currency(sale.paid_amount)),
-        });
-    }
-
-    // Add subsequent payments from loan_payment table
-    for payment in payments {
-        let payment_date = payment
-            .payment_date
-            .with_timezone(&Mexico_City)
-            .format("%d-%b-%Y %H:%M")
-            .to_string();
-
-        payment_items.push(PaymentItem {
-            date: escape_typst(&payment_date),
-            amount: escape_typst(&format_currency(payment.amount)),
-        });
-    }
+            PaymentItem {
+                date: escape_typst(&payment_date),
+                amount: escape_typst(&format_currency(payment.amount)),
+            }
+        })
+        .collect();
 
     let template = LoanReceiptTemplate {
         receipt_id: escape_typst(&sale.id),
@@ -98,6 +85,7 @@ pub fn generate_loan_receipt_pdf(
         items_count: operations.len(),
         items,
         total: escape_typst(&format_currency(sale.total_amount)),
+        initial_payment: escape_typst(&format_currency(sale.paid_amount)),
         payments: payment_items,
         total_paid: escape_typst(&format_currency(loan.paid_amount)),
         remaining_amount: escape_typst(&format_currency(loan.remaining_amount)),

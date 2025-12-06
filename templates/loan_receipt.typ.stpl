@@ -93,6 +93,8 @@
   row-gutter: 8pt,
   text(size: 11pt, weight: "bold", fill: rgb("#2d3748"), [Total:]),
   text(size: 11pt, weight: "bold", fill: rgb("#2d3748"), [<%= self.total %>]),
+  [Paid:],
+  text(fill: rgb("#48bb78"), weight: "semibold", [<%= self.initial_payment %>]),
 )
 
 #v(12pt)
