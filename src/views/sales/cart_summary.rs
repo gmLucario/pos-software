@@ -19,9 +19,6 @@ pub fn CartSummary(
 ) -> Element {
     let mut has_invalid_input = use_signal(|| false);
 
-    // Read the change amount once for reactivity
-    let current_change = change_amount();
-
     rsx! {
         div {
             style: "border-top: 2px solid #e2e8f0; padding-top: 1rem;",
@@ -76,12 +73,12 @@ pub fn CartSummary(
                 style: "display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 1rem;",
                 span { style: "font-weight: 500;", "Change:" }
                 span {
-                    style: if current_change > Decimal::ZERO {
+                    style: if change_amount() > Decimal::ZERO {
                         "font-weight: 600; color: #48bb78;"
                     } else {
                         "font-weight: 600; color: #718096;"
                     },
-                    "{format_currency(current_change)}"
+                    "{format_currency(change_amount())}"
                 }
             }
 
