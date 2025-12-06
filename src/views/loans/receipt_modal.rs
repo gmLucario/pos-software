@@ -2,18 +2,57 @@
 //!
 //! Modal dialog for displaying sale receipts linked to loans.
 
-use crate::models::{Operation, Sale};
+use crate::models::{Loan, LoanPayment, Operation, Sale};
 use crate::utils::formatting::format_currency;
 use chrono_tz::America::Mexico_City;
 use dioxus::prelude::*;
 
 #[component]
-pub fn ReceiptModal(sale: Sale, operations: Vec<Operation>, on_close: EventHandler<()>) -> Element {
+pub fn ReceiptModal(
+    sale: Sale,
+    operations: Vec<Operation>,
+    loan: Option<Loan>,
+    payments: Option<Vec<LoanPayment>>,
+    on_close: EventHandler<()>,
+) -> Element {
     let formatted_date = sale
         .sold_at
         .with_timezone(&Mexico_City)
         .format("%d-%b-%Y %H:%M")
         .to_string();
+
+    // Clone values for print handler
+    let sale_clone = sale.clone();
+    let operations_clone = operations.clone();
+    let loan_clone = loan.clone();
+    let payments_clone = payments.clone();
+
+    // Print PDF handler
+    let print_pdf = move |_| {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let (Some(loan_ref), Some(payments_ref)) = (&loan_clone, &payments_clone) {
+                let sale_id = sale_clone.id.clone();
+
+                // Show file save dialog
+                if let Some(file_path) = rfd::FileDialog::new()
+                    .set_file_name(format!("loan_receipt_{}.pdf", sale_id))
+                    .add_filter("PDF", &["pdf"])
+                    .save_file()
+                {
+                    if let Err(e) = super::receipt_template::generate_loan_receipt_pdf(
+                        loan_ref,
+                        &sale_clone,
+                        &operations_clone,
+                        payments_ref,
+                        file_path,
+                    ) {
+                        tracing::error!("Failed to generate loan receipt: {}", e);
+                    }
+                }
+            }
+        }
+    };
 
     rsx! {
         // Modal overlay
@@ -119,6 +158,18 @@ pub fn ReceiptModal(sale: Sale, operations: Vec<Operation>, on_close: EventHandl
                             style: "display: flex; justify-content: space-between; margin-bottom: 0.5rem;",
                             span { style: "font-weight: 500; color: #4a5568;", "Change:" }
                             span { style: "color: #667eea; font-weight: 600; font-family: monospace;", "{format_currency(sale.change_amount)}" }
+                        }
+                    }
+                }
+
+                // Print PDF button (only shown if loan data is available)
+                if loan.is_some() && payments.is_some() {
+                    div {
+                        style: "margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e2e8f0;",
+                        button {
+                            style: "width: 100%; background: #ed8936; color: white; padding: 0.75rem; border: none; border-radius: 0.5rem; font-weight: 500; cursor: pointer; font-size: 1rem;",
+                            onclick: print_pdf,
+                            "📄 Print PDF Receipt with Payments"
                         }
                     }
                 }

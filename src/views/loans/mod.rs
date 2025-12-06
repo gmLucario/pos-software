@@ -8,6 +8,7 @@ mod loan_row;
 mod payment_history_modal;
 mod payment_modal;
 mod receipt_modal;
+pub mod receipt_template;
 mod stat_card;
 
 use helpers::calculate_total_pages;
@@ -38,7 +39,9 @@ pub fn LoansView() -> Element {
     let mut payment_notes = use_signal(String::new);
     let mut payment_message = use_signal(|| Option::<(bool, String)>::None);
     let mut refresh_trigger = use_signal(|| 0);
-    let mut selected_receipt = use_signal(|| Option::<(Sale, Vec<Operation>)>::None);
+    let mut selected_receipt = use_signal(|| {
+        Option::<(Sale, Vec<Operation>, Option<Loan>, Option<Vec<LoanPayment>>)>::None
+    });
     let mut selected_payment_history = use_signal(|| Option::<(String, Vec<LoanPayment>)>::None);
     let mut current_page = use_signal(|| 1i64);
 
@@ -95,9 +98,30 @@ pub fn LoansView() -> Element {
     let view_receipt_handler = use_callback(move |sale_id: String| {
         let app_state = app_state_for_receipt.clone();
         spawn(async move {
-            match app_state.sales_handler.get_sale_details(sale_id).await {
+            // First get the sale details
+            match app_state
+                .sales_handler
+                .get_sale_details(sale_id.clone())
+                .await
+            {
                 Ok(sale_with_ops) => {
-                    selected_receipt.set(Some((sale_with_ops.sale, sale_with_ops.operations)));
+                    // Then try to get the loan details (may not exist for non-loan sales)
+                    let loan_result = app_state.loans_handler.get_loan_details(sale_id).await;
+
+                    let (loan, payments) = match loan_result {
+                        Ok(loan_with_payments) => (
+                            Some(loan_with_payments.loan),
+                            Some(loan_with_payments.payments),
+                        ),
+                        Err(_) => (None, None),
+                    };
+
+                    selected_receipt.set(Some((
+                        sale_with_ops.sale,
+                        sale_with_ops.operations,
+                        loan,
+                        payments,
+                    )));
                 }
                 Err(err) => {
                     payment_message.set(Some((false, format!("Failed to load receipt: {}", err))));
@@ -369,10 +393,12 @@ pub fn LoansView() -> Element {
             }
 
             // Receipt modal
-            if let Some((sale, operations)) = selected_receipt.read().as_ref() {
+            if let Some((sale, operations, loan, payments)) = selected_receipt.read().as_ref() {
                 ReceiptModal {
                     sale: sale.clone(),
                     operations: operations.clone(),
+                    loan: loan.clone(),
+                    payments: payments.clone(),
                     on_close: move |_| selected_receipt.set(None),
                 }
             }

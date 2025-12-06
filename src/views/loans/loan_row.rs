@@ -51,7 +51,7 @@ pub fn LoanRow(
             td {
                 style: "padding: 0.75rem; text-align: center;",
                 button {
-                    style: "background: #48bb78; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; font-weight: 500; margin-right: 0.5rem;",
+                    style: "background: #48bb78; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
                     onclick: move |_| on_view_receipt.call(loan_for_receipt.id.clone()),
                     "🧾 Receipt"
                 }

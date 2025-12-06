@@ -29,7 +29,9 @@ pub struct Product {
 // Manual FromRow implementation to handle Decimal as TEXT
 impl<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> for Product {
     fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
-        use crate::utils::db_parsing::{parse_datetime_from_row, parse_decimal_from_row, parse_optional_decimal_from_row};
+        use crate::utils::db_parsing::{
+            parse_datetime_from_row, parse_decimal_from_row, parse_optional_decimal_from_row,
+        };
         use sqlx::Row;
 
         Ok(Product {
