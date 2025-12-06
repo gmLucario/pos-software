@@ -4,7 +4,6 @@
 
 mod helpers;
 mod loan_form;
-mod loan_pdf_receipt_modal;
 mod loan_row;
 mod payment_history_modal;
 mod payment_modal;
@@ -14,7 +13,6 @@ mod stat_card;
 
 use helpers::calculate_total_pages;
 pub use loan_form::LoanForm;
-use loan_pdf_receipt_modal::LoanPdfReceiptModal;
 use loan_row::LoanRow;
 use payment_history_modal::PaymentHistoryModal;
 use payment_modal::PaymentModal;
@@ -41,9 +39,8 @@ pub fn LoansView() -> Element {
     let mut payment_notes = use_signal(String::new);
     let mut payment_message = use_signal(|| Option::<(bool, String)>::None);
     let mut refresh_trigger = use_signal(|| 0);
-    let mut selected_receipt = use_signal(|| Option::<(Sale, Vec<Operation>)>::None);
+    let mut selected_receipt = use_signal(|| Option::<(Sale, Vec<Operation>, Option<Loan>, Option<Vec<LoanPayment>>)>::None);
     let mut selected_payment_history = use_signal(|| Option::<(String, Vec<LoanPayment>)>::None);
-    let mut selected_pdf_receipt = use_signal(|| Option::<(Loan, Sale, Vec<Operation>, Vec<LoanPayment>)>::None);
     let mut current_page = use_signal(|| 1i64);
 
     // Load loans with pagination (always paginated, whether searching or not)
@@ -94,15 +91,31 @@ pub fn LoansView() -> Element {
     let app_state_for_payment = app_state.clone();
     let app_state_for_receipt = app_state.clone();
     let app_state_for_history = app_state.clone();
-    let app_state_for_pdf = app_state.clone();
 
     // View receipt handler (as callback so it can be copied in the loop)
     let view_receipt_handler = use_callback(move |sale_id: String| {
         let app_state = app_state_for_receipt.clone();
         spawn(async move {
-            match app_state.sales_handler.get_sale_details(sale_id).await {
+            // First get the sale details
+            match app_state.sales_handler.get_sale_details(sale_id.clone()).await {
                 Ok(sale_with_ops) => {
-                    selected_receipt.set(Some((sale_with_ops.sale, sale_with_ops.operations)));
+                    // Then try to get the loan details (may not exist for non-loan sales)
+                    let loan_result = app_state.loans_handler.get_loan_details(sale_id).await;
+
+                    let (loan, payments) = match loan_result {
+                        Ok(loan_with_payments) => (
+                            Some(loan_with_payments.loan),
+                            Some(loan_with_payments.payments),
+                        ),
+                        Err(_) => (None, None),
+                    };
+
+                    selected_receipt.set(Some((
+                        sale_with_ops.sale,
+                        sale_with_ops.operations,
+                        loan,
+                        payments,
+                    )));
                 }
                 Err(err) => {
                     payment_message.set(Some((false, format!("Failed to load receipt: {}", err))));
@@ -126,43 +139,6 @@ pub fn LoansView() -> Element {
                     payment_message.set(Some((
                         false,
                         format!("Failed to load payment history: {}", err),
-                    )));
-                }
-            }
-        });
-    });
-
-    // Print PDF receipt handler (as callback so it can be copied in the loop)
-    let print_pdf_handler = use_callback(move |loan_id: String| {
-        let app_state_loans = app_state_for_pdf.clone();
-        spawn(async move {
-            // First get the loan details with payments
-            let loan_result = app_state_loans.loans_handler.get_loan_details(loan_id.clone()).await;
-
-            match loan_result {
-                Ok(loan_with_payments) => {
-                    // Then get the sale details with operations
-                    match app_state_loans.sales_handler.get_sale_details(loan_id).await {
-                        Ok(sale_with_ops) => {
-                            selected_pdf_receipt.set(Some((
-                                loan_with_payments.loan,
-                                sale_with_ops.sale,
-                                sale_with_ops.operations,
-                                loan_with_payments.payments,
-                            )));
-                        }
-                        Err(err) => {
-                            payment_message.set(Some((
-                                false,
-                                format!("Failed to load sale details: {}", err),
-                            )));
-                        }
-                    }
-                }
-                Err(err) => {
-                    payment_message.set(Some((
-                        false,
-                        format!("Failed to load loan details: {}", err),
                     )));
                 }
             }
@@ -345,7 +321,6 @@ pub fn LoansView() -> Element {
                                             th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Paid" }
                                             th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Remaining" }
                                             th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Receipt" }
-                                            th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Print PDF" }
                                             th { style: "padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;", "Payment" }
                                         }
                                     }
@@ -354,7 +329,7 @@ pub fn LoansView() -> Element {
                                         if loans.is_empty() {
                                             tr {
                                                 td {
-                                                    colspan: "8",
+                                                    colspan: "7",
                                                     style: "padding: 3rem; text-align: center; color: #a0aec0;",
                                                     "No loans found"
                                                 }
@@ -366,7 +341,6 @@ pub fn LoansView() -> Element {
                                                     on_select: move |l: Loan| selected_loan.set(Some(l)),
                                                     on_view_receipt: view_receipt_handler,
                                                     on_view_payment_history: view_payment_history_handler,
-                                                    on_print_pdf: print_pdf_handler,
                                                 }
                                             }
                                         }
@@ -413,10 +387,12 @@ pub fn LoansView() -> Element {
             }
 
             // Receipt modal
-            if let Some((sale, operations)) = selected_receipt.read().as_ref() {
+            if let Some((sale, operations, loan, payments)) = selected_receipt.read().as_ref() {
                 ReceiptModal {
                     sale: sale.clone(),
                     operations: operations.clone(),
+                    loan: loan.clone(),
+                    payments: payments.clone(),
                     on_close: move |_| selected_receipt.set(None),
                 }
             }
@@ -427,17 +403,6 @@ pub fn LoansView() -> Element {
                     debtor_name: debtor_name.clone(),
                     payments: payments.clone(),
                     on_close: move |_| selected_payment_history.set(None),
-                }
-            }
-
-            // PDF receipt modal
-            if let Some((loan, sale, operations, payments)) = selected_pdf_receipt.read().as_ref() {
-                LoanPdfReceiptModal {
-                    loan: loan.clone(),
-                    sale: sale.clone(),
-                    operations: operations.clone(),
-                    payments: payments.clone(),
-                    on_close: move |_| selected_pdf_receipt.set(None),
                 }
             }
         }

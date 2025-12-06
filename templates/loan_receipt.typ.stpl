@@ -125,7 +125,7 @@
   ),
   table.hline(stroke: 2pt + rgb("#e2e8f0")),
 <% for payment in &self.payments { %>
-  table.cell(font: "Courier New", size: 9pt, [<%= payment.date %>]),
+  table.cell(text(font: "Courier New", size: 9pt, [<%= payment.date %>])),
   table.cell(align: right, text(fill: rgb("#48bb78"), weight: "semibold", [<%= payment.amount %>])),
 <% } %>
   table.hline(stroke: 1pt + rgb("#e2e8f0")),

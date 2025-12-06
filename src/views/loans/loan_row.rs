@@ -12,7 +12,6 @@ pub fn LoanRow(
     on_select: EventHandler<Loan>,
     on_view_receipt: EventHandler<String>,
     on_view_payment_history: EventHandler<String>,
-    on_print_pdf: EventHandler<String>,
 ) -> Element {
     let is_paid = loan.is_paid_off();
 
@@ -20,7 +19,6 @@ pub fn LoanRow(
     let loan_for_receipt = loan.clone();
     let loan_for_payment = loan.clone();
     let loan_for_history = loan.clone();
-    let loan_for_pdf = loan.clone();
 
     rsx! {
         tr {
@@ -53,17 +51,9 @@ pub fn LoanRow(
             td {
                 style: "padding: 0.75rem; text-align: center;",
                 button {
-                    style: "background: #48bb78; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; font-weight: 500; margin-right: 0.5rem;",
+                    style: "background: #48bb78; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
                     onclick: move |_| on_view_receipt.call(loan_for_receipt.id.clone()),
                     "🧾 Receipt"
-                }
-            }
-            td {
-                style: "padding: 0.75rem; text-align: center;",
-                button {
-                    style: "background: #ed8936; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
-                    onclick: move |_| on_print_pdf.call(loan_for_pdf.id.clone()),
-                    "📄 Print PDF"
                 }
             }
             td {
