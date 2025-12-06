@@ -6,15 +6,15 @@
 
 // Header with line
 #align(center)[
-  #text(size: 18pt, weight: "bold", fill: rgb("#9b87b5"))[Casa Ramirez]
+  #text(size: 18pt, weight: "bold", fill: rgb("#2d3748"))[Casa Ramirez]
   #v(10pt)
 ]
 
 // Receipt info box
 #rect(
   width: 100%,
-  stroke: 1pt + rgb("#e8d5f0"),
-  fill: rgb("#f5f0ff"),
+  stroke: 1pt + rgb("#e2e8f0"),
+  fill: rgb("#f7fafc"),
   inset: 12pt,
   radius: 4pt,
 )[
@@ -22,9 +22,9 @@
     columns: (auto, 1fr),
     row-gutter: 6pt,
     column-gutter: 12pt,
-    text(weight: "bold", fill: rgb("#a8a4c5"), [Receipt \#:]),
+    text(weight: "bold", fill: rgb("#4a5568"), [Receipt \#:]),
     text(font: "Courier New", size: 9pt, [<%= self.receipt_id %>]),
-    text(weight: "bold", fill: rgb("#a8a4c5"), [Date:]),
+    text(weight: "bold", fill: rgb("#4a5568"), [Date:]),
     [<%= self.date %>],
   )
 ]
@@ -32,13 +32,13 @@
 #v(12pt)
 
 // Debtor info section
-#text(size: 11pt, weight: "bold", fill: rgb("#9b87b5"))[Customer Information]
+#text(size: 11pt, weight: "bold", fill: rgb("#2d3748"))[Customer Information]
 #v(8pt)
 
 #rect(
   width: 100%,
-  stroke: 1pt + rgb("#f5d5e0"),
-  fill: rgb("#fff5f7"),
+  stroke: 1pt + rgb("#e2e8f0"),
+  fill: rgb("#fffaf0"),
   inset: 12pt,
   radius: 4pt,
 )[
@@ -46,10 +46,10 @@
     columns: (auto, 1fr),
     row-gutter: 6pt,
     column-gutter: 12pt,
-    text(weight: "bold", fill: rgb("#d8a4b8"), [Name:]),
+    text(weight: "bold", fill: rgb("#4a5568"), [Name:]),
     [<%= self.debtor_name %>],
 <% if let Some(phone) = &self.debtor_phone { %>
-    text(weight: "bold", fill: rgb("#d8a4b8"), [Phone:]),
+    text(weight: "bold", fill: rgb("#4a5568"), [Phone:]),
     [<%= phone %>],
 <% } %>
   )
@@ -58,61 +58,61 @@
 #v(12pt)
 
 // Items section
-#text(size: 11pt, weight: "bold", fill: rgb("#9b87b5"))[Items (<%= self.items_count %>)]
+#text(size: 11pt, weight: "bold", fill: rgb("#2d3748"))[Items (<%= self.items_count %>)]
 #v(8pt)
 
 #table(
   columns: (1fr, auto, auto, auto),
   stroke: none,
   inset: 8pt,
-  fill: (x, y) => if y == 0 { rgb("#f5f0ff") },
+  fill: (x, y) => if y == 0 { rgb("#f7fafc") },
   table.header(
-    table.cell(text(weight: "bold", fill: rgb("#a8a4c5"), size: 9pt, [Product])),
-    table.cell(align: right, text(weight: "bold", fill: rgb("#a8a4c5"), size: 9pt, [Qty])),
-    table.cell(align: right, text(weight: "bold", fill: rgb("#a8a4c5"), size: 9pt, [Price])),
-    table.cell(align: right, text(weight: "bold", fill: rgb("#a8a4c5"), size: 9pt, [Subtotal])),
+    table.cell(text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Product])),
+    table.cell(align: right, text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Qty])),
+    table.cell(align: right, text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Price])),
+    table.cell(align: right, text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Subtotal])),
   ),
-  table.hline(stroke: 2pt + rgb("#e8d5f0")),
+  table.hline(stroke: 2pt + rgb("#e2e8f0")),
 <% for item in &self.items { %>
   table.cell([<%= item.product_name %>]),
   table.cell(align: right, [<%= item.quantity %>]),
   table.cell(align: right, [<%= item.price %>]),
   table.cell(align: right, text(weight: "bold", [<%= item.subtotal %>])),
 <% } %>
-  table.hline(stroke: 1pt + rgb("#e8d5f0")),
+  table.hline(stroke: 1pt + rgb("#e2e8f0")),
 )
 
 #v(8pt)
 
 // Totals section
-#line(length: 100%, stroke: 2pt + rgb("#e8d5f0"))
+#line(length: 100%, stroke: 2pt + rgb("#e2e8f0"))
 #v(10pt)
 
 #grid(
   columns: (1fr, auto),
   row-gutter: 8pt,
-  text(size: 11pt, weight: "bold", fill: rgb("#9b87b5"), [Total:]),
-  text(size: 11pt, weight: "bold", fill: rgb("#9b87b5"), [<%= self.total %>]),
+  text(size: 11pt, weight: "bold", fill: rgb("#2d3748"), [Total:]),
+  text(size: 11pt, weight: "bold", fill: rgb("#2d3748"), [<%= self.total %>]),
   [Paid:],
-  text(fill: rgb("#93d5a8"), weight: "semibold", [<%= self.initial_payment %>]),
+  text(fill: rgb("#48bb78"), weight: "semibold", [<%= self.initial_payment %>]),
 )
 
 #v(12pt)
 
 // Payment History section
-#text(size: 11pt, weight: "bold", fill: rgb("#9b87b5"))[Payment History (<%= self.payments.len() %> payments)]
+#text(size: 11pt, weight: "bold", fill: rgb("#2d3748"))[Payment History (<%= self.payments.len() %> payments)]
 #v(8pt)
 
 <% if self.payments.is_empty() { %>
 #rect(
   width: 100%,
-  stroke: 1pt + rgb("#e8d5f0"),
-  fill: rgb("#f5f0ff"),
+  stroke: 1pt + rgb("#e2e8f0"),
+  fill: rgb("#f7fafc"),
   inset: 12pt,
   radius: 4pt,
 )[
   #align(center)[
-    #text(fill: rgb("#c5b8d5"), [No payments recorded yet])
+    #text(fill: rgb("#a0aec0"), [No payments recorded yet])
   ]
 ]
 <% } else { %>
@@ -120,17 +120,17 @@
   columns: (1fr, auto),
   stroke: none,
   inset: 8pt,
-  fill: (x, y) => if y == 0 { rgb("#f5f0ff") },
+  fill: (x, y) => if y == 0 { rgb("#f7fafc") },
   table.header(
-    table.cell(text(weight: "bold", fill: rgb("#a8a4c5"), size: 9pt, [Date])),
-    table.cell(align: right, text(weight: "bold", fill: rgb("#a8a4c5"), size: 9pt, [Amount])),
+    table.cell(text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Date])),
+    table.cell(align: right, text(weight: "bold", fill: rgb("#4a5568"), size: 9pt, [Amount])),
   ),
-  table.hline(stroke: 2pt + rgb("#e8d5f0")),
+  table.hline(stroke: 2pt + rgb("#e2e8f0")),
 <% for payment in &self.payments { %>
   table.cell(text(font: "Courier New", size: 9pt, [<%= payment.date %>])),
-  table.cell(align: right, text(fill: rgb("#93d5a8"), weight: "semibold", [<%= payment.amount %>])),
+  table.cell(align: right, text(fill: rgb("#48bb78"), weight: "semibold", [<%= payment.amount %>])),
 <% } %>
-  table.hline(stroke: 1pt + rgb("#e8d5f0")),
+  table.hline(stroke: 1pt + rgb("#e2e8f0")),
 )
 
 #v(8pt)
@@ -139,25 +139,25 @@
 #grid(
   columns: (1fr, auto),
   row-gutter: 8pt,
-  text(size: 11pt, weight: "bold", fill: rgb("#9b87b5"), [Total Paid:]),
-  text(size: 11pt, weight: "bold", fill: rgb("#93d5a8"), [<%= self.total_paid %>]),
+  text(size: 11pt, weight: "bold", fill: rgb("#2d3748"), [Total Paid:]),
+  text(size: 11pt, weight: "bold", fill: rgb("#48bb78"), [<%= self.total_paid %>]),
 )
 <% } %>
 
 #v(12pt)
-#line(length: 100%, stroke: 2pt + rgb("#e8d5f0"))
+#line(length: 100%, stroke: 2pt + rgb("#e2e8f0"))
 #v(10pt)
 
 // Payment Status
 <% if self.is_fully_paid { %>
 #align(center)[
-  #text(size: 14pt, weight: "bold", fill: rgb("#93d5a8"))[✓ FULLY PAID]
+  #text(size: 14pt, weight: "bold", fill: rgb("#48bb78"))[✓ FULLY PAID]
 ]
 <% } else { %>
 #grid(
   columns: (1fr, auto),
   row-gutter: 8pt,
-  text(size: 12pt, weight: "bold", fill: rgb("#f5a5a5"), [Amount Still Owed:]),
-  text(size: 12pt, weight: "bold", fill: rgb("#f5a5a5"), [<%= self.remaining_amount %>]),
+  text(size: 12pt, weight: "bold", fill: rgb("#c53030"), [Amount Still Owed:]),
+  text(size: 12pt, weight: "bold", fill: rgb("#c53030"), [<%= self.remaining_amount %>]),
 )
 <% } %>
