@@ -11,7 +11,7 @@ use super::validations::is_valid_payment_amount;
 #[component]
 pub fn CartSummary(
     cart_total: Decimal,
-    change_amount: ReadOnlySignal<Decimal>,
+    change_amount: ReadSignal<Decimal>,
     payment_amount: ReadSignal<String>,
     cart_is_empty: bool,
     on_payment_change: EventHandler<String>,
